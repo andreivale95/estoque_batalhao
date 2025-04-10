@@ -66,6 +66,7 @@
                                             </select>
                                         </div>
 
+
                                         <div class="form-group has-feedback col-md-6">
 
                                             <label class="control-label" for="">Condição</label>
@@ -76,6 +77,29 @@
                                                 @endforeach
                                             </select>
                                         </div>
+
+                                        <div class="form-group has-feedback col-md-6">
+
+                                            <label class="control-label" for="">Kit (se houver)</label>
+                                            <select name="kit" id="" class="form-control">
+                                                <option value="">Selecione</option>
+                                                @foreach ($kits as $kit)
+                                                    <option value="{{ $kit->id }}">{{ $kit->nome }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group has-feedback col-md-6">
+                                            <label class="control-label" for="tamanho">Tamanho (se houver)</label>
+                                            <select name="tamanho" id="tamanho" class="form-control">
+                                                <option value="">Selecione</option>
+                                                <option value="PP">PP</option>
+                                                <option value="M">M</option>
+                                                <option value="G">G</option>
+                                                <option value="GG">GG</option>
+                                            </select>
+                                        </div>
+
 
                                         <div class="form-group has-feedback col-md-6">
                                             <label class="control-label" for="valor">Valor (R$):</label>

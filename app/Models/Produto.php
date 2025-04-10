@@ -17,6 +17,8 @@ class Produto extends Model
         'marca',
         'valor',
         'fk_tipo_produto',
+        'fk_kit',
+        'tamanho',
         'ativo',
 
 
@@ -35,11 +37,22 @@ class Produto extends Model
         return $this->belongsTo(TipoProduto::class, 'fk_tipo_produto'); // FK para tipo_produto
     }
 
-    public function kits()
+
+
+    public function kit()
     {
-        return $this->belongsToMany(Kit::class, 'kit_produto', 'fk_produto', 'fk_kit')
-            ->withPivot('quantidade');
+        return $this->belongsTo(Kit::class, 'fk_kit');
     }
+
+
+
+
+    public function militares()
+    {
+        return $this->belongsToMany(EfetivoMilitar::class, 'efetivo_militar_produto', 'fk_produto', 'fk_efetivo_militar')
+                    ->withTimestamps();
+    }
+
 
 
 

@@ -9,9 +9,9 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PerfilController;
 use App\Http\Controllers\KitController;
-
+use App\Http\Controllers\EfetivoMilitarProdutoController;
 use App\Http\Controllers\ImageController;
-
+use App\Http\Controllers\SaidaEstoqueController;
 use App\Http\Controllers\ProdutoController;
 use App\Http\Controllers\UnidadeController;
 
@@ -35,7 +35,7 @@ Route::middleware(['auth', 'verified'])->controller(EstoqueController::class)->g
     Route::post('registros/estoque/saida/', 'saidaEstoque')->name('estoque.saida');
     Route::get('registros/estoque/form_entrada/{id}', 'formEntrada')->name('entrada.form');
     Route::get('registros/estoque/form_saida/{id}', 'formSaida')->name('saida.form');
-    Route::post('/estoque/transferencia', [EstoqueController::class, 'transferir'])->name('transferencia.efetuar');
+    Route::post('/estoque/transferencia', [EstoqueController::class, 'transferir'])->name('estoque.transferir');
 
 
 });
@@ -48,13 +48,28 @@ Route::middleware(['auth', 'verified'])->controller(KitController::class)->group
     Route::get('registros/kits/{kit}/editar', 'edit')->name('kits.editar'); // Formulário de edição
     Route::put('registros/kits/{kit}/atualizar', 'update')->name('kits.atualizar'); // Atualizar kit
     Route::delete('registros/kits/{kit}/remover', 'desfazerKit')->name('kits.remover'); // Remover kit
+    Route::post('/kits/{kit}/entregar', 'entregarKit')->name('kits.entregar');
+    Route::patch('/kits/{id}/toggle-disponibilidade', 'toggleDisponibilidade')->name('kits.toggleDisponibilidade');
+    Route::delete('/kits/{id}', 'excluir')->name('kits.excluir');
+
 });
+
+
+Route::middleware(['auth', 'verified'])->controller(SaidaEstoqueController::class)->group(function () {
+    Route::get('registros/saida-estoque/form', 'index')->name('saida_estoque.index'); // Formulário de seleção de militar e kit
+    Route::get('registros/saida-estoque/confirmar', 'selecionarKit')->name('saida_estoque.selecionar_kit'); // View de confirmação dos produtos
+    Route::post('registros/saida-estoque/confirmar-saida', 'confirmarSaida')->name('saida_estoque.confirmar_saida'); // Processar saída do estoque
+});
+
+
+
 
 
 Route::middleware(['auth', 'verified'])->controller(ProdutoController::class)->group(function () {
     Route::get('registros/produto/listar', 'listarProdutos')->name('produtos.listar');
     Route::get('registros/produto/ver/{id}', 'verProduto')->name('produto.ver');
     Route::get('registros/produto/form', 'formProduto')->name('produto.form');
+    Route::get('registros/produto/editar', 'editarProduto')->name('produto.editar');
     Route::post('registros/produto/criar', 'cadastrarProduto')->name('produto.cadastrar');
     Route::get('registros/produto/forminserir', 'inserirProdutoForm')->name('produtoinserir.form');
     Route::get('registros/produto/editar/{id}', 'editarProduto')->name('produto.editar');
@@ -84,6 +99,21 @@ Route::middleware(['auth', 'verified'])->controller(UserController::class)->grou
 
 
 });
+
+
+
+Route::middleware(['auth', 'verified'])->controller(EfetivoMilitarProdutoController::class)->group(function () {
+    Route::get('registros/efetivo-produtos/form', 'Listar')->name('efetivo_produtos.listar'); // Listar
+    Route::post('registros/efetivo-produtos/salvar', 'store')->name('efetivo_produtos.salvar'); // Salvar
+    Route::get('registros/efetivo-produtos/{militar}/editar', 'edit')->name('efetivo_produtos.editar'); // Editar produtos do militar
+    Route::put('registros/efetivo-produtos/{militar}/atualizar', 'update')->name('efetivo_produtos.atualizar'); // Atualizar
+    Route::get('/efetivo-produtos/atribuir/{militar}', 'atribuirProdutos')->name('efetivo_produtos.atribuir');
+    Route::get('/efetivo-produtos/visualizar/{id}', 'visualizar')->name('efetivo_produtos.visualizar');
+
+});
+
+
+
 
 Route::middleware(['auth', 'verified'])->controller(ProfileController::class)->group(function () {
     Route::get('profile/{id}', 'verProfile')->name('profile.ver');

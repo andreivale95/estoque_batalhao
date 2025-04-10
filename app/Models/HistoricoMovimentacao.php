@@ -19,6 +19,8 @@ class HistoricoMovimentacao extends Model
         'observacao',
         'data_movimentacao',
         'fk_unidade',
+        'unidade_origem',
+        'unidade_destino',
 
     ];
 

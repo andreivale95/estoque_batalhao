@@ -103,6 +103,12 @@
                         @can('autorizacao', 5)
                             <li><a href="{{ route('estoque.listar') }}">Estoque</a></li>
                         @endcan
+                        @can('autorizacao', 5)
+                            <li><a href="{{ route('efetivo_produtos.listar') }}">Listar Efetivo</a></li>
+                        @endcan
+                        @can('autorizacao', 5)
+                        <li><a href="{{ route('saida_estoque.index') }}">Entregar Kit</a></li>
+                    @endcan
 
 
                     </ul>

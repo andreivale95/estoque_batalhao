@@ -30,9 +30,9 @@
                         <thead>
                             <tr>
                                 <th>Nome do Kit</th>
-                                <th>Unidade de Origem</th>
+                                <th>Unidade</th>
                                 <th>Data de Criação</th>
-                                <th>Itens</th>
+                                <th>Disponibilidade</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
@@ -43,23 +43,44 @@
                                     <td>{{ $kit->unidade->nome ?? '-' }}</td>
                                     <td>{{ $kit->created_at->format('d/m/Y H:i') }}</td>
                                     <td>
-                                        <ul style="padding-left: 16px;">
-                                            @foreach ($kit->produtos as $produto)
-                                                <li>{{ $produto->nome }} (Qtd: {{ $produto->pivot->quantidade }})</li>
-                                            @endforeach
-                                        </ul>
+                                        @if ($kit->disponivel == 'S')
+                                            <span class="label label-success">Disponível</span>
+                                        @else
+                                            <span class="label label-danger">Indisponível</span>
+                                        @endif
+
+
                                     </td>
                                     <td>
-                                        <form action="{{ route('kits.remover', $kit->id) }}" method="POST"
-                                            style="display:inline;">
+                                        {{-- Botão Editar --}}
+                                        <a href="{{ route('kits.editar', $kit->id) }}" class="btn btn-warning btn-xs">
+                                            <i class="fa fa-pencil"></i> Editar
+                                        </a>
+
+                                        {{-- Botão Alterar Disponibilidade --}}
+                                        <form action="{{ route('kits.toggleDisponibilidade', $kit->id) }}" method="POST" style="display:inline-block;">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit"
+                                                class="btn btn-xs {{ $kit->disponivel == 'S' ? 'btn-default' : 'btn-success' }}">
+                                                <i class="fa fa-refresh"></i>
+                                                {{ $kit->disponivel == 'S' ? 'Indisponibilizar' : 'Disponibilizar' }}
+                                            </button>
+                                        </form>
+
+                                        {{-- Botão Excluir --}}
+                                        <form action="{{ route('kits.excluir', $kit->id) }}" method="POST" style="display:inline-block;">
                                             @csrf
                                             @method('DELETE')
-                                            <button class="btn btn-danger btn-sm"
-                                                onclick="return confirm('Deseja desfazer este kit?')">
-                                                <i class="fa fa-undo"></i> Desfazer
+                                            <button type="submit" class="btn btn-danger btn-xs"
+                                                onclick="return confirm('Tem certeza que deseja excluir este kit?')">
+                                                <i class="fa fa-trash"></i> Excluir
                                             </button>
                                         </form>
                                     </td>
+
+
+
                                 </tr>
                             @empty
                                 <tr>
@@ -70,7 +91,7 @@
                     </table>
 
                     <div class="text-center">
-                        {{ $kits->links() }}
+
                     </div>
                 </div>
             </div>

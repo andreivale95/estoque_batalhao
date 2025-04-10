@@ -89,7 +89,7 @@
                                 <tr>
                                     <td>
                                         <a href="{{ route('produto.ver', $estoque->fk_produto) }}">
-                                            {{ $estoque->produto()->first()->nome }}
+                                            {{ $estoque->produto()->first()->nome }} -  {{ $estoque->produto()->first()->tamanho }}
                                         </a>
                                     </td>
                                     <td>{{ $estoque->quantidade }}</td>
@@ -116,8 +116,62 @@
                                     </td>
                                 </tr>
 
-                                <!-- Modal Transferência (mantido como está no seu código) -->
-                                <!-- ... -->
+                                <!-- Modal de Transferência -->
+                                <div class="modal fade" id="modalTransferencia{{ $estoque->id }}" tabindex="-1"
+                                    role="dialog" aria-labelledby="modalTransferenciaLabel{{ $estoque->id }}"
+                                    aria-hidden="true">
+                                    <div class="modal-dialog" role="document">
+                                        <form action="{{ route('estoque.transferir') }}" method="POST">
+                                            @csrf
+                                            <input type="hidden" name="estoque_id" value="{{ $estoque->id }}">
+                                            <input type="hidden" name="unidade_atual" value="{{ $estoque->unidade }}">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Transferir Produto</h5>
+                                                    <button type="button" class="close" data-dismiss="modal"
+                                                        aria-label="Fechar">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                </div>
+
+                                                <div class="modal-body">
+                                                    <p><strong>Produto:</strong> {{ $estoque->produto->nome }}</p>
+                                                    <p><strong>Unidade atual:</strong> {{ $estoque->unidade()->first()->nome ?? 'Não definida' }}</p>
+
+                                                    <div class="form-group">
+                                                        <label for="nova_unidade">Nova Unidade:</label>
+                                                        <select class="form-control" name="nova_unidade" required>
+                                                            <option value="">Selecione</option>
+                                                            @foreach ($unidades as $unidade)
+                                                                @if ($unidade->id != $estoque->fk_unidade)
+                                                                    <option value="{{ $unidade->id }}">{{ $unidade->nome }}</option>
+                                                                @endif
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+
+                                                    <div class="form-group">
+                                                        <label for="quantidade">Quantidade:</label>
+                                                        <input type="number" name="quantidade" class="form-control"
+                                                            min="1" max="{{ $estoque->quantidade }}" required>
+                                                    </div>
+
+                                                    <div class="form-group">
+                                                        <label for="observacao">Observação:</label>
+                                                        <textarea name="observacao" class="form-control" rows="3"
+                                                            placeholder="Observações sobre a transferência (opcional)"></textarea>
+                                                    </div>
+                                                </div>
+
+                                                <div class="modal-footer">
+                                                    <button type="submit" class="btn btn-success">Confirmar Transferência</button>
+                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+
                             @endforeach
                         </tbody>
                         <tfoot>

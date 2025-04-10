@@ -4,13 +4,13 @@
         <!-- Content Header (Page header) -->
         <section class="content-header">
             <h1>
-                Inserir Novo Produto no Estoque
-
+                Saída <b> {{ $produto->produto()->first()->nome ?? '' }} </b> no Estoque. <br>
+                <small>Unidade: {{$produto->unidade()->first()->nome}}</small>
             </h1>
             <ol class="breadcrumb">
                 <li><a href="{{ route('dashboard') }}"><i class="fa fa-dashboard"></i> Dashboard</a></li>
                 <li><a href="{{ route('estoque.listar') }}"><i class=""></i> Estoque</a></li>
-                <li></i>Entrada de Produtos</li>
+                <li></i>Saída de Produtos</li>
 
             </ol>
         </section>
@@ -18,38 +18,16 @@
         <!-- Main content -->
         <section class="content container-fluid">
 
-            <div class="panel" style="background-color: #3c8dbc;">
+            <div class="panel" style="background-color: #e21616;">
                 <div class="panel-heading" style="color: white;">
 
 
                 </div>
                 <div class="panel-body" style="background-color: white;">
-                    <form action="{{ route('estoque.entrada_novoproduto') }}" method="POST">
+                    <form action="{{ route('estoque.saida') }}" method="POST">
                         @csrf
 
                         <div class="row">
-
-                             <!-- Unidade -->
-                             <div class="form-group col-md-6">
-                                <label for="unidade">Unidade:</label>
-                                <select name="unidade" class="form-control" required>
-                                    <option value="">Estoque da Unidade</option>
-                                    @foreach ($unidades as $unidade)
-                                        <option value="{{ $unidade->id }}">{{ $unidade->nome }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <!-- Produto -->
-                            <div class="form-group col-md-6">
-                                <label for="fk_produto">Produto:</label>
-                                <select name="fk_produto" class="form-control" required>
-                                    <option value="">Selecione um Produto</option>
-                                    @foreach ($produtos as $produto)
-                                        <option value="{{ $produto->id }}">{{ $produto->nome }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
                             <!-- Quantidade -->
                             <div class="form-group col-md-6">
                                 <label for="quantidade">Quantidade:</label>
@@ -57,13 +35,30 @@
                                     placeholder="Digite a quantidade">
                             </div>
 
+
                             <!-- Data de Entrada -->
                             <div class="form-group col-md-6">
-                                <label for="data_entrada">Data de Entrada:</label>
-                                <input type="date" name="data_entrada" class="form-control" required>
+                                <label for="data_saida">Data da Saída:</label>
+                                <input type="date" name="data_saida" class="form-control" required>
                             </div>
 
+                            <!-- Produto -->
+                            <!-- Campo visível com o nome do produto (apenas para exibição) -->
+                            <div class="form-group col-md-6">
+                                <label for="fk_produto">Produto:</label>
+                                <input type="text" class="form-control"
+                                    value="{{ $produto->produto()->first()->nome ?? '' }}" disabled>
+                            </div>
+                            <div>
+                                <!-- Campo oculto com o ID do produto (será enviado no form) -->
+                                <input type="hidden" name="fk_produto" value="{{ $produto->fk_produto }}">
 
+                            </div>
+                            <div>
+                                <!-- Campo oculto com o ID do produto (será enviado no form) -->
+                                <input type="hidden" name="unidade" value="{{ $produto->unidade }}">
+
+                            </div>
 
 
                         </div>
@@ -76,9 +71,7 @@
                         </div>
                     </form>
                 </div>
-
             </div>
-
         </section>
         <!-- /.content -->
     </div>

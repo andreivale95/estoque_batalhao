@@ -7,6 +7,7 @@ use App\Models\Categoria;
 use App\Models\Condicao;
 use App\Models\HistoricoRevisoes;
 use App\Models\Itens_estoque;
+use App\Models\Kit;
 use App\Models\MinMaxKm;
 use App\Models\TipoBem;
 use App\Models\TipoProduto;
@@ -33,7 +34,6 @@ class ProdutoController extends Controller
 
         $mesAtual = Carbon::now()->month;
 
-
         try {
 
             $unidades = Unidade::all();
@@ -44,7 +44,7 @@ class ProdutoController extends Controller
             $tipoprodutos = Produto::select('fk_tipo_produto', 'nome')->where('fk_tipo_produto', $produto->tipoProduto()->first()->id)->get();
             //dd($tipoprodutos);
 
-            return view('registros/verProduto', compact(
+            return view('produtos/verProduto', compact(
                 'produto',
                 'condicoes',
                 'tipoprodutos',
@@ -60,6 +60,7 @@ class ProdutoController extends Controller
 
     public function listarProdutos(Request $request)
     {
+
 
         $request['nome'] = empty($request['nome']) ? '' : $request->get('nome');
         $request['categoria'] = empty($request['categoria']) ? '' : $request->get('categoria');
@@ -84,14 +85,13 @@ class ProdutoController extends Controller
                 ->paginate(10);
 
 
-            return view('registros/listarProdutos', compact('produtos', 'categorias', 'todasMarcas'));
+            return view('produtos/listarProdutos', compact('produtos', 'categorias', 'todasMarcas'));
         } catch (\Exception $e) {
             Log::error('Erro ao buscar produtos', [$e]);
             return back()->with('warning', 'Erro ao buscar produtos.');
         }
 
     }
-
 
     public function formProduto(Request $request)
     {
@@ -105,7 +105,9 @@ class ProdutoController extends Controller
             // $fontes = Fonte::all();
             $condicoes = Condicao::all();
 
-            return view('registros/formProduto', compact('tipoprodutos', 'condicoes'));
+            $kits = Kit::all();
+
+            return view('produtos/formProduto', compact('tipoprodutos', 'condicoes', 'kits'));
 
 
 
@@ -125,7 +127,7 @@ class ProdutoController extends Controller
             $produtos = Produto::all();
             $unidades = Unidade::all();
 
-            return view('registros/entradaProdutos', compact('produtos', 'unidades'));
+            return view('produtos/entradaProdutos', compact('produtos', 'unidades'));
 
 
 
@@ -142,7 +144,7 @@ class ProdutoController extends Controller
 
             DB::beginTransaction();
 
-            $nome = preg_replace('/[^a-zA-Z0-9]/', '', $request->get('nome'));
+
             // Converte valor formatado brasileiro ("1.500,00") para formato decimal ("1500.00")
             $valorBr = $request->get('valor'); // "250000"
             $valorFinal = ((float) $valorBr) / 100; // resultado: 250.00
@@ -151,20 +153,28 @@ class ProdutoController extends Controller
 
 
             // Verifica se o número já existe no banco de dados
-            $existe = Produto::where('nome', $nome)->exists();
+            $existeMesmoProduto = Produto::where('nome', $request->get('nome'))
+                ->where('tamanho', $request->get('tamanho'))
+                ->exists();
 
-            if ($existe) {
+            if ($existeMesmoProduto) {
                 DB::rollBack();
-                return redirect()->back()->with('error', 'Esse produto já existe!');
+                return redirect()->back()->with('error', 'Esse produto já existe nesse tamanho!');
             }
+
+
+
+
 
             // Se não existir, criar o produto
             $produto = Produto::create([
-                'nome' => $nome,
+                'nome' => $request->get('nome'),
                 'descricao' => $request->get('descricao'),
                 'marca' => $request->get('marca'),
+                'tamanho' => $request->get('tamanho'),
                 'valor' => $valorFinal, // agora decimal válido
                 'fk_tipo_produto' => $request->get('tipoproduto'),
+                'fk_kit' => $request->get('kit'),
                 'ativo' => 'Y',
             ]);
 
@@ -181,57 +191,73 @@ class ProdutoController extends Controller
 
     public function editarProduto(Request $request, $id)
     {
-        $patrimonio = Patrimonio::find($id);
-
-
-        $unidades = Unidade::all();
-        $fontes = Fonte::all();
-        $condicoes = Condicao::all();
-        $tipobens = TipoBem::all();
-
-
         try {
 
+            $unidades = Unidade::all();
+            //  $fontes = Fonte::all();
+            $condicoes = Condicao::all();
+            $produto = Produto::find($id);
+
+            $tipoprodutos = TipoProduto::all();
+            //dd($tipoprodutos);
+
+            return view('produtos/editarProduto', compact(
+                'produto',
+                'condicoes',
+                'tipoprodutos',
+                'unidades',
 
 
-            return view('registros/editarPatrimonio', compact('tipobens', 'unidades', 'patrimonio', 'fontes', 'condicoes'));
+            ));
         } catch (Exception $e) {
-            Log::error('Error ao consultar Patrimonio', [$e]);
-            return back()->with('warning', 'Houve um erro ao consultar o Patrimonio');
+            Log::error('Error ao consultar Produto', [$e]);
+            return back()->with('warning', 'Houve um erro ao consultar o Produto');
         }
     }
 
     public function atualizarProduto(Request $request, $id)
     {
 
-        //$this->authorize('autorizacao', 3);
 
         try {
             DB::beginTransaction();
 
+            $request->validate([
+                'nome' => 'required|string|max:255',
+                'descricao' => 'nullable|string',
+                'marca' => 'nullable|string',
+
+                'tipoproduto' => 'required|exists:tipoprodutos,id',
+            ]);
 
 
-            Patrimonio::where('id', $id)->update(
-                [
-                    'numero' => preg_replace('/[^a-zA-Z0-9]/', '', $request->get('numero')),
-                    'fk_tipobem' => $request->get('tipobem'),
-                    'unidade' => $request->get('unidade'),
-                    'fk_fonte' => $request->get('fonte'),
-                    'fk_condicao' => $request->get('condicao'),
-                ]
-            );
+
+            $valorBr = $request->get('valor'); // "250000"
+            $valorFinal = ((float) $valorBr) / 100; // resultado: 250.00
+
+
+
+            Produto::where('id', $id)->update([
+                'nome' => $request->get('nome'),
+                'descricao' => $request->get('descricao'),
+                'marca' => $request->get('marca'),
+                'valor' => $valorFinal,
+                'fk_tipo_produto' => $request->get('tipoproduto'),
+                'ativo' => 'Y',
+            ]);
 
             DB::commit();
 
-            Log::info('Veículoa atualizado com sucesso', [Veiculos::find($id), Auth::user()]);
+            Log::info('Produto atualizado com sucesso', [Produto::find($id), Auth::user()]);
 
-            return redirect()->route('veiculo.editar', $id)->with('success', 'Veículo atualizado com sucesso');
-        } catch (Exception $e) {
+            return redirect()->route('produto.editar', $id)->with('success', 'Produto atualizado com sucesso');
+        } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error ao atualizar o Veículo', [$e]);
-            return back()->with('warning', 'Error ao atualizar o Veículo');
+            Log::error('Erro ao atualizar o Produto', [$e]);
+            return back()->with('warning', 'Erro ao atualizar o Produto');
         }
     }
+
 
     public function getProdutosPorUnidade($unidadeId)
     {

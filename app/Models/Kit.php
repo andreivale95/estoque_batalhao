@@ -15,15 +15,17 @@ class Kit extends Model
         'nome',
         'descricao',
         'fk_unidade',
+        'entregue',
+        'disponivel',
 
 
     ];
 
     public function produtos()
     {
-        return $this->belongsToMany(Produto::class, 'kit_produto', 'fk_kit', 'fk_produto')
-            ->withPivot('quantidade');
+        return $this->hasMany(Produto::class, 'fk_kit');
     }
+
 
     // Kit.php
     public function itens()

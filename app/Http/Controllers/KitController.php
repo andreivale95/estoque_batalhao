@@ -22,9 +22,19 @@ class KitController extends Controller
 
     public function listarKits()
     {
-        $kits = Kit::with('produtos')->paginate(10);
+        $kits = Kit::all();
         return view('kits.listarKits', compact('kits'));
     }
+
+    public function toggleDisponibilidade($id)
+    {
+        $kit = Kit::findOrFail($id);
+        $kit->disponivel = $kit->disponivel === 'S' ? 'N' : 'S';
+        $kit->save();
+
+        return redirect()->back()->with('success', 'Disponibilidade do kit atualizada com sucesso!');
+    }
+
 
     public function formKit()
     {
@@ -177,6 +187,31 @@ class KitController extends Controller
             return back()->with('warning', 'Erro ao desfazer kit.');
         }
     }
+
+    public function entregarKit($id)
+    {
+        $kit = Kit::with('produtos')->findOrFail($id);
+
+        // Aqui você pode registrar a saída, por exemplo:
+        HistoricoMovimentacao::create([
+            'fk_produto' => null,
+            'tipo_movimentacao' => 'saida_kit',
+            'quantidade' => 1,
+            'responsavel' => Auth::user()->nome,
+            'observacao' => "Saída do kit: {$kit->nome}",
+            'data_movimentacao' => now(),
+            'unidade_origem' => $kit->unidade_id,
+            'unidade_destino' => null,
+        ]);
+
+
+        $kit->update(['entregue' => 'sim']);
+
+
+
+        return redirect()->back()->with('success', 'Saída do kit registrada com sucesso!');
+    }
+
 
 
 

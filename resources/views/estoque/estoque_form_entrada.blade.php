@@ -4,8 +4,8 @@
         <!-- Content Header (Page header) -->
         <section class="content-header">
             <h1>
-                Entrada do Produto <b> {{ $produto->produto()->first()->nome ?? '' }} </b> no Estoque<br>
-                <small>Cadastro de Entrada</small>
+                Entrada <b> {{ $produto->produto()->first()->nome ?? '' }} </b> no Estoque. <br>
+                <small>Unidade: {{$produto->unidade()->first()->nome}}</small>
 
             </h1>
             <ol class="breadcrumb">

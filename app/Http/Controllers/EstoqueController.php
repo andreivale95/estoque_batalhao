@@ -7,12 +7,10 @@ use App\Models\HistoricoMovimentacao;
 use App\Models\Itens_estoque;
 use App\Models\TipoProduto;
 use App\Models\Unidade;
-use App\Models\Produto;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 
@@ -56,7 +54,7 @@ class EstoqueController extends Controller
             // Paginação com os mesmos filtros
             $itens_estoque = (clone $query)->paginate(10);
 
-            return view('registros/listarEstoque', compact('itens_estoque', 'unidades', 'tipoprodutos', 'totalGeral'));
+            return view('estoque/listarEstoque', compact('itens_estoque', 'unidades', 'tipoprodutos', 'totalGeral'));
         } catch (\Exception $e) {
             Log::error('Erro ao consultar estoque', [$e]);
             return back()->with('warning', 'Houve um erro ao consultar estoque.');
@@ -65,14 +63,19 @@ class EstoqueController extends Controller
 
     public function transferir(Request $request)
     {
+     //   dd($request->all());
         $request->validate([
             'estoque_id' => 'required|exists:itens_estoque,id',
             'nova_unidade' => 'required|exists:unidades,id',
+            'unidade_atual' => 'required|exists:unidades,id',
             'quantidade' => 'required|integer|min:1',
             'observacao' => 'nullable|string|max:255',
         ]);
 
         $itemAtual = Itens_estoque::findOrFail($request->estoque_id);
+        $unidadeAtual = $request->input('unidade_atual');
+        $novaUnidade = $request->input('nova_unidade');
+
 
         if ($request->quantidade > $itemAtual->quantidade) {
             return back()->with('warning', 'A quantidade informada excede o estoque atual.');
@@ -104,8 +107,10 @@ class EstoqueController extends Controller
             'tipo_movimentacao' => 'transferencia',
             'quantidade' => $request->quantidade,
             'responsavel' => Auth::user()->nome,
-            'observacao' => $request->observacao ?? 'Transferência de produto',
+            'observacao' => $request->observacao ?? 'Transferência entre Unidades',
             'data_movimentacao' => now(),
+            'unidade_origem' => $unidadeAtual,
+            'unidade_destino' => $novaUnidade,
         ]);
 
         return redirect()->route('estoque.listar')->with('success', 'Produto transferido com sucesso!');
@@ -256,7 +261,7 @@ class EstoqueController extends Controller
 
             $produto = Itens_estoque::select('fk_produto', 'unidade')->where('id', $id)->first();
 
-            return view('registros/estoque_form_entrada', compact('produto'));
+            return view('estoque/estoque_form_entrada', compact('produto'));
 
 
 
@@ -273,7 +278,7 @@ class EstoqueController extends Controller
 
             $produto = Itens_estoque::select('fk_produto', 'unidade')->where('id', $id)->first();
 
-            return view('registros/estoque_form_saida', compact('produto'));
+            return view('estoque/estoque_form_saida', compact('produto'));
 
 
 
