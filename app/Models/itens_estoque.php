@@ -18,6 +18,10 @@ class Itens_estoque extends Model
         'data_entrada',
         'data_saida',
         'fk_produto',
+        'lote',
+        'fornecedor',
+        'nota_fiscal',
+        'observacao',
 
 
 

@@ -63,7 +63,7 @@ class EstoqueController extends Controller
 
     public function transferir(Request $request)
     {
-     //   dd($request->all());
+        //   dd($request->all());
         $request->validate([
             'estoque_id' => 'required|exists:itens_estoque,id',
             'nova_unidade' => 'required|exists:unidades,id',
@@ -166,12 +166,11 @@ class EstoqueController extends Controller
     }
     public function entradaProdutoEstoque(Request $request)
     {
-        //dd($request->all());
+        // dd($request->all());
         try {
             // Validação dos dados
             $request->validate([
                 'quantidade' => 'required|integer|min:1',
-
                 'data_entrada' => 'required|date',
                 'fk_produto' => 'required|exists:produtos,id',
             ]);
@@ -190,6 +189,10 @@ class EstoqueController extends Controller
                 'quantidade' => $request->quantidade,
                 'data_entrada' => $request->data_entrada,
                 'fk_produto' => $request->fk_produto,
+                'lote' => $request->lote,
+                'fornecedor' => $request->fornecedor,
+                'nota_fiscal' => $request->nota_fiscal,
+                'observacao' => $request->observacao ?? 'Entrada de novo produto',
             ]);
 
             // Registrar no histórico
@@ -204,7 +207,7 @@ class EstoqueController extends Controller
             ]);
 
             return redirect()->route('estoque.listar')->with('success', 'Produto cadastrado no estoque com sucesso!');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Erro ao dar entrada no Estoque', [$e]);
             return back()->with('warning', 'Houve um erro ao dar entrada no Estoque.');
         }

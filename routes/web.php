@@ -44,7 +44,6 @@ Route::middleware(['auth', 'verified'])->controller(KitController::class)->group
     Route::get('registros/kits/listar', 'listarKits')->name('kits.listar'); // Listar kits
     Route::get('registros/kits/form', 'formKit')->name('kits.criar'); // Formulário de criação
     Route::post('registros/kits/salvar', 'criarKit')->name('kits.salvar'); // Criar kit
-    Route::get('registros/kits/{kit}/detalhes', 'show')->name('kits.detalhes'); // Exibir detalhes do kit
     Route::get('registros/kits/{kit}/editar', 'edit')->name('kits.editar'); // Formulário de edição
     Route::put('registros/kits/{kit}/atualizar', 'update')->name('kits.atualizar'); // Atualizar kit
     Route::delete('registros/kits/{kit}/remover', 'desfazerKit')->name('kits.remover'); // Remover kit
@@ -58,7 +57,7 @@ Route::middleware(['auth', 'verified'])->controller(KitController::class)->group
 Route::middleware(['auth', 'verified'])->controller(SaidaEstoqueController::class)->group(function () {
     Route::get('registros/saida-estoque/form', 'index')->name('saida_estoque.index'); // Formulário de seleção de militar e kit
     Route::get('registros/saida-estoque/confirmar', 'selecionarKit')->name('saida_estoque.selecionar_kit'); // View de confirmação dos produtos
-    Route::post('registros/saida-estoque/confirmar-saida', 'confirmarSaida')->name('saida_estoque.confirmar_saida'); // Processar saída do estoque
+    Route::post('registros/saida-estoque/confirmar-saida', 'confirmarSaida')->name('saida_estoque.confirmar_saida'); // Processar saída do kit no estoque
 });
 
 

@@ -16,7 +16,6 @@
                 <div class="box-header with-border">
                     <h3 class="box-title">Confirmação da Saída - Kit "{{ $kit->nome }}"</h3>
                 </div>
-
                 <div class="box-body">
                     <div class="row mb-3">
                         <div class="col-md-4"><strong>Militar:</strong> {{ $militar->nome }} ({{ $militar->matricula }})

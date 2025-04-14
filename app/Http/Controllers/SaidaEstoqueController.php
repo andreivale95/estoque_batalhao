@@ -7,7 +7,6 @@ use App\Models\Itens_estoque;
 use App\Models\Unidade;
 use App\Models\Produto;
 use App\Models\Kit;
-use App\Models\ItensEstoque;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -68,7 +67,7 @@ class SaidaEstoqueController extends Controller
         $itens = [];
 
         foreach ($produtosParaSaida as $produto) {
-            $estoque = Itens_estoque::where('fk_produto', $produto->id)->first();
+            $estoque = Itens_estoque::where('fk_produto', $produto->id)->where('unidade', $militar->fk_unidade)->first();
 
             $itens[] = [
                 'produto' => $produto,
@@ -85,12 +84,13 @@ class SaidaEstoqueController extends Controller
     }
 
 
-    // (a ser implementado) Processa a saída de estoque
+
     public function confirmarSaida(Request $request)
     {
         $militarId = $request->militar_id;
         $kitId = $request->kit_id;
         $militar = EfetivoMilitar::findOrFail($militarId);
+        $unidadeMilitar = $militar->fk_unidade;
 
         // Busca os IDs dos produtos associados ao militar que ainda não foram entregues
         $produtosAssociados = DB::table('efetivo_militar_produto')
@@ -103,8 +103,9 @@ class SaidaEstoqueController extends Controller
             ->where('fk_kit', $kitId)
             ->get();
 
-        // Verifica se os produtos existem no estoque
+        // Verifica o estoque dos produtos somente da unidade do militar
         $itensEstoque = Itens_estoque::whereIn('fk_produto', $produtosParaSaida->pluck('id'))
+            ->where('unidade', $unidadeMilitar)
             ->get()
             ->groupBy('fk_produto');
 
@@ -151,14 +152,16 @@ class SaidaEstoqueController extends Controller
         }
 
         if (count($produtosSemEstoque) > 0) {
-            $produtosSemEstoque = array_unique($produtosSemEstoque); // remove duplicados
+            $produtosSemEstoque = array_unique($produtosSemEstoque);
             $mensagem = 'Saída realizada parcialmente.';
-            $mensagem .= ' Os seguintes produtos estavam indisponíveis no estoque e não foram baixados: ' . implode(', ', $produtosSemEstoque);
+            $mensagem .= ' Os seguintes produtos estavam indisponíveis na unidade e não foram baixados: ' . implode(', ', $produtosSemEstoque);
             return redirect()->route('saida_estoque.index')->with('warning', $mensagem);
         }
 
         return redirect()->route('saida_estoque.index')->with('success', 'Saída de produtos realizada com sucesso!');
     }
+
+
 
 }
 
