@@ -30,21 +30,17 @@
             </div>
         </form>
         <!-- /.search form -->
-
         <!-- Sidebar Menu -->
         <ul class="sidebar-menu" data-widget="tree">
-
             <li class="header">HEADER</li>
-
             @can('modulo', '1')
                 <li class="active">
                     <a href="{{ route('dashboard') }}"><i class="fa fa-dashboard"></i> <span>Dashboard</span></a>
                 </li>
             @endcan
-
             @can('modulo', '2')
                 <li class="treeview">
-                    <a href="#"><i class="fa fa-expeditedssl"></i> <span>Parâmetros</span>
+                    <a href="#"><i class="fa fa-cogs"></i> <span>Parâmetros</span>
                         <span class="pull-right-container">
                             <i class="fa fa-angle-left pull-right"></i>
                         </span>
@@ -65,11 +61,9 @@
                     </ul>
                 </li>
             @endcan
-
-
             @can('modulo', '3')
                 <li class="treeview">
-                    <a href="#"><i class="fa fa-expeditedssl"></i> <span>Segurança</span>
+                    <a href="#"><i class="fa fa-shield"></i> <span>Segurança</span>
                         <span class="pull-right-container">
                             <i class="fa fa-angle-left pull-right"></i>
                         </span>
@@ -85,16 +79,9 @@
                     </ul>
                 </li>
             @endcan
-
-
-
-
-
-
-
             @can('modulo', '4')
                 <li class="treeview">
-                    <a href="#"><i class="fa fa-cab"></i> <span>Registros</span>
+                    <a href="#"><i class="fa fa-clipboard"></i> <span>Registros</span>
                         <span class="pull-right-container">
                             <i class="fa fa-angle-left pull-right"></i>
                         </span>
@@ -107,32 +94,28 @@
                             <li><a href="{{ route('efetivo_produtos.listar') }}">Listar Efetivo</a></li>
                         @endcan
                         @can('autorizacao', 5)
-                        <li><a href="{{ route('saida_estoque.index') }}">Entregar Kit</a></li>
+                            <li><a href="{{ route('saida_estoque.index') }}">Entregar Kit</a></li>
+                        @endcan
+
+
+                    </ul>
+                </li>
+            @endcan
+            @can('modulo', '4')
+            <li class="treeview">
+                <a href="#"><i class="fa fa-random"></i> <span>Movimentações</span>
+                    <span class="pull-right-container">
+                        <i class="fa fa-angle-left pull-right"></i>
+                    </span>
+                </a>
+                <ul class="treeview-menu">
+                    @can('autorizacao', 5)
+                        <li><a href="{{ route('movimentacoes.index') }}">Movimentações</a></li>
                     @endcan
+                </ul>
+            </li>
 
-
-                    </ul>
-                </li>
             @endcan
-
-
-
-
-            @can('modulo', '5')
-                <li class="treeview">
-                    <a href="#"><i class="fa fa-bar-chart"></i> <span>Relatórios</span>
-                        <span class="pull-right-container">
-                            <i class="fa fa-angle-left pull-right"></i>
-                        </span>
-                    </a>
-                    <ul class="treeview-menu">
-
-                    </ul>
-                </li>
-            @endcan
-
-
-
             <li class="">
                 <a href="{{ route('profile.ver', Auth::user()->cpf) }}"><i class="fa fa-user-secret"></i> <span>Dados
                         Pessoais</span></a>
@@ -142,7 +125,6 @@
             <li class="">
                 <a href="{{ route('logout') }}"><i class="glyphicon glyphicon-log-out"></i> <span>Sair</span></a>
             </li>
-
         </ul>
         <!-- /.sidebar-menu -->
     </section>

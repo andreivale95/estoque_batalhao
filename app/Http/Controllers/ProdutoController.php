@@ -9,6 +9,7 @@ use App\Models\HistoricoRevisoes;
 use App\Models\Itens_estoque;
 use App\Models\Kit;
 use App\Models\MinMaxKm;
+use App\Models\Tamanho;
 use App\Models\TipoBem;
 use App\Models\TipoProduto;
 use App\Models\Unidade;
@@ -37,18 +38,23 @@ class ProdutoController extends Controller
         try {
 
             $unidades = Unidade::all();
-            //  $fontes = Fonte::all();
+            $kit = Produto::find($id)->kit()->first();
+            $kits = Kit::all();
             $condicoes = Condicao::all();
             $produto = Produto::find($id);
-
+            $produtos = Produto::all();
+            $tamanhos = Tamanho::all();
             $tipoprodutos = Produto::select('fk_tipo_produto', 'nome')->where('fk_tipo_produto', $produto->tipoProduto()->first()->id)->get();
-            //dd($tipoprodutos);
 
             return view('produtos/verProduto', compact(
                 'produto',
                 'condicoes',
                 'tipoprodutos',
                 'unidades',
+                'kit',
+                'produtos',
+                'kits',
+                'tamanhos',
 
 
             ));
@@ -104,10 +110,11 @@ class ProdutoController extends Controller
 
             // $fontes = Fonte::all();
             $condicoes = Condicao::all();
+            $tamanhos = Tamanho::all();
 
             $kits = Kit::all();
 
-            return view('produtos/formProduto', compact('tipoprodutos', 'condicoes', 'kits'));
+            return view('produtos/formProduto', compact('tipoprodutos', 'condicoes', 'kits', 'tamanhos'));
 
 
 
@@ -193,12 +200,15 @@ class ProdutoController extends Controller
     {
         try {
 
+            $kits = Kit::all();
+            $kit = Produto::find($id)->kit()->first();
             $unidades = Unidade::all();
-            //  $fontes = Fonte::all();
             $condicoes = Condicao::all();
             $produto = Produto::find($id);
-
+            $produtos = Produto::all();
             $tipoprodutos = TipoProduto::all();
+            $tamanhos = Tamanho::all();
+
             //dd($tipoprodutos);
 
             return view('produtos/editarProduto', compact(
@@ -206,6 +216,10 @@ class ProdutoController extends Controller
                 'condicoes',
                 'tipoprodutos',
                 'unidades',
+                'kits',
+                'kit',
+                'produtos',
+                'tamanhos',
 
 
             ));
@@ -217,8 +231,7 @@ class ProdutoController extends Controller
 
     public function atualizarProduto(Request $request, $id)
     {
-
-
+      // dd($request->all());
         try {
             DB::beginTransaction();
 
@@ -226,14 +239,28 @@ class ProdutoController extends Controller
                 'nome' => 'required|string|max:255',
                 'descricao' => 'nullable|string',
                 'marca' => 'nullable|string',
-
-                'tipoproduto' => 'required|exists:tipoprodutos,id',
+                'fk_tipo_produto' => 'required|exists:tipoprodutos,id',
             ]);
 
 
 
             $valorBr = $request->get('valor'); // "250000"
             $valorFinal = ((float) $valorBr) / 100; // resultado: 250.00
+           // dd($valorFinal);
+
+
+
+            // Verifica se o número já existe no banco de dados
+            $existeMesmoProduto = Produto::where('nome', $request->get('nome'))
+                ->where('tamanho', $request->get('tamanho'))
+                ->where('id', '!=', $id)
+                ->exists();
+
+            if ($existeMesmoProduto) {
+                DB::rollBack();
+                return redirect()->back()->with('error', 'Esse produto já existe nesse tamanho!');
+            }
+
 
 
 
@@ -242,7 +269,10 @@ class ProdutoController extends Controller
                 'descricao' => $request->get('descricao'),
                 'marca' => $request->get('marca'),
                 'valor' => $valorFinal,
-                'fk_tipo_produto' => $request->get('tipoproduto'),
+                'tamanho' => $request->get('tamanho'),
+                'fk_kit' => $request->get('fk_kit'),
+                'fk_tipo_produto' => $request->get('fk_tipo_produto'),
+
                 'ativo' => 'Y',
             ]);
 

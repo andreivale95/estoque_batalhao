@@ -9,9 +9,11 @@ use App\Models\TipoProduto;
 use App\Models\Unidade;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
+use App\Models\EfetivoMilitar;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 
 class EstoqueController extends Controller
@@ -131,6 +133,7 @@ class EstoqueController extends Controller
 
             // Verifica se o produto já existe no estoque
             $itemEstoque = Itens_estoque::where('fk_produto', $request->fk_produto)->where('unidade', $request->unidade)->first();
+            $dataEntrada = Carbon::parse($request->data_entrada);
 
             if ($itemEstoque) {
                 // Se já existe, apenas soma a quantidade
@@ -141,9 +144,14 @@ class EstoqueController extends Controller
                 Itens_estoque::create([
                     'quantidade' => $request->quantidade,
                     'unidade' => $request->unidade,
-                    'data_saida' => $request->data_saida,
+                    'data_entrada' => $dataEntrada,
                     'fk_produto' => $request->fk_produto,
-                ]);
+                    'lote' => $request->lote,
+                    'fornecedor' => $request->fornecedor,
+                    'nota_fiscal' => $request->nota_fiscal,
+                    'observacao' => $request->observacao ?? 'Entrada de novo produto',
+                ])->save();
+
             }
 
             HistoricoMovimentacao::create([
@@ -152,7 +160,7 @@ class EstoqueController extends Controller
                 'quantidade' => $request->quantidade,
                 'responsavel' => Auth::user()->nome,
                 'observacao' => 'Entrada de novo produto',
-                'data_movimentacao' => now(),
+                'data_movimentacao' => $dataEntrada,
                 'fk_unidade' => $request->unidade,
             ])->save();
 
@@ -218,19 +226,24 @@ class EstoqueController extends Controller
             // Validação dos dados
             $request->validate([
                 'quantidade' => 'required|integer|min:1',
-                'data_saida' => 'required|date',
+
                 'fk_produto' => 'required|exists:produtos,id',
             ]);
 
             // Verifica se o produto existe no estoque
             $itemEstoque = Itens_estoque::where('fk_produto', $request->fk_produto)->where('unidade', $request->unidade)->first();
+            $dataSaida = Carbon::parse($request->data_saida);
+
+
 
             if ($itemEstoque) {
                 // Verifica se há estoque suficiente para a saída
                 if ($itemEstoque->quantidade >= $request->quantidade) {
                     $itemEstoque->quantidade -= $request->quantidade;
 
+
                     $itemEstoque->save();
+                    $militar = EfetivoMilitar::where('id', $request->militar)->first();
 
 
                     HistoricoMovimentacao::create([
@@ -238,9 +251,10 @@ class EstoqueController extends Controller
                         'tipo_movimentacao' => 'saida',
                         'quantidade' => $request->quantidade,
                         'responsavel' => Auth::user()->nome,
-                        'observacao' => 'Saida de novo produto',
-                        'data_movimentacao' => now(),
+                        'observacao' => $request->observacao ?? 'Saída de produto',
+                        'data_movimentacao' => $dataSaida,
                         'fk_unidade' => $request->unidade,
+                        'militar' => $militar->nome,
                     ]);
 
 
@@ -280,8 +294,9 @@ class EstoqueController extends Controller
 
 
             $produto = Itens_estoque::select('fk_produto', 'unidade')->where('id', $id)->first();
+            $militares = EfetivoMilitar::all();
 
-            return view('estoque/estoque_form_saida', compact('produto'));
+            return view('estoque/estoque_form_saida', compact('produto','militares'));
 
 
 

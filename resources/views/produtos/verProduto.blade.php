@@ -5,7 +5,7 @@
         <section class="content-header">
 
             <h1>
-                {{ $produto->tipoProduto()->first()->nome }} - {{ $produto->nome }}
+                {{ $produto->tipoProduto()->first()->nome }} - {{ $produto->nome }} -  {{ $produto->tamanho()->first()->tamanho }}
             </h1>
 
             <ol class="breadcrumb">
@@ -36,7 +36,7 @@
                                     <div class="form-group has-feedback col-md-6">
                                         <label class="control-label" for="">Nome:</label>
                                         <input type="text" class="form-control" name="nome"
-                                            value="{{ $produto->nome }}" disabled>
+                                            value="{{ $produto->nome }} -  {{ $produto->tamanho()->first()->tamanho }}" disabled>
                                     </div>
                                     <div class="form-group has-feedback col-md-6">
                                         <label class="control-label" for="">Marca:</label>
@@ -70,6 +70,37 @@
                                             @endforeach
                                         </select>
                                     </div>
+
+                                    <div class="form-group has-feedback col-md-6">
+
+                                        <label class="control-label" for="">Kit</label>
+                                        <select name="kit" id="" class="form-control" disabled>
+                                            <option value="">Selecione</option>
+                                            @foreach ($kits as $kitt)
+                                                <option value="{{ $kitt->id }}"
+                                                    {{ $kit->id == $kitt->id ? 'selected' : '' }}>
+                                                    {{ $kitt->nome }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+
+                                    <div class="form-group has-feedback col-md-6">
+                                        <label class="control-label" for="tamanho">Tamanho</label>
+                                        <select name="tamanho" class="form-control" disabled>
+                                            <option value="">Selecione</option>
+                                            @foreach ($tamanhos as $tamanho)
+                                                <option value="{{ $tamanho->id }}"
+                                                    {{ $produto->tamanho == $tamanho->id ? 'selected' : '' }}>
+                                                    {{ $tamanho->tamanho }}
+                                                </option>
+
+                                            @endforeach
+                                        </select>
+
+
+                                    </div>
                                     <div class="form-group has-feedback col-md-6">
                                         <label class="control-label" for="valor">Valor (R$):</label>
                                         <input type="text" class="form-control" name="valor"
@@ -83,10 +114,10 @@
                                     <i class="fa fa-arrow-left"></i> Voltar
                                 </a>
 
-                                    <a class="btn btn-warning" href="{{ route('produto.editar', $produto->id) }}"
-                                        style="color: white;">
-                                        <i class="fa fa-edit"></i> Editar
-                                    </a>
+                                <a class="btn btn-warning" href="{{ route('produto.editar', $produto->id) }}"
+                                    style="color: white;">
+                                    <i class="fa fa-edit"></i> Editar
+                                </a>
 
                             </div>
                         </div>

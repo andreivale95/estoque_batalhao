@@ -40,7 +40,7 @@
                                 <select name="fk_produto" class="form-control select2-produto" required>
                                     <option value="">Selecione um Produto</option>
                                     @foreach ($produtos as $produto)
-                                        <option value="{{ $produto->id }}">{{ $produto->nome }} - {{ $produto->tamanho }}
+                                        <option value="{{ $produto->id }}">{{ $produto->nome }} - {{ $produto->tamanho()->first()->tamanho }}
                                         </option>
                                     @endforeach
                                 </select>

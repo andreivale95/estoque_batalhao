@@ -56,12 +56,14 @@ class SaidaEstoqueController extends Controller
         $kit = Kit::findOrFail($request->kit_id);
 
         // 1. Buscar produtos associados ao militar e que pertencem ao kit selecionado
-        $produtosParaSaida = DB::table('efetivo_militar_produto')->where('entregue', 'NAO')
-            ->join('produtos', 'efetivo_militar_produto.fk_produto', '=', 'produtos.id')
-            ->where('efetivo_militar_produto.fk_efetivo_militar', $militar->id)
-            ->where('produtos.fk_kit', $kit->id)
-            ->select('produtos.*')
-            ->get();
+        $produtosParaSaida = Produto::with('tamanho')
+        ->join('efetivo_militar_produto', 'produtos.id', '=', 'efetivo_militar_produto.fk_produto')
+        ->where('efetivo_militar_produto.entregue', 'NAO')
+        ->where('efetivo_militar_produto.fk_efetivo_militar', $militar->id)
+        ->where('produtos.fk_kit', $kit->id)
+        ->select('produtos.*') // cuidado: só seleciona da tabela produtos
+        ->get();
+
 
         // 2. Montar a lista de itens com disponibilidade
         $itens = [];
@@ -71,7 +73,7 @@ class SaidaEstoqueController extends Controller
 
             $itens[] = [
                 'produto' => $produto,
-                'tamanho' => $produto->tamanho ?? 'Único', // caso exista essa coluna
+                'tamanho' => $produto->tamanho()->first()->tamanho ?? 'Único',
                 'quantidade' => 1, // já que cada item é único
                 'disponivel' => ($estoque && $estoque->quantidade >= 1) ? 'Sim' : 'Não'
             ];
@@ -131,7 +133,7 @@ class SaidaEstoqueController extends Controller
                     'tipo_movimentacao' => 'saida_kit',
                     'quantidade' => 1,
                     'responsavel' => Auth::user()->nome,
-                    'observacao' => "Saída de kit '{$produto->kit->nome}' para o militar {$militar->nome} ({$militar->matricula}) produto '{$produto->nome}' Tamanho {$produto->tamanho}",
+                    'observacao' => "Saída de kit '{$produto->kit->nome}' para o militar {$militar->nome} ({$militar->matricula}) produto '{$produto->nome}' Tamanho {$produto->tamanho()->first()->tamanho}",
                     'data_movimentacao' => now(),
                     'fk_unidade' => $item->fk_unidade,
                 ]);

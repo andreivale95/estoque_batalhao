@@ -85,7 +85,8 @@
 
                             @foreach ($produtos as $produto)
                                 <tr>
-                                    <td><a href="{{ route('produto.ver', $produto->id) }}">{{ $produto->nome }}</a>
+                                    <td><a href="{{ route('produto.ver', $produto->id) }}">{{ $produto->nome }} -
+                                            {{ $produto->tamanho()->first()->tamanho }}</a>
                                     </td>
                                     <td>{{ $produto->descricao }}</td>
                                     <td>{{ $produto->marca }}</td>
@@ -137,7 +138,6 @@
         }
 
         .btn-person {
-
     </style>
 
     <!-- /.content-wrapper -->

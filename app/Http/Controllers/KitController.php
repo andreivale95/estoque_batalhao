@@ -9,6 +9,7 @@ use App\Models\Unidade;
 use App\Models\Produto;
 use App\Models\Kit;
 use App\Models\KitProduto;
+
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -43,64 +44,87 @@ class KitController extends Controller
         return view('kits.formKit', compact('produtos', 'unidades'));
     }
 
+    public function editarKit($kit)
+    {
+        $kit = Kit::findOrFail($kit);
+        $unidades = Unidade::all();
+
+        return view('kits.editarKit', compact('unidades', 'kit'));
+    }
+
+    public function atualizarKit($kit)
+    {
+        try {
+
+            $kit = Kit::where('id', $kit)->update([
+                'nome' => request('nome'),
+                'fk_unidade' => request('fk_unidade'),
+                'descricao' => request('descricao'),
+                'disponivel' => request('disponivel'),
+            ]);
+
+
+            return redirect()->route('kits.listar')->with('success', 'Kit atualizado com sucesso!');
+        } catch (Exception $e) {
+            Log::error('Erro ao atualizar Kit', [$e]);
+            return back()->with('warning', 'Houve um erro ao atualiazr Kit.');
+        }
+    }
+
     public function criarKit(Request $request)
     {
         //dd($request->all());
         $request->validate([
             'nome' => 'required|string|max:255',
-            'produtos' => 'required|array',
-            'unidade' => 'required|exists:unidades,id',
+            'descricao' => 'required|string|max:255',
         ]);
 
         DB::beginTransaction();
         try {
             // Criar o kit
-            $kit = Kit::create([
+              Kit::create([
                 'nome' => $request->nome,
-                'fk_unidade' => $request->unidade,
+                'descricao' => $request->descricao,
+                'fk_unidade' => 14,
             ]);
 
-            foreach ($request->produtos as $index => $produtoId) {
-                $quantidade = $request->quantidades[$index];
-
-                // Verifica e altera estoque
-                $estoque = Itens_estoque::where('fk_produto', $produtoId)
-                    ->where('unidade', $request->unidade)
-                    ->first();
-
-                if (!$estoque || $estoque->quantidade < $quantidade) {
-                    DB::rollBack();
-                    return back()->with('warning', 'Quantidade insuficiente para o produto ID ' . $produtoId);
-                }
-
-                $estoque->quantidade -= $quantidade;
-                $estoque->save();
-
-                KitProduto::create([
-                    'fk_kit' => $kit->id,
-                    'fk_produto' => $produtoId,
-                    'quantidade' => $quantidade,
-                ]);
-
-                HistoricoMovimentacao::create([
-                    'fk_produto' => $produtoId,
-                    'tipo_movimentacao' => 'saida',
-                    'quantidade' => $quantidade,
-                    'responsavel' => Auth::user()->nome,
-                    'observacao' => 'Saida para kit',
-                    'data_movimentacao' => now(),
-                    'fk_unidade' => $request->unidade,
-                ]);
-            }
 
             DB::commit();
-            return redirect()->route('kits.listar')->with('success', 'Kit criado e produtos removidos do estoque com sucesso!');
+            return redirect()->route('kits.listar')->with('success', 'Kit criado com sucesso!');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Erro ao criar kit: ', [$e]);
             return back()->with('warning', 'Erro ao criar kit.');
         }
     }
+
+    public function deletarKit($kitId)
+    {
+        DB::beginTransaction();
+
+        try {
+            // Verifica se há produtos associados a esse kit
+            $kitEmUso = Produto::where('fk_kit', $kitId)->exists();
+
+            if ($kitEmUso) {
+                return back()->with('warning', 'Este kit está associado a produtos e não pode ser deletado.');
+            }
+
+            // Deleta o kit
+            Kit::where('id', $kitId)->delete();
+
+            DB::commit();
+            return redirect()->route('kits.listar')->with('success', 'Kit deletado com sucesso!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Erro ao deletar kit: ' . $e->getMessage(), ['exception' => $e]);
+
+            return back()->with('warning', 'Ocorreu um erro ao tentar deletar o kit.');
+        }
+    }
+
+
+
 
 
 

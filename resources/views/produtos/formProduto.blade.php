@@ -5,16 +5,13 @@
         <section class="content-header">
             <h1>
                 Cadastro de Produto
-
             </h1>
             <ol class="breadcrumb">
                 <li><a href="{{ route('dashboard') }}"><i class="fa fa-dashboard"></i> Dashboard</a></li>
                 <li><a href="{{ route('estoque.listar') }}"><i class=""></i> Estoque</a></li>
                 <li></i> Cadastro de Produto</li>
-
             </ol>
         </section>
-
         <!-- Main content -->
         <section class="content container-fluid">
 
@@ -89,17 +86,20 @@
                                             </select>
                                         </div>
 
+
                                         <div class="form-group has-feedback col-md-6">
-                                            <label class="control-label" for="tamanho">Tamanho (se houver)</label>
-                                            <select name="tamanho" id="tamanho" class="form-control">
+                                            <label class="control-label" for="tamanho">Tamanho (Se houver)</label>
+                                            <select name="tamanho" class="form-control">
                                                 <option value="">Selecione</option>
-                                                <option value="PP">PP</option>
-                                                <option value="M">M</option>
-                                                <option value="G">G</option>
-                                                <option value="GG">GG</option>
+                                                @foreach ($tamanhos as $tamanho)
+                                                    <option value="{{ $tamanho->id }}">
+
+                                                        {{ $tamanho->tamanho }}
+                                                    </option>
+
+                                                @endforeach
                                             </select>
                                         </div>
-
 
                                         <div class="form-group has-feedback col-md-6">
                                             <label class="control-label" for="valor">Valor (R$):</label>

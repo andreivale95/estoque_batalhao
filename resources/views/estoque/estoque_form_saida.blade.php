@@ -4,8 +4,9 @@
         <!-- Content Header (Page header) -->
         <section class="content-header">
             <h1>
-                Saída <b> {{ $produto->produto()->first()->nome ?? '' }} </b> no Estoque. <br>
-                <small>Unidade: {{$produto->unidade()->first()->nome}}</small>
+                Saída <b> {{ $produto->produto()->first()->nome ?? '' }} - {{$produto->produto()->first()->tamanho()->first()->tamanho}} </b> no Estoque. <br>
+                <small>Unidade: {{ $produto->unidade()->first()->nome }}</small>
+
             </h1>
             <ol class="breadcrumb">
                 <li><a href="{{ route('dashboard') }}"><i class="fa fa-dashboard"></i> Dashboard</a></li>
@@ -18,7 +19,7 @@
         <!-- Main content -->
         <section class="content container-fluid">
 
-            <div class="panel" style="background-color: #e21616;">
+            <div class="panel" style="background-color: #e61212;">
                 <div class="panel-heading" style="color: white;">
 
 
@@ -28,26 +29,12 @@
                         @csrf
 
                         <div class="row">
-                            <!-- Quantidade -->
-                            <div class="form-group col-md-6">
-                                <label for="quantidade">Quantidade:</label>
-                                <input type="number" name="quantidade" class="form-control" required min="1"
-                                    placeholder="Digite a quantidade">
-                            </div>
-
-
-                            <!-- Data de Entrada -->
-                            <div class="form-group col-md-6">
-                                <label for="data_saida">Data da Saída:</label>
-                                <input type="date" name="data_saida" class="form-control" required>
-                            </div>
-
                             <!-- Produto -->
-                            <!-- Campo visível com o nome do produto (apenas para exibição) -->
-                            <div class="form-group col-md-6">
+
+                            <div class="form-group col-md-4">
                                 <label for="fk_produto">Produto:</label>
                                 <input type="text" class="form-control"
-                                    value="{{ $produto->produto()->first()->nome ?? '' }}" disabled>
+                                    value="{{ $produto->produto()->first()->nome ?? '' }} - {{$produto->produto()->first()->tamanho()->first()->tamanho}}" disabled>
                             </div>
                             <div>
                                 <!-- Campo oculto com o ID do produto (será enviado no form) -->
@@ -61,6 +48,39 @@
                             </div>
 
 
+                               <!-- Data de Saída -->
+                               <div class="form-group col-md-4">
+                                <label for="data_entrada">Data de Saída:</label>
+                                <input type="datetime-local" name="data_saida" class="form-control" required>
+
+                            </div>
+                            <!-- Quantidade -->
+                            <div class="form-group col-md-4">
+                                <label for="quantidade">Quantidade:</label>
+                                <input type="number" name="quantidade" class="form-control" required min="1"
+                                    placeholder="Digite a quantidade">
+                            </div>
+
+
+                            <div class="form-group col-md-12">
+                                <label for="militar">Entregue para o Militar:</label>
+                                <select name="militar" class="form-control select2" required>
+                                    <option value="">Selecione </option>
+                                    @foreach($militares as $militar)
+                                        <option value="{{ $militar->id }}">{{ $militar->nome }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+
+
+                            <!-- Observações -->
+                            <div class="form-group col-md-12">
+                                <label for="fornecedor">Observações:</label>
+                                <input type="text" name="observacao" class="form-control"
+                                    placeholder="Detalhes da saída do produto">
+                            </div>
+
                         </div>
 
                         <!-- Botões -->
@@ -71,7 +91,9 @@
                         </div>
                     </form>
                 </div>
+
             </div>
+
         </section>
         <!-- /.content -->
     </div>
@@ -89,4 +111,14 @@
             e.target.value = value !== "NaN" ? value : "";
         });
     </script>
+
+<script>
+    $(document).ready(function() {
+        $('.select2').select2({
+            placeholder: "Selecione um Militar",
+            allowClear: true,
+            width: '100%'
+        });
+    });
+</script>
 @endsection

@@ -4,8 +4,8 @@
         <!-- Content Header (Page header) -->
         <section class="content-header">
             <h1>
-                Entrada <b> {{ $produto->produto()->first()->nome ?? '' }} </b> no Estoque. <br>
-                <small>Unidade: {{$produto->unidade()->first()->nome}}</small>
+                Entrada <b> {{ $produto->produto()->first()->nome ?? '' }} - {{$produto->produto()->first()->tamanho()->first()->tamanho}} </b> no Estoque. <br>
+                <small>Unidade: {{ $produto->unidade()->first()->nome }}</small>
 
             </h1>
             <ol class="breadcrumb">
@@ -29,27 +29,12 @@
                         @csrf
 
                         <div class="row">
-                            <!-- Quantidade -->
-                            <div class="form-group col-md-6">
-                                <label for="quantidade">Quantidade:</label>
-                                <input type="number" name="quantidade" class="form-control" required min="1"
-                                    placeholder="Digite a quantidade">
-                            </div>
-
-
-                            <!-- Data de Entrada -->
-                            <div class="form-group col-md-6">
-                                <label for="data_entrada">Data de Entrada:</label>
-                                <input type="date" name="data_entrada" class="form-control" required>
-                            </div>
-
                             <!-- Produto -->
 
-                            <!-- Campo visível com o nome do produto (apenas para exibição) -->
-                            <div class="form-group col-md-6">
+                            <div class="form-group col-md-4">
                                 <label for="fk_produto">Produto:</label>
                                 <input type="text" class="form-control"
-                                    value="{{ $produto->produto()->first()->nome ?? '' }}" disabled>
+                                    value="{{ $produto->produto()->first()->nome ?? '' }} - {{$produto->produto()->first()->tamanho()->first()->tamanho}}" disabled>
                             </div>
                             <div>
                                 <!-- Campo oculto com o ID do produto (será enviado no form) -->
@@ -61,6 +46,47 @@
                                 <input type="hidden" name="unidade" value="{{ $produto->unidade }}">
 
                             </div>
+
+                            <!-- Lote -->
+                            <div class="form-group col-md-4">
+                                <label for="lote">Lote:</label>
+                                <input type="text" name="lote" class="form-control" placeholder="Ex: LOTE123">
+                            </div>
+                               <!-- Data de Entrada -->
+                               <div class="form-group col-md-4">
+                                <label for="data_entrada">Data de Entrada:</label>
+                                <input type="date" name="data_entrada" class="form-control" required>
+                            </div>
+                            <!-- Quantidade -->
+                            <div class="form-group col-md-2">
+                                <label for="quantidade">Quantidade:</label>
+                                <input type="number" name="quantidade" class="form-control" required min="1"
+                                    placeholder="Digite a quantidade">
+                            </div>
+
+                            <!-- Fornecedor -->
+                            <div class="form-group col-md-3">
+                                <label for="fornecedor">Fornecedor:</label>
+                                <input type="text" name="fornecedor" class="form-control"
+                                    placeholder="Nome do Fornecedor">
+                            </div>
+
+                            <!-- Nota Fiscal -->
+                            <div class="form-group col-md-3">
+                                <label for="nota_fiscal">Número da Nota Fiscal:</label>
+                                <input type="text" name="nota_fiscal" class="form-control" placeholder="Ex: 00012345">
+                            </div>
+
+                            <!-- Observações -->
+                            <div class="form-group col-md-12">
+                                <label for="fornecedor">Observações:</label>
+                                <input type="text" name="observacao" class="form-control"
+                                    placeholder="Nome do Fornecedor">
+                            </div>
+
+
+
+
 
                         </div>
 

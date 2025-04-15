@@ -89,7 +89,7 @@
                                 <tr>
                                     <td>
                                         <a href="{{ route('produto.ver', $estoque->fk_produto) }}">
-                                            {{ $estoque->produto()->first()->nome }} -  {{ $estoque->produto()->first()->tamanho }}
+                                            {{ $estoque->produto()->first()->nome }} -  {{ $estoque->produto()->first()->tamanho()->first()->tamanho }}
                                         </a>
                                     </td>
                                     <td>{{ $estoque->quantidade }}</td>

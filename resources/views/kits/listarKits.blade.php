@@ -53,7 +53,7 @@
                                     </td>
                                     <td>
                                         {{-- Botão Editar --}}
-                                        <a href="{{ route('kits.editar', $kit->id) }}" class="btn btn-warning btn-xs">
+                                        <a href="{{ route('kit.editar', $kit->id) }}" class="btn btn-warning btn-xs">
                                             <i class="fa fa-pencil"></i> Editar
                                         </a>
 
@@ -69,7 +69,7 @@
                                         </form>
 
                                         {{-- Botão Excluir --}}
-                                        <form action="{{ route('kits.excluir', $kit->id) }}" method="POST" style="display:inline-block;">
+                                        <form action="{{ route('kit.deletar', $kit->id) }}" method="POST" style="display:inline-block;">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-danger btn-xs"

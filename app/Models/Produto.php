@@ -37,12 +37,16 @@ class Produto extends Model
         return $this->belongsTo(TipoProduto::class, 'fk_tipo_produto'); // FK para tipo_produto
     }
 
-
-
     public function kit()
     {
         return $this->belongsTo(Kit::class, 'fk_kit');
     }
+    // Produto.php
+    public function tamanho()
+    {
+        return $this->belongsTo(Tamanho::class, 'tamanho');
+    }
+
 
 
 
@@ -50,7 +54,7 @@ class Produto extends Model
     public function militares()
     {
         return $this->belongsToMany(EfetivoMilitar::class, 'efetivo_militar_produto', 'fk_produto', 'fk_efetivo_militar')
-                    ->withTimestamps();
+            ->withTimestamps();
     }
 
 

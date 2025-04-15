@@ -43,7 +43,7 @@
                                             <strong>{{ $nomeProduto }}:</strong>
                                             <ul class="list-unstyled">
                                                 @foreach ($grupo as $produto)
-                                                    <li>{{ $produto->tamanho ?? 'Único' }}</li>
+                                                    <li>{{ $produto->tamanho()->first()->tamanho ?? 'Único' }}</li>
                                                 @endforeach
                                             </ul>
                                         </div>

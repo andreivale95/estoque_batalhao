@@ -14,7 +14,9 @@ use App\Http\Controllers\ImageController;
 use App\Http\Controllers\SaidaEstoqueController;
 use App\Http\Controllers\ProdutoController;
 use App\Http\Controllers\UnidadeController;
+use App\Http\Controllers\MovimentacaoController;
 
+Route::get('/movimentacoes', [MovimentacaoController::class, 'index'])->name('movimentacoes.index');
 
 
 
@@ -44,12 +46,10 @@ Route::middleware(['auth', 'verified'])->controller(KitController::class)->group
     Route::get('registros/kits/listar', 'listarKits')->name('kits.listar'); // Listar kits
     Route::get('registros/kits/form', 'formKit')->name('kits.criar'); // Formulário de criação
     Route::post('registros/kits/salvar', 'criarKit')->name('kits.salvar'); // Criar kit
-    Route::get('registros/kits/{kit}/editar', 'edit')->name('kits.editar'); // Formulário de edição
-    Route::put('registros/kits/{kit}/atualizar', 'update')->name('kits.atualizar'); // Atualizar kit
-    Route::delete('registros/kits/{kit}/remover', 'desfazerKit')->name('kits.remover'); // Remover kit
-    Route::post('/kits/{kit}/entregar', 'entregarKit')->name('kits.entregar');
+    Route::get('registros/kits/{kit}/editar', 'editarKit')->name('kit.editar'); // Formulário de edição
+    Route::post('registros/kits/{kit}/atualizar', 'atualizarKit')->name('kit.atualizar'); // Atualizar kit
+    Route::delete('registros/kits/{kit}/deletar', 'deletarKit')->name('kit.deletar'); // Remover kit
     Route::patch('/kits/{id}/toggle-disponibilidade', 'toggleDisponibilidade')->name('kits.toggleDisponibilidade');
-    Route::delete('/kits/{id}', 'excluir')->name('kits.excluir');
 
 });
 
@@ -59,9 +59,6 @@ Route::middleware(['auth', 'verified'])->controller(SaidaEstoqueController::clas
     Route::get('registros/saida-estoque/confirmar', 'selecionarKit')->name('saida_estoque.selecionar_kit'); // View de confirmação dos produtos
     Route::post('registros/saida-estoque/confirmar-saida', 'confirmarSaida')->name('saida_estoque.confirmar_saida'); // Processar saída do kit no estoque
 });
-
-
-
 
 
 Route::middleware(['auth', 'verified'])->controller(ProdutoController::class)->group(function () {

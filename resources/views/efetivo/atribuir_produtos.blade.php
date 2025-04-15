@@ -45,7 +45,7 @@
                                                         @foreach ($grupo as $produto)
                                                         <option value="{{ $produto->id }}"
                                                             {{ in_array($produto->id, $produtosSelecionados) ? 'selected' : '' }}>
-                                                            {{ $produto->tamanho ?? 'Único' }}
+                                                            {{ $produto->tamanho()->first()->tamanho ?? 'Único' }}
                                                         </option>
 
                                                         @endforeach

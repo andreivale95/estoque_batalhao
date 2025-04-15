@@ -21,9 +21,28 @@ class HistoricoMovimentacao extends Model
         'fk_unidade',
         'unidade_origem',
         'unidade_destino',
+        'militar',
 
     ];
 
+    public function militar()
+    {
+        return $this->belongsTo(EfetivoMilitar::class, 'militar');
+    }
 
+    public function produto()
+    {
+        return $this->belongsTo(Produto::class, 'fk_produto');
+    }
+
+    public function origem()
+    {
+        return $this->belongsTo(Unidade::class, 'unidade_origem');
+    }
+
+    public function destino()
+    {
+        return $this->belongsTo(Unidade::class, 'unidade_destino');
+    }
 
 }
