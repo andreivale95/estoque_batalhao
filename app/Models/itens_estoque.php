@@ -22,10 +22,6 @@ class Itens_estoque extends Model
         'fornecedor',
         'nota_fiscal',
         'observacao',
-
-
-
-
     ];
 
     public function unidade()
@@ -39,14 +35,6 @@ class Itens_estoque extends Model
     }
 
 
-
-
-
-
-    public function fonte()
-    {
-        return $this->hasOne(Fonte::class, 'id', 'fk_fonte');
-    }
 
 
 
