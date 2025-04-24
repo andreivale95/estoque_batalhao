@@ -36,7 +36,7 @@
             max-width: 480px;
             max-height: 480px;
             margin: 0 auto;
-            margin-top: -3vh; /* Ajusta o posicionamento superior */
+            margin-top: -3vh; /* Ajusta o posicionamento superiodr */
         }
 
         .login-logo a {
