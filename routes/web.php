@@ -93,7 +93,7 @@ Route::middleware(['auth', 'verified'])->controller(UserController::class)->grou
     Route::get('user/interno/editar/{id}', 'editarUserInterno')->name('usi.editar');
     Route::post('user/interno/atualizar/{id}', 'atualizarUserInterno')->name('usi.atualizar');
 
-});
+});//teste upload deploy auto
 
 
 Route::middleware(['auth', 'verified'])->controller(EfetivoMilitarProdutoController::class)->group(function () {
