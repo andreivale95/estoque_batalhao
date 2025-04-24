@@ -44,7 +44,7 @@ develop:
 
     # Para o container de desenvolvimento se estiver rodando, antes de removê-lo
     - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "docker stop $IMAGE_NAME_DEV || true"  # Para o container
-    - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "docker rm -f $IMAGE_NAME_DEV || true"  # Remove o container
+    - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "docker rm -f $IMAGE_NAME_DEV || true"  # Remove o container agora vau
 
     # Tagueia a imagem dev com o timestamp diretamente
     - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "docker tag $IMAGE_NAME_DEV:latest $IMAGE_NAME_DEV:$(date +%Y%m%d%H%M%S)"
