@@ -72,7 +72,7 @@ Route::middleware(['auth', 'verified'])->controller(ProdutoController::class)->g
     Route::post('registros/produto/atualizar/{id}', 'atualizarProduto')->name('produto.atualizar');
     Route::get('/api/produtos/unidade/{unidade}', [ProdutoController::class, 'getProdutosPorUnidade']);
 
-}); //teste
+}); //testehhhhhhhh
 
 
 Route::middleware(['auth', 'verified'])->controller(UnidadeController::class)->group(function () {
