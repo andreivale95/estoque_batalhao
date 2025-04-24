@@ -97,7 +97,6 @@ Route::middleware(['auth', 'verified'])->controller(UserController::class)->grou
 });
 
 
-
 Route::middleware(['auth', 'verified'])->controller(EfetivoMilitarProdutoController::class)->group(function () {
     Route::get('registros/efetivo-produtos/form', 'Listar')->name('efetivo_produtos.listar'); // Listar
     Route::post('registros/efetivo-produtos/salvar', 'store')->name('efetivo_produtos.salvar'); // Salvar
@@ -107,8 +106,6 @@ Route::middleware(['auth', 'verified'])->controller(EfetivoMilitarProdutoControl
     Route::get('/efetivo-produtos/visualizar/{id}', 'visualizar')->name('efetivo_produtos.visualizar');
 
 });
-
-
 
 
 Route::middleware(['auth', 'verified'])->controller(ProfileController::class)->group(function () {

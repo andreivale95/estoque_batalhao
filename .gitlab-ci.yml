@@ -1,33 +1,51 @@
-image: debian
+image: debian  # Usa imagem base Debian para executar os jobs
 
 before_script:
-  - apt update
-  - apt install openssh-client sshpass -y
+  - apt update  # Atualiza lista de pacotes
+  - apt install openssh-client sshpass -y  # Instala clientes SSH e sshpass para conexões automatizadas
 
 stages:
-  - production
-  - develop
+  - production  # Etapa de deploy para produção
+  - develop     # Etapa de deploy para desenvolvimento
 
 production:
   stage: production
   script:
+    # Conecta via SSH no servidor de produção e faz git pull no diretório da aplicação
     - sshpass -v -p $SSHPASS ssh -o "StrictHostKeyChecking no" $USERNAME@$SERVER_IP_PROD "cd $SERVER_PATH_PROD && git pull"
+
+    # Entra no diretório do projeto e derruba os containers existentes
     - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "cd $SERVER_PATH_PROD && docker-compose down"
+
+    # Tagueia a imagem atual com o timestamp da execução
     - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD docker tag $IMAGE_NAME:latest $IMAGE_NAME:$NOW
+
+    # Rebuilda a imagem Docker com a versão mais recente do código
     - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD docker build $SERVER_PATH_PROD -t $IMAGE_NAME:latest
+
+    # Sobe os containers atualizados em background
     - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "cd $SERVER_PATH_PROD && docker-compose up -d"
 
   only:
-    - master
+    - master  # Este job só roda quando houver push na branch master
 
 develop:
   stage: develop
   script:
+    # Conecta no servidor e puxa atualizações da branch dev
     - sshpass -v -p $SSHPASS ssh -o "StrictHostKeyChecking no" $USERNAME@$SERVER_IP_PROD "cd $SERVER_PATH_DEV && git pull origin dev"
+
+    # Para os containers antigos da aplicação de desenvolvimento
     - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "cd $SERVER_PATH_DEV && docker-compose down"
+
+    # Tagueia a imagem dev atual com timestamp
     - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD docker tag $IMAGE_NAME_DEV:latest $IMAGE_NAME_DEV:$NOW
+
+    # Rebuilda a imagem Docker para o ambiente de desenvolvimento
     - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD docker build $SERVER_PATH_DEV -t $IMAGE_NAME_DEV:latest
+
+    # Sobe os containers atualizados no ambiente de desenvolvimento
     - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "cd $SERVER_PATH_DEV && docker-compose up -d"
 
   only:
-    - dev
+    - dev  # Este job roda apenas em pushes para a branch dev
