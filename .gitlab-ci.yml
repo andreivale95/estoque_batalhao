@@ -27,7 +27,7 @@ production:
     - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "cd $SERVER_PATH_PROD && docker-compose up -d"
 
   only:
-    - master  # Este job só roda quando houver push na branch master
+    - master  # Este job só roda quando houver push na branch master //
 
 develop:
   stage: develop
