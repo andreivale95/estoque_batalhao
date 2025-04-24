@@ -5,29 +5,41 @@ before_script:
   - apt install openssh-client sshpass -y
 
 stages:
-  - production
-  - develop
+  - build
+  - deploy
 
-production:
-  stage: production
+# Job para construir a imagem Docker e rodar o container
+build:
+  stage: build
   script:
-    - sshpass -v -p $SSHPASS ssh -o "StrictHostKeyChecking no" $USERNAME@$SERVER_IP_PROD "cd $SERVER_PATH_PROD && git pull"
-    - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "cd $SERVER_PATH_PROD && docker-compose down"
-    - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD docker tag $IMAGE_NAME:latest $IMAGE_NAME:$NOW
-    - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD docker build $SERVER_PATH_PROD -t $IMAGE_NAME:latest
-    - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "cd $SERVER_PATH_PROD && docker-compose up -d"
-
+    - echo "🚧 Iniciando o build da imagem Docker..."
+    - docker build -t sisalmox .
   only:
     - master
-
-develop:
-  stage: develop
-  script:
-    - sshpass -v -p $SSHPASS ssh -o "StrictHostKeyChecking no" $USERNAME@$SERVER_IP_PROD "cd $SERVER_PATH_DEV && git pull origin dev"
-    - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "cd $SERVER_PATH_DEV && docker-compose down"
-    - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD docker tag $IMAGE_NAME_DEV:latest $IMAGE_NAME_DEV:$NOW
-    - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD docker build $SERVER_PATH_DEV -t $IMAGE_NAME_DEV:latest
-    - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "cd $SERVER_PATH_DEV && docker-compose up -d"
-
-  only:
     - dev
+
+# Job de deploy para o ambiente de produção
+deploy_production:
+  stage: deploy
+  script:
+    - echo "🚀 Iniciando o deploy para produção..."
+    - export SERVER_PATH=$SERVER_PATH_PROD  # Variável de ambiente para a pasta de produção
+    - bash ./rebuild_sisalmox.sh
+  only:
+    - master  # Esse job só rodará na branch master
+  environment:
+    name: production
+    url: http://localhost:3010/login  # URL do ambiente de produção
+
+# Job de deploy para o ambiente de desenvolvimento
+deploy_develop:
+  stage: deploy
+  script:
+    - echo "🚀 Iniciando o deploy para desenvolvimento..."
+    - export SERVER_PATH=$SERVER_PATH_DEV  # Variável de ambiente para a pasta de desenvolvimento
+    - bash ./rebuild_sisalmox.sh
+  only:
+    - dev  # Esse job só rodará na branch dev
+  environment:
+    name: development
+    url: http://localhost:3010/login  # URL do ambiente de desenvolvimento
