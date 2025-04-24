@@ -91,7 +91,7 @@ Route::middleware(['auth', 'verified'])->controller(UserController::class)->grou
     Route::get('user/interno/form', 'formUserInterno')->name('usi.form');
     Route::get('user/interno/ver/{id}', 'verUserInterno')->name('usi.ver');
     Route::get('user/interno/editar/{id}', 'editarUserInterno')->name('usi.editar');
-    Route::post('user/interno/atualizar/{id}', 'atualizarUserInterno')->name('usi.atualizar'); //ts
+    Route::post('user/interno/atualizar/{id}', 'atualizarUserInterno')->name('usi.atualizar'); //tsihgjhg
 
 });//teste upload deploy auto
 
