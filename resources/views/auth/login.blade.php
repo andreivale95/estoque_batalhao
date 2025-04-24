@@ -15,7 +15,7 @@
     <!-- Custom CSS -->
     <style>
         body {
-            background-image: url("{{ env('APP_URL') . '/assets/img/WALLPAPER-LOGIN-SISPAT.png' }}");
+            background-image: url("{{ env('APP_URL') . '/assets/img/logo.jpg' }}");
             background-size: 100% 100%;
             background-position: center;
             background-repeat: no-repeat;
