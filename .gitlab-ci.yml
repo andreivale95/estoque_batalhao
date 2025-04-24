@@ -28,7 +28,7 @@ production:
     - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "docker build $SERVER_PATH_PROD -t $IMAGE_NAME:latest"
 
     # Sobe os containers atualizados em background
-    - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "cd $SERVER_PATH_PROD && docker-compose up -d" # Sobe os containers em backgroundddddd
+    - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "cd $SERVER_PATH_PROD && docker-compose up -d" # Sobe os containers em background
 
   only:
     - master  # Este job só roda quando houver push na branch master
