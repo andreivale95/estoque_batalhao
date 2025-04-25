@@ -11,12 +11,7 @@ deploy_production:
   script:
     - echo "🚀 Conectando ao servidor de produção e rodando o script de deploy..."
     - sshpass -v -p $SSHPASS ssh -o "StrictHostKeyChecking no" $USERNAME@$SERVER_IP_PROD "cd $SERVER_PATH_PROD && bash ./rebuild_sisalmox.sh"
-<<<<<<< HEAD
-    - echo "🔑 Gerando chave da aplicação Laravel no servidor..."
-    - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_PROD "docker exec sisalmox php artisan key:generate"
-=======
-   
->>>>>>> 1d9bd690406df001e607ef0c422230808a302a92
+
   only:
     - master
   environment:
@@ -28,12 +23,7 @@ deploy_develop:
   script:
     - echo "🚀 Conectando ao servidor de desenvolvimento e rodando o script de deploy..."
     - sshpass -v -p $SSHPASS ssh -o "StrictHostKeyChecking no" $USERNAME@$SERVER_IP_DEV "cd $SERVER_PATH_DEV && bash ./rebuild_sisalmox.sh"
-<<<<<<< HEAD
-    - echo "🔑 Gerando chave da aplicação Laravel no servidor..."
-    - sshpass -v -p $SSHPASS ssh $USERNAME@$SERVER_IP_DEV "docker exec sisalmox php artisan key:generate"
-=======
-    
->>>>>>> 1d9bd690406df001e607ef0c422230808a302a92
+
   only:
     - dev
   environment:
