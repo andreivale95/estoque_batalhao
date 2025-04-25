@@ -1,7 +1,7 @@
 image: debian
 
 before_script:
-  - apt update && apt install -y openssh-client sshpass  # Instala os clientes SSH e sshpass
+  - apt update && apt install -y openssh-client sshpass  # Instala os clientes SSH e sshpass c
 
 stages:
   - deploy
