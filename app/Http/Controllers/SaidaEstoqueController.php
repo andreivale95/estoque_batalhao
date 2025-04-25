@@ -139,7 +139,7 @@ class SaidaEstoqueController extends Controller
                     'responsavel' => Auth::user()->nome,
                     'observacao' => "Saída de kit '{$produto->kit->nome}' para o militar {$militar->nome} ({$militar->matricula}) produto '{$produto->nome}' Tamanho {$produto->tamanho()->first()->tamanho}",
                     'data_movimentacao' => now(),
-                    'fk_unidade' => $item->fk_unidade,
+                    'fk_unidade' => $unidadeMilitar,
                 ]);
 
                 $produtosComSaida[] = $produto->nome;

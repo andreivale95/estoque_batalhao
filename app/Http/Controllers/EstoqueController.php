@@ -113,6 +113,7 @@ class EstoqueController extends Controller
             'data_movimentacao' => now(),
             'unidade_origem' => $unidadeAtual,
             'unidade_destino' => $novaUnidade,
+            'fk_unidade' => $novaUnidade,
         ]);
 
         return redirect()->route('estoque.listar')->with('success', 'Produto transferido com sucesso!');
