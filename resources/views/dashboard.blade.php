@@ -31,8 +31,10 @@
                         <div class="icon">
                             <i class="ion ion-bag"></i>
                         </div>
-                        <a href="{{ route('estoque.listar') }}" class="small-box-footer">Mais Informações <i
-                                class="fa fa-arrow-circle-right"></i></a>
+                        <a href="{{ route('estoque.listar', ['nome' => '', 'categoria' => '', 'unidade' => 14]) }}" class="small-box-footer">
+                            Mais Informações <i class="fa fa-arrow-circle-right"></i>
+                        </a>
+
                     </div>
                 </div>
 

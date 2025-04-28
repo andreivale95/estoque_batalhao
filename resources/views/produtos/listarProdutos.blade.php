@@ -77,7 +77,7 @@
                                 <th>DESCRICAO</th>
                                 <th>MARCA</th>
                                 <th>VALOR</th>
-                                <th>TIPO</th>
+
                                 <th>CATEGORIA</th>
                             </tr>
                         </thead>
@@ -85,16 +85,20 @@
 
                             @foreach ($produtos as $produto)
                                 <tr>
-                                    <td><a href="{{ route('produto.ver', $produto->id) }}">{{ $produto->nome }} -
-                                            {{ $produto->tamanho()->first()->tamanho }}</a>
+                                    <td>
+                                        <a href="{{ route('produto.ver', $produto->id) }}">
+                                            {{ $produto->nome }} -
+                                            {{ optional($produto->tamanho()->first())->tamanho ?? 'Sem tamanho' }}
+                                        </a>
                                     </td>
+
                                     <td>{{ $produto->descricao }}</td>
                                     <td>{{ $produto->marca }}</td>
                                     <td>{{ $produto->valor }}</td>
 
-                                    <td>{{ $produto->tipoProduto->nome }}</td>
+                                    <td>{{ $produto->categoria->nome }}</td>
 
-                                    <td>{{ $produto->tipoProduto->categoria->nome }}</td>
+
 
                                     <td> <a class="btn btn-warning" href="{{ route('produto.editar', $produto->id) }}"
                                             style="color: white">

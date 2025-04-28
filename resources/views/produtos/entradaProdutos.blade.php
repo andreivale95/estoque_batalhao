@@ -36,7 +36,7 @@
                                 <select name="fk_produto" class="form-control select2-produto" required>
                                     <option value="">Selecione um Produto</option>
                                     @foreach ($produtos as $produto)
-                                        <option value="{{ $produto->id }}">{{ $produto->nome }} - {{ $produto->tamanho()->first()->tamanho }}
+                                        <option value="{{ $produto->id }}">{{ $produto->nome }} -  {{ optional($produto->tamanho()->first())->tamanho ?? 'Tamanho Único' }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -111,8 +111,9 @@
 
                         <!-- Botões -->
                         <div class="form-group text-right">
-                            <a href="{{ route('estoque.listar') }}" class="btn btn-danger"><i class="fa fa-arrow-left"></i>
-                                Cancelar</a>
+                            <a href="{{ route('estoque.listar') }}?nome=&categoria=&unidade={{ Auth::user()->fk_unidade }}" class="btn btn-danger">
+                                Cancelar <i class="fa fa-arrow-left"></i>
+                            </a>
                             <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Cadastrar</button>
                         </div>
                     </form>

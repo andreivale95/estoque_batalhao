@@ -88,7 +88,12 @@
                     </a>
                     <ul class="treeview-menu">
                         @can('autorizacao', 5)
-                            <li><a href="{{ route('estoque.listar') }}">Estoque</a></li>
+                            <li><a href="{{ route('estoque.entrada') }}">Entrada de Produtos</a></li>
+
+                            <li> <a href="{{ route('estoque.listar') }}?nome=&categoria=&unidade={{ Auth::user()->fk_unidade }}"
+                                    class="small-box-footer">
+                                    Estoque
+                                </a></li>
                         @endcan
                         @can('autorizacao', 5)
                             <li><a href="{{ route('efetivo_produtos.listar') }}">Listar Efetivo</a></li>
@@ -102,18 +107,18 @@
                 </li>
             @endcan
             @can('modulo', '4')
-            <li class="treeview">
-                <a href="#"><i class="fa fa-random"></i> <span>Movimentações</span>
-                    <span class="pull-right-container">
-                        <i class="fa fa-angle-left pull-right"></i>
-                    </span>
-                </a>
-                <ul class="treeview-menu">
-                    @can('autorizacao', 5)
-                        <li><a href="{{ route('movimentacoes.index') }}">Movimentações</a></li>
-                    @endcan
-                </ul>
-            </li>
+                <li class="treeview">
+                    <a href="#"><i class="fa fa-random"></i> <span>Movimentações</span>
+                        <span class="pull-right-container">
+                            <i class="fa fa-angle-left pull-right"></i>
+                        </span>
+                    </a>
+                    <ul class="treeview-menu">
+                        @can('autorizacao', 5)
+                            <li><a href="{{ route('movimentacoes.index') }}">Movimentações</a></li>
+                        @endcan
+                    </ul>
+                </li>
 
             @endcan
             <li class="">

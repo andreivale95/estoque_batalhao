@@ -4,7 +4,7 @@
         <!-- Content Header (Page header) -->
         <section class="content-header">
             <h1>
-                {{ $produto->tipoProduto()->first()->nome }} - {{ $produto->nome }}
+                {{ $produto->nome }} -  {{ optional($produto->tamanho()->first())->tamanho ?? 'Tamanho Único' }}
             </h1>
 
             <ol class="breadcrumb">
@@ -50,16 +50,18 @@
                                                 value="{{ $produto->descricao }}">
                                         </div>
                                         <div class="form-group has-feedback col-md-6">
-                                            <label for="tipoproduto">Tipo Produto:</label>
-                                            <select class="form-control" name="fk_tipo_produto">
-                                                @foreach ($tipoprodutos as $tipoproduto)
-                                                    <option value="{{ $tipoproduto->id }}"
-                                                        {{ $produto->fk_tipo_produto == $tipoproduto->id ? 'selected' : '' }}>
-                                                        {{ $tipoproduto->nome }}
+                                            <label for="tipoproduto">Categoria:</label>
+                                            <select class="form-control" name="categoria">
+                                                @foreach ($categorias as $categoria)
+                                                    <option value="{{ $categoria->id }}"
+                                                        {{ $produto->fk_categoria == $categoria->id ? 'selected' : '' }}>
+                                                        {{ $categoria->nome }}
                                                     </option>
                                                 @endforeach
                                             </select>
                                         </div>
+
+
                                         <div class="form-group has-feedback col-md-6">
                                             <label for="">Condição:</label>
                                             <select class="form-control" name="fk_condicao">
@@ -75,36 +77,49 @@
                                             <label for="">Kit</label>
                                             <select name="fk_kit" class="form-control">
                                                 <option value="">Selecione</option>
-                                                @foreach ($kits as $kitt)
-                                                    <option value="{{ $kitt->id }}"
-                                                        {{ $kit->id == $kitt->id ? 'selected' : '' }}>
-                                                        {{ $kitt->nome }}
-                                                    </option>
-                                                @endforeach
+                                                @if ($kit)
+                                                    @foreach ($kits as $kitt)
+                                                        <option value="{{ $kitt->id }}"
+                                                            {{ isset($kit) && $kit->id == $kitt->id ? 'selected' : '' }}>
+                                                            {{ $kitt->nome }}
+                                                        </option>
+                                                    @endforeach
+
+                                                @else
+                                                    @foreach ($kits as $kitt)
+                                                        <option value="{{ $kitt->id }}">{{ $kitt->nome }}</option>
+                                                    @endforeach
+                                                @endif
+
                                             </select>
                                         </div>
 
 
-                                        <div class="form-group has-feedback col-md-6">
-                                            <label class="control-label" for="tamanho">Tamanho</label>
-                                            <select name="tamanho" class="form-control">
-                                                <option value="">Selecione</option>
+
+                                    <div class="form-group has-feedback col-md-6">
+                                        <label class="control-label" for="tamanho">Tamanho</label>
+                                        <select name="tamanho" class="form-control" >
+                                            <option value="">Selecione</option>
+
+                                            @if ($tamanhos && count($tamanhos) > 0)
                                                 @foreach ($tamanhos as $tamanho)
                                                     <option value="{{ $tamanho->id }}"
-                                                        {{ $produto->tamanho == $tamanho->id ? 'selected' : '' }}>
+                                                        {{ isset($produto) && $produto->tamanho == $tamanho->id ? 'selected' : '' }}>
                                                         {{ $tamanho->tamanho }}
                                                     </option>
-
                                                 @endforeach
-                                            </select>
+                                            @else
+                                                <option disabled selected>Nenhum tamanho disponível</option>
+                                            @endif
 
-
-                                        </div>
+                                        </select>
+                                    </div>
 
                                         <div class="form-group has-feedback col-md-6">
                                             <label class="control-label" for="valor">Valor (R$):</label>
-                                            <input type="text" class="form-control" placeholder="0,00" name="valor_formatado" id="valor" required
-                                            value="{{ number_format((float) $produto->valor, 2, ',', '.') }}">
+                                            <input type="text" class="form-control" placeholder="0,00"
+                                                name="valor_formatado" id="valor" required
+                                                value="{{ number_format((float) $produto->valor, 2, ',', '.') }}">
                                             <input type="hidden" name="valor" id="valor_limpo">
                                         </div>
                                     </div>
@@ -137,7 +152,7 @@
     </div>
 
     <script>
-        document.getElementById('valor').addEventListener('input', function (e) {
+        document.getElementById('valor').addEventListener('input', function(e) {
             let raw = e.target.value.replace(/\D/g, ''); // só números
             let valorCentavos = raw ? parseInt(raw, 10) : 0;
 

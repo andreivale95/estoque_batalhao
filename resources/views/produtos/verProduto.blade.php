@@ -5,7 +5,9 @@
         <section class="content-header">
 
             <h1>
-                {{ $produto->tipoProduto()->first()->nome }} - {{ $produto->nome }} -  {{ $produto->tamanho()->first()->tamanho }}
+                {{ $produto->nome }} -
+                {{ optional($produto->tamanho()->first())->tamanho ?? 'Tamanho Único' }}
+            </a>
             </h1>
 
             <ol class="breadcrumb">
@@ -36,7 +38,11 @@
                                     <div class="form-group has-feedback col-md-6">
                                         <label class="control-label" for="">Nome:</label>
                                         <input type="text" class="form-control" name="nome"
-                                            value="{{ $produto->nome }} -  {{ $produto->tamanho()->first()->tamanho }}" disabled>
+                                            value="{{ $produto->nome }} -  {{ optional($produto->tamanho()->first())->tamanho ?? 'Tamanho Único' }}"
+                                            disabled>
+
+
+                                        </a>
                                     </div>
                                     <div class="form-group has-feedback col-md-6">
                                         <label class="control-label" for="">Marca:</label>
@@ -49,12 +55,11 @@
                                             value="{{ $produto->descricao }}" disabled>
                                     </div>
                                     <div class="form-group has-feedback col-md-6">
-                                        <label class="control-label" for="tipoproduto">Tipo Produto:</label>
+                                        <label class="control-label" for="categoria">Categoria:</label>
                                         <select class="form-control" disabled>
-                                            @foreach ($tipoprodutos as $tipoproduto)
-                                                <option
-                                                    {{ $produto->fk_tipo_produto == $tipoproduto->id ? 'selected' : '' }}>
-                                                    {{ $tipoproduto->nome }}
+                                            @foreach ($categorias as $categoria)
+                                                <option {{ $produto->fk_categoria == $categoria->id ? 'selected' : '' }}>
+                                                    {{ $categoria->nome }}
                                                 </option>
                                             @endforeach
                                         </select>
@@ -77,33 +82,36 @@
                                         <select name="kit" id="" class="form-control" disabled>
                                             <option value="">Selecione</option>
                                             @if ($kits->isNotEmpty())
-                                            @foreach ($kits as $kitt)
-                                                <option value="{{ $kitt->id }}"
-                                                    {{ isset($kit) && $kit->id == $kitt->id ? 'selected' : '' }}>
-                                                    {{ $kitt->nome }}
-                                                </option>
-                                            @endforeach
-                                        @endif
+                                                @foreach ($kits as $kitt)
+                                                    <option value="{{ $kitt->id }}"
+                                                        {{ isset($kit) && $kit->id == $kitt->id ? 'selected' : '' }}>
+                                                        {{ $kitt->nome }}
+                                                    </option>
+                                                @endforeach
+                                            @endif
 
                                         </select>
                                     </div>
-
 
                                     <div class="form-group has-feedback col-md-6">
                                         <label class="control-label" for="tamanho">Tamanho</label>
                                         <select name="tamanho" class="form-control" disabled>
                                             <option value="">Selecione</option>
-                                            @foreach ($tamanhos as $tamanho)
-                                                <option value="{{ $tamanho->id }}"
-                                                    {{ $produto->tamanho == $tamanho->id ? 'selected' : '' }}>
-                                                    {{ $tamanho->tamanho }}
-                                                </option>
 
-                                            @endforeach
+                                            @if ($tamanhos && count($tamanhos) > 0)
+                                                @foreach ($tamanhos as $tamanho)
+                                                    <option value="{{ $tamanho->id }}"
+                                                        {{ isset($produto) && $produto->tamanho == $tamanho->id ? 'selected' : '' }}>
+                                                        {{ $tamanho->tamanho }}
+                                                    </option>
+                                                @endforeach
+                                            @else
+                                                <option disabled selected>Nenhum tamanho disponível</option>
+                                            @endif
+
                                         </select>
-
-
                                     </div>
+
                                     <div class="form-group has-feedback col-md-6">
                                         <label class="control-label" for="valor">Valor (R$):</label>
                                         <input type="text" class="form-control" name="valor"

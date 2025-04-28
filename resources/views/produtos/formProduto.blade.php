@@ -53,12 +53,12 @@
 
 
                                         <div class="form-group has-feedback col-md-6">
-                                            <label class="control-label" for="tipoproduto">Tipo Produto</label>
-                                            <select name="tipoproduto" id="tipoproduto" class="form-control" required>
-                                                <option value="">Escolha um Tipo</option>
-                                                @foreach ($tipoprodutos as $tipoproduto)
-                                                    <option value="{{ $tipoproduto->id }}">
-                                                        {{ $tipoproduto->nome }}</option>
+                                            <label class="control-label" for="categoria">Categoria</label>
+                                            <select name="categoria" id="categoria" class="form-control" required>
+                                                <option value="">Escolha</option>
+                                                @foreach ($categorias as $categoria)
+                                                    <option value="{{ $categoria->id }}">
+                                                        {{ $categoria->nome }}</option>
                                                 @endforeach
                                             </select>
                                         </div>

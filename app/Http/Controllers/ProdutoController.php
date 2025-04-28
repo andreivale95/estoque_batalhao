@@ -44,12 +44,12 @@ class ProdutoController extends Controller
             $produto = Produto::find($id);
             $produtos = Produto::all();
             $tamanhos = Tamanho::all();
-            $tipoprodutos = Produto::select('fk_tipo_produto', 'nome')->where('fk_tipo_produto', $produto->tipoProduto()->first()->id)->get();
+            $categorias = Categoria::all();
 
             return view('produtos/verProduto', compact(
                 'produto',
                 'condicoes',
-                'tipoprodutos',
+                'categorias',
                 'unidades',
                 'kit',
                 'produtos',
@@ -78,7 +78,7 @@ class ProdutoController extends Controller
 
             $produtos = Produto::query()
                 ->when(filled($request->get('categoria')), function (Builder $query) use ($request) {
-                    return $query->whereHas('tipoProduto.categoria', function ($q) use ($request) {
+                    return $query->whereHas('categoria', function ($q) use ($request) {
                         $q->where('nome', 'like', '%' . $request->get('categoria') . '%');
                     });
                 })
@@ -106,7 +106,7 @@ class ProdutoController extends Controller
 
         try {
 
-            $tipoprodutos = TipoProduto::all();
+            $categorias = Categoria::all();
 
             // $fontes = Fonte::all();
             $condicoes = Condicao::all();
@@ -114,7 +114,7 @@ class ProdutoController extends Controller
 
             $kits = Kit::all();
 
-            return view('produtos/formProduto', compact('tipoprodutos', 'condicoes', 'kits', 'tamanhos'));
+            return view('produtos/formProduto', compact('categorias', 'condicoes', 'kits', 'tamanhos'));
 
 
 
@@ -169,10 +169,6 @@ class ProdutoController extends Controller
                 return redirect()->back()->with('error', 'Esse produto já existe nesse tamanho!');
             }
 
-
-
-
-
             // Se não existir, criar o produto
             $produto = Produto::create([
                 'nome' => $request->get('nome'),
@@ -180,7 +176,7 @@ class ProdutoController extends Controller
                 'marca' => $request->get('marca'),
                 'tamanho' => $request->get('tamanho'),
                 'valor' => $valorFinal, // agora decimal válido
-                'fk_tipo_produto' => $request->get('tipoproduto'),
+                'fk_categoria' => $request->get('categoria'),
                 'fk_kit' => $request->get('kit'),
                 'ativo' => 'Y',
             ]);
@@ -206,7 +202,7 @@ class ProdutoController extends Controller
             $condicoes = Condicao::all();
             $produto = Produto::find($id);
             $produtos = Produto::all();
-            $tipoprodutos = TipoProduto::all();
+            $categorias = Categoria::all();
             $tamanhos = Tamanho::all();
 
             //dd($tipoprodutos);
@@ -214,7 +210,7 @@ class ProdutoController extends Controller
             return view('produtos/editarProduto', compact(
                 'produto',
                 'condicoes',
-                'tipoprodutos',
+                'categorias',
                 'unidades',
                 'kits',
                 'kit',
@@ -239,7 +235,7 @@ class ProdutoController extends Controller
                 'nome' => 'required|string|max:255',
                 'descricao' => 'nullable|string',
                 'marca' => 'nullable|string',
-                'fk_tipo_produto' => 'required|exists:tipoprodutos,id',
+                'categoria' => 'required|exists:categorias,id',
             ]);
 
 
@@ -271,8 +267,7 @@ class ProdutoController extends Controller
                 'valor' => $valorFinal,
                 'tamanho' => $request->get('tamanho'),
                 'fk_kit' => $request->get('fk_kit'),
-                'fk_tipo_produto' => $request->get('fk_tipo_produto'),
-
+                'fk_categoria' => $request->get('categoria'),
                 'ativo' => 'Y',
             ]);
 
@@ -280,7 +275,7 @@ class ProdutoController extends Controller
 
             Log::info('Produto atualizado com sucesso', [Produto::find($id), Auth::user()]);
 
-            return redirect()->route('produto.editar', $id)->with('success', 'Produto atualizado com sucesso');
+            return redirect()->route('produto.ver', $id)->with('success', 'Produto atualizado com sucesso');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Erro ao atualizar o Produto', [$e]);

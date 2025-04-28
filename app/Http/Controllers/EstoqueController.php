@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 
+use App\Models\Categoria;
 use App\Models\HistoricoMovimentacao;
 use App\Models\Itens_estoque;
-use App\Models\TipoProduto;
 use App\Models\Unidade;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,20 +21,17 @@ class EstoqueController extends Controller
     public function listarEstoque(Request $request)
     {
         $request['unidade'] = empty($request['unidade']) ? '' : $request->get('unidade');
-        $request['tipoproduto'] = empty($request['tipoproduto']) ? '' : $request->get('tipoproduto');
+        $request['categoria'] = empty($request['categoria']) ? '' : $request->get('categoria');
         $request['nome'] = empty($request['nome']) ? '' : $request->get('nome');
 
-        $tipoprodutos = TipoProduto::all();
+        $categorias = Categoria::all();
         $unidades = Unidade::all();
 
         try {
             // Query base com filtros aplicados
             $query = Itens_estoque::query()
                 ->with('produto')
-                ->when(Auth::user()->fk_unidade != 14, function (Builder $query) {
-                    return $query->where('unidade', Auth::user()->fk_unidade);
-                })
-                ->when(Auth::user()->fk_unidade == 14 && filled(request()->get('unidade')), function (Builder $query) use ($request) {
+                ->when(filled(request()->get('unidade')), function (Builder $query) use ($request) {
                     return $query->where('unidade', $request->get('unidade'));
                 })
                 ->when(filled($request->get('nome')), function (Builder $query) use ($request) {
@@ -42,9 +39,9 @@ class EstoqueController extends Controller
                         $q->where('nome', 'like', '%' . $request->get('nome') . '%');
                     });
                 })
-                ->when(filled($request->get('tipoproduto')), function (Builder $query) use ($request) {
-                    return $query->whereHas('produto.tipoProduto', function ($q) use ($request) {
-                        $q->where('id', $request->get('tipoproduto'));
+                ->when(filled($request->get('categoria')), function (Builder $query) use ($request) {
+                    return $query->whereHas('produto.categoria', function ($q) use ($request) {
+                        $q->where('id', $request->get('categoria'));
                     });
                 });
 
@@ -56,7 +53,7 @@ class EstoqueController extends Controller
             // Paginação com os mesmos filtros
             $itens_estoque = (clone $query)->paginate(10);
 
-            return view('estoque/listarEstoque', compact('itens_estoque', 'unidades', 'tipoprodutos', 'totalGeral'));
+            return view('estoque/listarEstoque', compact('itens_estoque', 'unidades', 'categorias', 'totalGeral'));
         } catch (\Exception $e) {
             Log::error('Erro ao consultar estoque', [$e]);
             return back()->with('warning', 'Houve um erro ao consultar estoque.');

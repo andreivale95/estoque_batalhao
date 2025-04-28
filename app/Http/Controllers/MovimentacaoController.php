@@ -44,6 +44,24 @@ class MovimentacaoController extends Controller
         if ($request->filled('responsavel')) {
             $query->where('responsavel', 'like', '%' . $request->responsavel . '%');
         }
+        if ($request->filled('militar')) {
+            $query->where('militar', 'like', '%' . $request->militar . '%');
+        }
+
+        if ($request->filled('fonte')) {
+            $query->where('fonte', 'like', '%' . $request->fonte . '%');
+        }
+
+        if ($request->filled('estoque')) {
+            $query->whereHas('unidade', function ($q) use ($request) {
+                $q->where('nome', 'like', '%' . $request->estoque . '%');
+            });
+        }
+
+        if ($request->filled('sei')) {
+            $query->where('sei', 'like', '%' . $request->sei . '%');
+        }
+
 
         $movimentacoes = $query->orderByDesc('data_movimentacao')->paginate(20);
 

@@ -25,19 +25,19 @@
                             </div>
 
                             <div class="form-group has-feedback col-md-2">
-                                <label class="control-label">TIPO DO PRODUTO:</label>
-                                <select name="tipoproduto" class="form-control">
+                                <label class="control-label">CATEGORIA:</label>
+                                <select name="categoria" class="form-control">
                                     <option value="">Selecione</option>
-                                    @foreach ($tipoprodutos as $tipoproduto)
-                                        <option value="{{ $tipoproduto->id }}"
-                                            {{ request()->tipoproduto == $tipoproduto->id ? 'selected' : '' }}>
-                                            {{ $tipoproduto->nome }}
+                                    @foreach ($categorias as $categoria)
+                                        <option value="{{ $categoria->id }}"
+                                            {{ request()->categoria == $categoria->id ? 'selected' : '' }}>
+                                            {{ $categoria->nome }}
                                         </option>
                                     @endforeach
                                 </select>
                             </div>
 
-                            @if (Auth::user()->fk_unidade == 14)
+
                                 <div class="form-group has-feedback col-md-2">
                                     <label class="control-label">UNIDADE:</label>
                                     <select name="unidade" class="form-control">
@@ -50,7 +50,7 @@
                                         @endforeach
                                     </select>
                                 </div>
-                            @endif
+
 
                             <div class="form-group has-feedback col-md-1 pull-right">
                                 <label class="control-label">&nbsp;</label>
@@ -71,7 +71,7 @@
                             <tr>
                                 <th>Produto</th>
                                 <th>Quantidade</th>
-                                <th>Tipo</th>
+
                                 <th>Categoria</th>
                                 <th>Unidade</th>
                                 <th>Valor Unitário</th>
@@ -90,12 +90,12 @@
                                     <td>
                                         <a href="{{ route('produto.ver', $estoque->fk_produto) }}">
                                             {{ $estoque->produto()->first()->nome }} -
-                                            {{ $estoque->produto()->first()->tamanho()->first()->tamanho }}
+                                            {{ optional($estoque->produto()->first()?->tamanho()->first())->tamanho ?? 'Tamanho Único' }}
+
                                         </a>
                                     </td>
                                     <td>{{ $estoque->quantidade }}</td>
-                                    <td>{{ $estoque->produto->tipoProduto->nome }}</td>
-                                    <td>{{ $estoque->produto->tipoProduto->categoria->nome }}</td>
+                                    <td>{{ $estoque->produto->categoria->nome }}</td>
                                     <td>{{ $estoque->unidade()->first()->nome }}</td>
                                     <td>R$ {{ number_format($valorUnitario, 2, ',', '.') }}</td>
                                     <td>R$ {{ number_format($subtotal, 2, ',', '.') }}</td>

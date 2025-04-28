@@ -16,7 +16,7 @@ class Produto extends Model
         'descricao',
         'marca',
         'valor',
-        'fk_tipo_produto',
+        'fk_categoria',
         'fk_kit',
         'tamanho',
         'ativo',
@@ -32,9 +32,9 @@ class Produto extends Model
     }
 
 
-    public function tipoProduto()
+    public function categoria()
     {
-        return $this->belongsTo(TipoProduto::class, 'fk_tipo_produto'); // FK para tipo_produto
+        return $this->belongsTo(Categoria::class, 'fk_categoria'); // FK para Categoria
     }
 
     public function kit()

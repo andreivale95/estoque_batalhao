@@ -140,6 +140,7 @@ class SaidaEstoqueController extends Controller
                     'observacao' => "Saída de kit '{$produto->kit->nome}' para o militar {$militar->nome} ({$militar->matricula}) produto '{$produto->nome}' Tamanho {$produto->tamanho()->first()->tamanho}",
                     'data_movimentacao' => now(),
                     'fk_unidade' => $unidadeMilitar,
+                    'militar' => $militar->nome,
                 ]);
 
                 $produtosComSaida[] = $produto->nome;
