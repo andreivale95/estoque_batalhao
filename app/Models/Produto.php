@@ -19,6 +19,7 @@ class Produto extends Model
         'fk_categoria',
         'fk_kit',
         'tamanho',
+        'unidade',
         'ativo',
 
 

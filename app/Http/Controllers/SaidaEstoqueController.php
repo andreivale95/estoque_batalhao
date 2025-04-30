@@ -130,6 +130,8 @@ class SaidaEstoqueController extends Controller
                     $item->data_saida = Carbon::now();
                 }
                 $item->save();
+                $tamanho = $produto->tamanho()->first();
+                $nomeTamanho = $tamanho ? $tamanho->tamanho : 'Tamanho Único';
 
                 // Registrar histórico
                 HistoricoMovimentacao::create([
@@ -137,7 +139,7 @@ class SaidaEstoqueController extends Controller
                     'tipo_movimentacao' => 'saida_kit',
                     'quantidade' => 1,
                     'responsavel' => Auth::user()->nome,
-                    'observacao' => "Saída de kit '{$produto->kit->nome}' para o militar {$militar->nome} ({$militar->matricula}) produto '{$produto->nome}' Tamanho {$produto->tamanho()->first()->tamanho}",
+                    'observacao' => "Saída de kit '{$produto->kit->nome}' para o militar {$militar->nome} ({$militar->matricula}) produto '{$produto->nome}' Tamanho {$nomeTamanho}",
                     'data_movimentacao' => now(),
                     'fk_unidade' => $unidadeMilitar,
                     'militar' => $militar->nome,

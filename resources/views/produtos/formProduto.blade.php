@@ -49,6 +49,18 @@
                                             <input type="text" class="form-control" placeholder="" name="descricao"
                                                 value="" required>
                                         </div>
+                                        <div class="form-group has-feedback col-md-6">
+                                            <label class="control-label" for="unidade">Unidade</label>
+                                            <select name="unidade" id="unidade" class="form-control" required>
+                                                <option value="">Escolha</option>
+
+                                                <option value="UN">UN</option>
+                                                <option value="CX">CX</option>
+                                                <option value="PCT">PCT</option>
+
+
+                                            </select>
+                                        </div>
 
 
 
@@ -57,10 +69,13 @@
                                             <select name="categoria" id="categoria" class="form-control" required>
                                                 <option value="">Escolha</option>
                                                 @foreach ($categorias as $categoria)
-                                                    <option value="{{ $categoria->id }}">
-                                                        {{ $categoria->nome }}</option>
+                                                    <option value="{{ $categoria->id }}"
+                                                        data-tipo="{{ $categoria->tipo_tamanho }}">
+                                                        {{ $categoria->nome }}
+                                                    </option>
                                                 @endforeach
                                             </select>
+
                                         </div>
 
 
@@ -89,21 +104,22 @@
 
                                         <div class="form-group has-feedback col-md-6">
                                             <label class="control-label" for="tamanho">Tamanho (Se houver)</label>
-                                            <select name="tamanho" class="form-control">
+                                            <select name="tamanho" id="tamanho" class="form-control">
                                                 <option value="">Selecione</option>
                                                 @foreach ($tamanhos as $tamanho)
-                                                    <option value="{{ $tamanho->id }}">
-
+                                                    <option value="{{ $tamanho->id }}"
+                                                        data-tipo="{{ $tamanho->tipo_tamanho }}">
                                                         {{ $tamanho->tamanho }}
                                                     </option>
-
                                                 @endforeach
                                             </select>
+
                                         </div>
 
                                         <div class="form-group has-feedback col-md-6">
                                             <label class="control-label" for="valor">Valor (R$):</label>
-                                            <input type="text" class="form-control" placeholder="0,00" name="valor_formatado" id="valor" required>
+                                            <input type="text" class="form-control" placeholder="0,00"
+                                                name="valor_formatado" id="valor" required>
                                             <input type="hidden" name="valor" id="valor_limpo">
                                         </div>
 
@@ -129,7 +145,7 @@
     <!-- /.content-wrapper -->
 
     <script>
-        document.getElementById('valor').addEventListener('input', function (e) {
+        document.getElementById('valor').addEventListener('input', function(e) {
             let raw = e.target.value.replace(/\D/g, ''); // só números
             let valorCentavos = raw ? parseInt(raw, 10) : 0;
 
@@ -143,6 +159,26 @@
             e.target.value = valorFormatado;
         });
     </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const categoriaSelect = document.getElementById('categoria');
+            const tamanhoSelect = document.getElementById('tamanho');
 
+            const todasOpcoesTamanho = Array.from(tamanhoSelect.options);
 
+            categoriaSelect.addEventListener('change', function() {
+                const tipoSelecionado = categoriaSelect.options[categoriaSelect.selectedIndex].dataset.tipo;
+
+                // Limpa opções exceto a primeira
+                tamanhoSelect.innerHTML = '<option value="">Selecione</option>';
+
+                // Filtra e adiciona apenas os tamanhos compatíveis
+                todasOpcoesTamanho.forEach(option => {
+                    if (!option.dataset.tipo || option.dataset.tipo === tipoSelecionado) {
+                        tamanhoSelect.appendChild(option);
+                    }
+                });
+            });
+        });
+    </script>
 @endsection

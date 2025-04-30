@@ -3,18 +3,15 @@
     <div class="content-wrapper">
         <!-- Content Header (Page header) -->
         <section class="content-header">
-            <h1>
-                Estoque
-
-            </h1>
+            <h1>Estoque</h1>
             <ol class="breadcrumb">
                 <li><a href="{{ route('dashboard') }}"><i class="fa fa-dashboard"></i> Dashboard</a></li>
                 <li><a href="{{ route('estoque.listar') }}"><i class=""></i> Estoque</a></li>
             </ol>
         </section>
+
         <!-- Main content -->
         <section class="content container-fluid">
-
             <form action="{{ route('estoque.listar') }}" method="get">
                 <div class="box box-primary">
                     <div class="box-header">
@@ -37,20 +34,18 @@
                                 </select>
                             </div>
 
-
-                                <div class="form-group has-feedback col-md-2">
-                                    <label class="control-label">UNIDADE:</label>
-                                    <select name="unidade" class="form-control">
-                                        <option value="">Selecione</option>
-                                        @foreach ($unidades as $unidade)
-                                            <option value="{{ $unidade->id }}"
-                                                {{ request()->unidade == $unidade->id ? 'selected' : '' }}>
-                                                {{ $unidade->nome }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-
+                            <div class="form-group has-feedback col-md-2">
+                                <label class="control-label">Estoque:</label>
+                                <select name="unidade" class="form-control">
+                                    <option value="">Selecione</option>
+                                    @foreach ($unidades as $unidade)
+                                        <option value="{{ $unidade->id }}"
+                                            {{ request()->unidade == $unidade->id ? 'selected' : '' }}>
+                                            {{ $unidade->nome }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
 
                             <div class="form-group has-feedback col-md-1 pull-right">
                                 <label class="control-label">&nbsp;</label>
@@ -58,26 +53,34 @@
                                     <i class="fa fa-search"></i> Pesquisar
                                 </button>
                             </div>
+
+                            <!-- Botão para inserir novo produto -->
+                            <div class="form-group has-feedback col-md-2 pull-right">
+                                <label class="control-label">&nbsp;</label>
+                                <a href="{{ route('produtoinserir.form') }}" class="btn btn-success form-control">
+                                    <i class="fa fa-plus"></i> Inserir Produto
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </form>
 
             <div class="box box-primary">
-
                 <div class="box-body table-responsive">
                     <table class="table table-striped">
                         <thead>
                             <tr>
+                                <th><input type="checkbox" id="select-all"></th>
                                 <th>Produto</th>
                                 <th>Quantidade</th>
-
-                                <th>Categoria</th>
                                 <th>Unidade</th>
+                                <th>Categoria</th>
+                                <th>Estoque</th>
                                 <th>Valor Unitário</th>
                                 <th>Subtotal</th>
                                 <th>Ações</th>
-                                <th>Transferir</th>
+                                <th>Transferência</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -88,13 +91,29 @@
                                 @endphp
                                 <tr>
                                     <td>
+                                        @if (Auth::user()->fk_unidade == $estoque->unidade()->first()->id)
+                                            <input type="checkbox" class="select-item"
+                                                name="produtos[{{ $estoque->id }}][selecionado]">
+                                        @else
+                                            <input type="checkbox" class="select-item"
+                                                name="produtos[{{ $estoque->id }}][selecionado]"disabled>
+                                        @endif
+
+                                    </td>
+                                    <td>
                                         <a href="{{ route('produto.ver', $estoque->fk_produto) }}">
                                             {{ $estoque->produto()->first()->nome }} -
                                             {{ optional($estoque->produto()->first()?->tamanho()->first())->tamanho ?? 'Tamanho Único' }}
-
                                         </a>
                                     </td>
-                                    <td>{{ $estoque->quantidade }}</td>
+                                    <td>
+                                        @if ($estoque->quantidade <= 0)
+                                            <span class="text-danger">Produto esgotado</span>
+                                        @else
+                                            {{ $estoque->quantidade }}
+                                        @endif
+                                    </td>
+                                    <td>{{ $estoque->produto->unidade }}</td>
                                     <td>{{ $estoque->produto->categoria->nome }}</td>
                                     <td>{{ $estoque->unidade()->first()->nome }}</td>
                                     <td>R$ {{ number_format($valorUnitario, 2, ',', '.') }}</td>
@@ -123,7 +142,6 @@
                                             <span class="text-muted">Acesso restrito</span>
                                         @endif
                                     </td>
-
                                 </tr>
 
                                 <!-- Modal de Transferência -->
@@ -187,107 +205,105 @@
                                 </div>
                             @endforeach
                         </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="6" class="text-right"><strong>Total Geral:</strong></td>
-                                <td><strong>R$ {{ number_format($totalGeral, 2, ',', '.') }}</strong></td>
-                                <td colspan="2"></td>
-                            </tr>
-                        </tfoot>
-
                     </table>
                 </div>
 
-
-
                 <div class="box-footer">
-
-
-                    <div class="btn-person">
-                        <a href="{{ route('produtoinserir.form') }}" class="btn btn-primary add pull-right">
-                            <i class="fa fa-plus"></i> Inserir novo produto
-                        </a>
-                    </div>
-
-
-
-
-                    {{ $itens_estoque->appends([
-                            'nome' => request()->get('nome'),
-                            'tipoproduto' => request()->get('tipoproduto'),
-                            'unidade' => request()->get('unidade'),
-                        ])->links() }}
+                    <button type="button" class="btn btn-success" id="open-modal-saida" disabled>
+                        <i class="fa fa-check"></i> Saída Múltipla
+                    </button>
                 </div>
             </div>
 
+            <!-- Modal de Saída Múltipla -->
+            <div class="modal fade" id="modalSaidaMultipla" tabindex="-1" role="dialog"
+                aria-labelledby="modalSaidaMultiplaLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <form id="modal-saida-form" action="{{ route('estoque.saidaMultiplos') }}" method="POST">
+                            @csrf
+                            <div class="modal-header">
+                                <h5 class="modal-title">Confirmar Saída de Produtos</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <p>Confirme as informações de saída para os produtos selecionados:</p>
+                                <div id="produtosSelecionadosContainer"></div>
+                                <div class="form-group">
+                                    <label for="militar">Militar:</label>
+                                    <select name="militar" class="form-control" required>
+                                        <option value="">Selecione o militar</option>
+                                        @foreach ($militares as $militar)
+                                            <option value="{{ $militar->id }}">{{ $militar->nome }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="data_saida">Data de Saída:</label>
+                                    <input type="date" name="data_saida" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="observacao">Observação:</label>
+                                    <textarea name="observacao" class="form-control" rows="3" placeholder="Observações sobre a saída (opcional)"></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-success">Confirmar Saída</button>
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </section>
-        <!-- /.content -->
     </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const selectAllCheckbox = document.getElementById('select-all');
+            const itemCheckboxes = document.querySelectorAll('.select-item');
+            const openModalButton = document.getElementById('open-modal-saida');
+            const produtosSelecionadosContainer = document.getElementById('produtosSelecionadosContainer');
 
-    <style>
-        .imagem-redimensionada {
-            width: 75px;
-            /* Define a largura */
-            height: auto;
-            /* Mantém a proporção */
-        }
+            selectAllCheckbox.addEventListener('change', function() {
+                itemCheckboxes.forEach(checkbox => {
+                    checkbox.checked = selectAllCheckbox.checked;
+                });
+                toggleOpenModalButton();
+            });
 
-        .btn-person {
-            position: fixed;
-            right: 4%;
-            bottom: 5%;
-            border-radius: 50%;
-            z-index: 1000;
-        }
+            itemCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', toggleOpenModalButton);
+            });
 
-        .btn-person2 {
-            position: fixed;
-            right: 1%;
-            bottom: 5%;
-            border-radius: 50%;
-            z-index: 1000;
-        }
-
-        .add {
-            box-shadow: 3px 3px 10px 3px rgba(23, 22, 0, 0.5);
-            border-radius: 50px;
-            font-size: 20px
-        }
-
-        .add:hover {
-            zoom: 135%;
-        }
-
-        .remove {
-            box-shadow: 3px 3px 10px 3px rgba(23, 22, 0, 0.5);
-            border-radius: 50px;
-            font-size: 20px
-        }
-
-        .remove:hover {
-            zoom: 135%;
-        }
-
-        @media (max-width:767px) {
-            .btn-person {
-                position: fixed;
-                right: 7%;
-                bottom: 3%;
-                border-radius: 50%;
-                z-index: 1000;
+            function toggleOpenModalButton() {
+                const anyChecked = Array.from(itemCheckboxes).some(checkbox => checkbox.checked);
+                openModalButton.disabled = !anyChecked;
             }
 
-            @media (max-width:767px) {
-                .btn-person2 {
-                    position: fixed;
-                    right: 7%;
-                    bottom: 3%;
-                    border-radius: 50%;
-                    z-index: 1000;
-                }
-            }
-    </style>
+            openModalButton.addEventListener('click', function() {
+                produtosSelecionadosContainer.innerHTML = '';
+                itemCheckboxes.forEach(checkbox => {
+                    if (checkbox.checked) {
+                        const row = checkbox.closest('tr');
+                        const produtoNome = row.querySelector('td:nth-child(2)').innerText.trim();
+                        const estoqueId = checkbox.name.match(/\d+/)[0];
+                        const quantidadeDisponivel = row.querySelector('td:nth-child(3)').innerText
+                            .trim();
 
-    <!-- /.content-wrapper -->
+                        const html = `
+                            <div class="form-group">
+                                <label>${produtoNome} (Disponível: ${quantidadeDisponivel})</label>
+                                <input type="number" name="produtos[${estoqueId}][quantidade]" class="form-control" min="1" max="${quantidadeDisponivel}" required>
+                            </div>
+                        `;
+                        produtosSelecionadosContainer.insertAdjacentHTML('beforeend', html);
+                    }
+                });
+                $('#modalSaidaMultipla').modal('show');
+            });
+        });
+    </script>
 @endsection

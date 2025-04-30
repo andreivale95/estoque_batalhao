@@ -74,6 +74,7 @@
                             <tr>
 
                                 <th>PRODUTO</th>
+                                <th>UNIDADE</th>
                                 <th>DESCRICAO</th>
                                 <th>MARCA</th>
                                 <th>VALOR</th>
@@ -90,6 +91,9 @@
                                             {{ $produto->nome }} -
                                             {{ optional($produto->tamanho()->first())->tamanho ?? 'Sem tamanho' }}
                                         </a>
+                                    </td>
+                                    <td>
+                                        {{ $produto->unidade }}
                                     </td>
 
                                     <td>{{ $produto->descricao }}</td>

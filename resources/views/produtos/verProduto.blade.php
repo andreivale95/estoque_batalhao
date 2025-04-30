@@ -54,6 +54,12 @@
                                         <input type="text" class="form-control" name="descricao"
                                             value="{{ $produto->descricao }}" disabled>
                                     </div>
+
+                                    <div class="form-group has-feedback col-md-6">
+                                        <label class="control-label" for="">Unidade:</label>
+                                        <input type="text" class="form-control" name="unidade"
+                                            value="{{ $produto->unidade }}" disabled>
+                                    </div>
                                     <div class="form-group has-feedback col-md-6">
                                         <label class="control-label" for="categoria">Categoria:</label>
                                         <select class="form-control" disabled>

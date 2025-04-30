@@ -175,6 +175,7 @@ class ProdutoController extends Controller
                 'descricao' => $request->get('descricao'),
                 'marca' => $request->get('marca'),
                 'tamanho' => $request->get('tamanho'),
+                'unidade' => $request->get('unidade'),
                 'valor' => $valorFinal, // agora decimal válido
                 'fk_categoria' => $request->get('categoria'),
                 'fk_kit' => $request->get('kit'),
@@ -266,6 +267,7 @@ class ProdutoController extends Controller
                 'marca' => $request->get('marca'),
                 'valor' => $valorFinal,
                 'tamanho' => $request->get('tamanho'),
+                'unidade' => $request->get('unidade'),
                 'fk_kit' => $request->get('fk_kit'),
                 'fk_categoria' => $request->get('categoria'),
                 'ativo' => 'Y',

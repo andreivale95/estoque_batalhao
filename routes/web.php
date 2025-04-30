@@ -38,9 +38,12 @@ Route::middleware(['auth', 'verified'])->controller(EstoqueController::class)->g
     Route::get('registros/estoque/form_entrada/{id}', 'formEntrada')->name('entrada.form');
     Route::get('registros/estoque/form_saida/{id}', 'formSaida')->name('saida.form');
     Route::post('/estoque/transferencia', [EstoqueController::class, 'transferir'])->name('estoque.transferir');
+    Route::post('/estoque/saida-multiplos', [EstoqueController::class, 'saidaMultiplos'])->name('estoque.saidaMultiplos');
+
 
 
 });
+
 
 Route::middleware(['auth', 'verified'])->controller(KitController::class)->group(function () {
     Route::get('registros/kits/listar', 'listarKits')->name('kits.listar'); // Listar kits

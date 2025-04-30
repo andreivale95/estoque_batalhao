@@ -26,6 +26,7 @@ class EstoqueController extends Controller
 
         $categorias = Categoria::all();
         $unidades = Unidade::all();
+        $militares = EfetivoMilitar::all();
 
         try {
             // Query base com filtros aplicados
@@ -53,7 +54,7 @@ class EstoqueController extends Controller
             // Paginação com os mesmos filtros
             $itens_estoque = (clone $query)->paginate(10);
 
-            return view('estoque/listarEstoque', compact('itens_estoque', 'unidades', 'categorias', 'totalGeral'));
+            return view('estoque/listarEstoque', compact('itens_estoque', 'unidades', 'categorias', 'totalGeral', 'militares', ));
         } catch (\Exception $e) {
             Log::error('Erro ao consultar estoque', [$e]);
             return back()->with('warning', 'Houve um erro ao consultar estoque.');
@@ -100,7 +101,7 @@ class EstoqueController extends Controller
             ]);
         }
 
-          // Registrar no histórico
+        // Registrar no histórico
         HistoricoMovimentacao::create([
             'fk_produto' => $itemAtual->fk_produto,
             'tipo_movimentacao' => 'transferencia',
@@ -330,6 +331,69 @@ class EstoqueController extends Controller
         } catch (Exception $e) {
             Log::error('Error ao consultar formulario', [$e]);
             return back()->with('warning', 'Houve um erro ao abrir Formulário');
+        }
+    }
+
+
+    public function saidaMultiplos(Request $request)
+    {
+        try {
+            // Valida os dados recebidos
+            $request->validate([
+                'militar' => 'required|exists:efetivo_militar,id',
+                'data_saida' => 'required|date',
+                'produtos' => 'required|array',
+            ]);
+
+            $produtos = $request->input('produtos', []);
+            $militarId = $request->input('militar');
+            $dataSaida = Carbon::parse($request->data_saida);
+            $obsGeral = $request->input('observacao');
+
+            // Busca o nome do militar pelo ID
+            $militar = EfetivoMilitar::findOrFail($militarId);
+            $destinatario = $militar->nome;
+
+            foreach ($produtos as $estoqueId => $dados) {
+                // Verifica se a quantidade foi informada
+                if (empty($dados['quantidade'])) {
+                    continue;
+                }
+                // Verifica se o produto existe no estoque
+
+
+                $quantidadeSolicitada = (int) $dados['quantidade'];
+                $estoque = Itens_estoque::where('id', $estoqueId)
+                    ->where('unidade', Auth::user()->fk_unidade)
+                    ->firstOrFail();
+
+
+                if ($quantidadeSolicitada > 0 && $quantidadeSolicitada <= $estoque->quantidade) {
+                    // Atualiza o estoque
+                    $estoque->quantidade -= $quantidadeSolicitada;
+                    $estoque->save();
+
+                    // Registra no histórico de movimentação
+                    HistoricoMovimentacao::create([
+                        'fk_produto' => $estoque->fk_produto,
+                        'tipo_movimentacao' => 'saida_manual_multipla',
+                        'quantidade' => $quantidadeSolicitada,
+                        'responsavel' => Auth::user()->nome,
+                        'observacao' => "Saída para {$destinatario}. Obs: {$obsGeral}",
+                        'data_movimentacao' => $dataSaida,
+                        'fk_unidade' => Auth::user()->fk_unidade,
+                        'militar' => $destinatario,
+                    ]);
+                } else {
+                    // Se a quantidade solicitada for maior que a disponível, retorna um erro
+                    return back()->with('warning', 'Quantidade solicitada maior que a disponível no estoque.');
+                }
+            }
+
+            return redirect()->route('estoque.listar')->with('success', 'Saída realizada com sucesso.');
+        } catch (\Exception $e) {
+            Log::error('Erro ao realizar saída múltipla', [$e]);
+            return back()->with('warning', 'Houve um erro ao realizar a saída múltipla.');
         }
     }
 }
