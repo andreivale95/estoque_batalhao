@@ -7,6 +7,7 @@ use App\Models\Categoria;
 use App\Models\HistoricoMovimentacao;
 use App\Models\Itens_estoque;
 use App\Models\Unidade;
+use App\Models\Produto;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\EfetivoMilitar;
@@ -60,7 +61,6 @@ class EstoqueController extends Controller
             return back()->with('warning', 'Houve um erro ao consultar estoque.');
         }
     }
-
     public function transferir(Request $request)
     {
         //   dd($request->all());
@@ -114,37 +114,60 @@ class EstoqueController extends Controller
             'fk_unidade' => $novaUnidade,
         ]);
 
-        return redirect()->route('estoque.listar')->with('success', 'Produto transferido com sucesso!');
+
+        return redirect()->route('estoque.listar', [
+            'nome' => '',
+            'categoria' => '',
+            'unidade' => Auth::user()->fk_unidade
+        ])->with('success', 'Produto transferido com sucesso!');
+
     }
     public function entradaEstoque(Request $request)
-    { //dd($request->all());
-
-
+    {
         try {
+            // Verifica se o usuário tem permissão
             if (Auth::user()->fk_unidade != $request->unidade) {
                 return redirect()->back()->with('error', 'Você não tem permissão para movimentar produtos de outra unidade.');
             }
 
-
-            // Validação dos dados
+            // Validação dos dados recebidos
             $request->validate([
                 'quantidade' => 'required|integer|min:1',
                 'data_entrada' => 'required|date',
                 'fk_produto' => 'required|exists:produtos,id',
+                'preco_unitario' => 'required|numeric|min:0.01',
             ]);
 
-            // Verifica se o produto já existe no estoque
-            $itemEstoque = Itens_estoque::where('fk_produto', $request->fk_produto)->where('unidade', $request->unidade)->first();
             $dataEntrada = Carbon::parse($request->data_entrada);
 
+            // Busca o item no estoque
+            $itemEstoque = Itens_estoque::where('fk_produto', $request->fk_produto)
+                ->where('unidade', $request->unidade)
+                ->first();
+
             if ($itemEstoque) {
-                // Se já existe, apenas soma a quantidade
-                $itemEstoque->quantidade += $request->quantidade;
+                // Calcula a nova média ponderada
+                $quantidadeAtual = $itemEstoque->quantidade;
+                $valorAtual = $itemEstoque->produto->valor ?? 0;
+
+                $novaQuantidade = $quantidadeAtual + $request->quantidade;
+                $novoValorMedio = $novaQuantidade > 0
+                    ? (($quantidadeAtual * $valorAtual) + ($request->quantidade * $request->preco_unitario)) / $novaQuantidade
+                    : $request->preco_unitario;
+
+                // Atualiza o estoque
+                $itemEstoque->quantidade = $novaQuantidade;
                 $itemEstoque->save();
+
+                // Atualiza o valor médio do produto
+                $produto = $itemEstoque->produto;
+                $produto->valor = $novoValorMedio;
+                $produto->save();
             } else {
-                // Se não existe, cria um novo registro
+                // Se não existir o item, cria com o valor unitário informado
                 Itens_estoque::create([
                     'quantidade' => $request->quantidade,
+                    'preco_unitario' => $request->preco_unitario,
                     'unidade' => $request->unidade,
                     'data_entrada' => $dataEntrada,
                     'fk_produto' => $request->fk_produto,
@@ -155,10 +178,15 @@ class EstoqueController extends Controller
                     'fonte' => $request->fonte,
                     'data_trp' => $request->data_trp,
                     'sei' => $request->sei,
-                ])->save();
+                ]);
 
+                // Atualiza valor do produto com o valor da primeira entrada
+                $produto = Produto::find($request->fk_produto);
+                $produto->valor = $request->preco_unitario;
+                $produto->save();
             }
 
+            // Cria histórico de movimentação
             HistoricoMovimentacao::create([
                 'fk_produto' => $request->fk_produto,
                 'tipo_movimentacao' => 'entrada',
@@ -172,17 +200,20 @@ class EstoqueController extends Controller
                 'sei' => $request->sei,
                 'fornecedor' => $request->fornecedor,
                 'nota_fiscal' => $request->nota_fiscal,
+            ]);
 
-            ])->save();
-
-
-            return redirect()->route('estoque.listar')->with('success', 'Produto cadastrado no estoque com sucesso!');
+            return redirect()->route('estoque.listar', [
+                'nome' => '',
+                'categoria' => '',
+                'unidade' => Auth::user()->fk_unidade
+            ])->with('success', 'Produto atualizado no estoque com sucesso!');
 
         } catch (\Exception $e) {
-            Log::error('Erro ao dar entrada no Estoque', [$e]);
+            Log::error('Erro ao dar entrada no Estoque', ['exception' => $e->getMessage()]);
             return back()->with('warning', 'Houve um erro ao dar entrada no Estoque.');
         }
     }
+
     public function entradaProdutoEstoque(Request $request)
     {  //dd($request->all());
 
@@ -286,7 +317,12 @@ class EstoqueController extends Controller
                     ]);
 
 
-                    return redirect()->route('estoque.listar')->with('success', 'Saída de produto registrada com sucesso!');
+                    return redirect()->route('estoque.listar', [
+                        'nome' => '',
+                        'categoria' => '',
+                        'unidade' => Auth::user()->fk_unidade
+                    ])->with('success', 'Saída realizada com sucesso.');
+
                 } else {
                     return back()->with('warning', 'Estoque insuficiente para essa saída.');
                 }
@@ -333,8 +369,6 @@ class EstoqueController extends Controller
             return back()->with('warning', 'Houve um erro ao abrir Formulário');
         }
     }
-
-
     public function saidaMultiplos(Request $request)
     {
         try {
@@ -390,7 +424,12 @@ class EstoqueController extends Controller
                 }
             }
 
-            return redirect()->route('estoque.listar')->with('success', 'Saída realizada com sucesso.');
+            return redirect()->route('estoque.listar', [
+                'nome' => '',
+                'categoria' => '',
+                'unidade' => Auth::user()->fk_unidade
+            ])->with('success', 'Saída realizada com sucesso.');
+
         } catch (\Exception $e) {
             Log::error('Erro ao realizar saída múltipla', [$e]);
             return back()->with('warning', 'Houve um erro ao realizar a saída múltipla.');

@@ -71,6 +71,11 @@
                                 <input type="number" name="quantidade" class="form-control" required min="1"
                                     placeholder="Digite a quantidade">
                             </div>
+                            <div class="form-group col-md-2">
+                                <label for="preco_unitario">Preço Unitário (R$):</label>
+                                <input type="text" name="preco_unitario" class="form-control" required>
+                            </div>
+
 
                             <!-- Fornecedor -->
                             <div class="form-group col-md-3">

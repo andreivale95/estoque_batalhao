@@ -14,6 +14,7 @@ class Itens_estoque extends Model
     protected $fillable = [
 
         'quantidade',
+        'preco_unitario',
         'unidade',
         'data_entrada',
         'data_saida',

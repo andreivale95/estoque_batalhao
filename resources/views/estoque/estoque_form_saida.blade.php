@@ -46,14 +46,13 @@
                             <div>
                                 <!-- Campo oculto com o ID do produto (será enviado no form) -->
                                 <input type="hidden" name="unidade" value="{{ $produto->unidade }}">
-
                             </div>
 
 
                             <!-- Data de Saída -->
                             <div class="form-group col-md-4">
                                 <label for="data_entrada">Data de Saída:</label>
-                                <input type="datetime-local" name="data_saida" class="form-control" required>
+                                <input type="date" name="data_saida" class="form-control" required>
 
                             </div>
                             <!-- Quantidade -->

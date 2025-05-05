@@ -30,6 +30,7 @@
                             <option value="saida" {{ request('tipo') == 'saida' ? 'selected' : '' }}>Saída</option>
                             <option value="transferencia" {{ request('tipo') == 'transferencia' ? 'selected' : '' }}>Transferência</option>
                             <option value="saida_kit" {{ request('tipo') == 'saida_kit' ? 'selected' : '' }}>Saída Kit</option>
+                            <option value="Saida_manual_multipla" {{ request('tipo') == 'Saida_manual_multipla' ? 'selected' : '' }}>Saída Múltipla</option>
                         </select>
                     </div>
 
@@ -96,7 +97,7 @@
                 <tbody>
                     @forelse($movimentacoes as $m)
                         <tr>
-                            <td>{{ \Carbon\Carbon::parse($m->data_movimentacao)->format('d/m/Y H:i') }}</td>
+                            <td>{{ \Carbon\Carbon::parse($m->data_movimentacao)->format('d/m/Y') }}</td>
                             <td>{{ $m->produto->nome ?? '—' }} - {{ optional($m->produto()->first()?->tamanho()->first())->tamanho ?? 'Tamanho Único' }}
                             </td>
                             <td>{{ ucfirst($m->tipo_movimentacao) }}</td>
