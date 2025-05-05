@@ -28,6 +28,7 @@ class HistoricoMovimentacao extends Model
         'fornecedor',
         'setor',
         'nota_fiscal',
+        'valor_entrada',
 
     ];
 

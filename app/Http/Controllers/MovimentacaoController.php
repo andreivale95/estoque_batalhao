@@ -23,7 +23,7 @@ class MovimentacaoController extends Controller
 
     public function index(Request $request)
     {
-        $query = HistoricoMovimentacao::with(['produto', 'origem', 'destino']);
+        $query = HistoricoMovimentacao::with(['produto', 'origem', 'destino'])->where('fk_unidade', Auth::user()->fk_unidade);
 
         if ($request->filled('produto')) {
             $query->where('fk_produto', $request->produto);

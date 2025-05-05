@@ -130,12 +130,17 @@ class EstoqueController extends Controller
                 return redirect()->back()->with('error', 'Você não tem permissão para movimentar produtos de outra unidade.');
             }
 
+            $valorBr = $request->get('valor'); // "250000"
+            $valorFinal = ((float) $valorBr) / 100; // resultado: 250.00
+
+            //dd($valorFinal);
+
             // Validação dos dados recebidos
             $request->validate([
                 'quantidade' => 'required|integer|min:1',
                 'data_entrada' => 'required|date',
                 'fk_produto' => 'required|exists:produtos,id',
-                'preco_unitario' => 'required|numeric|min:0.01',
+
             ]);
 
             $dataEntrada = Carbon::parse($request->data_entrada);
@@ -152,11 +157,12 @@ class EstoqueController extends Controller
 
                 $novaQuantidade = $quantidadeAtual + $request->quantidade;
                 $novoValorMedio = $novaQuantidade > 0
-                    ? (($quantidadeAtual * $valorAtual) + ($request->quantidade * $request->preco_unitario)) / $novaQuantidade
-                    : $request->preco_unitario;
+                    ? (($quantidadeAtual * $valorAtual) + ($request->quantidade * $valorFinal)) / $novaQuantidade
+                    : $valorFinal;
 
                 // Atualiza o estoque
                 $itemEstoque->quantidade = $novaQuantidade;
+
                 $itemEstoque->save();
 
                 // Atualiza o valor médio do produto
@@ -167,7 +173,7 @@ class EstoqueController extends Controller
                 // Se não existir o item, cria com o valor unitário informado
                 Itens_estoque::create([
                     'quantidade' => $request->quantidade,
-                    'preco_unitario' => $request->preco_unitario,
+
                     'unidade' => $request->unidade,
                     'data_entrada' => $dataEntrada,
                     'fk_produto' => $request->fk_produto,
@@ -182,7 +188,7 @@ class EstoqueController extends Controller
 
                 // Atualiza valor do produto com o valor da primeira entrada
                 $produto = Produto::find($request->fk_produto);
-                $produto->valor = $request->preco_unitario;
+                $produto->valor = $valorFinal;
                 $produto->save();
             }
 
@@ -191,6 +197,7 @@ class EstoqueController extends Controller
                 'fk_produto' => $request->fk_produto,
                 'tipo_movimentacao' => 'entrada',
                 'quantidade' => $request->quantidade,
+                'valor_entrada' => $valorFinal * $request->quantidade,
                 'responsavel' => Auth::user()->nome,
                 'observacao' => 'Entrada de novo produto',
                 'data_movimentacao' => $dataEntrada,
@@ -207,13 +214,11 @@ class EstoqueController extends Controller
                 'categoria' => '',
                 'unidade' => Auth::user()->fk_unidade
             ])->with('success', 'Produto atualizado no estoque com sucesso!');
-
         } catch (\Exception $e) {
             Log::error('Erro ao dar entrada no Estoque', ['exception' => $e->getMessage()]);
             return back()->with('warning', 'Houve um erro ao dar entrada no Estoque.');
         }
     }
-
     public function entradaProdutoEstoque(Request $request)
     {  //dd($request->all());
 

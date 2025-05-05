@@ -5,7 +5,8 @@
         <section class="content-header">
             <h1>
                 Saída <b> {{ $produto->produto()->first()->nome ?? '' }} -
-                    {{ optional($produto->produto()->first()?->tamanho()->first())->tamanho ?? 'Tamanho Único' }} </b> no Estoque. <br>
+                    {{ optional($produto->produto()->first()?->tamanho()->first())->tamanho ?? 'Tamanho Único' }} </b> no
+                Estoque. <br>
                 <small>Unidade: {{ $produto->unidade()->first()->nome }}</small>
 
             </h1>
@@ -102,21 +103,24 @@
                             </div>
 
                         </div>
-
-                        <!-- Botões -->
-                        <div class="form-group text-right">
-                            <a href="{{ route('estoque.listar') }}?nome=&categoria=&unidade={{ Auth::user()->fk_unidade }}" class="btn btn-danger">
-                                Cancelar <i class="fa fa-arrow-left"></i>
-                            </a>
-                            <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Cadastrar</button>
-                        </div>
-                    </form>
                 </div>
-
             </div>
 
-        </section>
-        <!-- /.content -->
+            <!-- Botões -->
+            <div class="form-group text-right">
+                <a href="{{ route('estoque.listar') }}?nome=&categoria=&unidade={{ Auth::user()->fk_unidade }}"
+                    class="btn btn-danger">
+                    Cancelar <i class="fa fa-arrow-left"></i>
+                </a>
+                <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Cadastrar</button>
+            </div>
+            </form>
+    </div>
+
+
+
+    </section>
+    <!-- /.content -->
     </div>
     <!-- /.content-wrapper -->
 

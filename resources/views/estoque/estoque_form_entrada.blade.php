@@ -71,85 +71,94 @@
                                 <input type="number" name="quantidade" class="form-control" required min="1"
                                     placeholder="Digite a quantidade">
                             </div>
-                            <div class="form-group col-md-2">
-                                <label for="preco_unitario">Preço Unitário (R$):</label>
-                                <input type="text" name="preco_unitario" class="form-control" required>
+
+
+                            <div class="form-group has-feedback col-md-6">
+                                <label class="control-label" for="valor">Preço Unitário (R$):</label>
+                                <input type="text" class="form-control" placeholder="0,00" name="valor_formatado"
+                                    id="valor" required>
+                                <input type="hidden" name="valor" id="valor_limpo">
                             </div>
-
-
-                            <!-- Fornecedor -->
-                            <div class="form-group col-md-3">
-                                <label for="fornecedor">Fornecedor:</label>
-                                <input type="text" name="fornecedor" class="form-control"
-                                    placeholder="Nome do Fornecedor">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label for="sei">Número do Processo SEI:</label>
-                                <input type="text" name="sei" class="form-control"
-                                    placeholder="Número do Processo SEI">
-                            </div>
-
-                            <!-- Nota Fiscal -->
-                            <div class="form-group col-md-3">
-                                <label for="nota_fiscal">Número da Nota Fiscal:</label>
-                                <input type="text" name="nota_fiscal" class="form-control" placeholder="Ex: 00012345">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label for="fonte">Fonte:</label>
-                                <input type="text" name="fonte" class="form-control" list="fontes" placeholder="">
-                                <datalist id="fontes">
-                                    <option value="SENASP">
-                                    <option value="SEJUSP">
-                                    <option value="VINCI">
-                                    <option value="100">
-                                    <option value="700">
-                                    <option value="DOAÇÃO">
-                                    <option value="FUNDO A FUNDO">
-                                    <option value="OUTROS">
-                                </datalist>
-                            </div>
-
-
-                            <!-- Observações -->
-                            <div class="form-group col-md-12">
-                                <label for="fornecedor">Observações:</label>
-                                <input type="text" name="observacao" class="form-control"
-                                    placeholder="Nome do Fornecedor">
-                            </div>
-
-
-
-
 
                         </div>
 
-                        <!-- Botões -->
-                        <div class="form-group text-right">
-                            <a href="{{ route('estoque.listar') }}?nome=&categoria=&unidade={{ Auth::user()->fk_unidade }}" class="btn btn-danger">
-                                Cancelar <i class="fa fa-arrow-left"></i>
-                            </a>
-                            <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Cadastrar</button>
+
+
+                        <!-- Fornecedor -->
+                        <div class="form-group col-md-3">
+                            <label for="fornecedor">Fornecedor:</label>
+                            <input type="text" name="fornecedor" class="form-control" placeholder="Nome do Fornecedor">
                         </div>
-                    </form>
+                        <div class="form-group col-md-3">
+                            <label for="sei">Número do Processo SEI:</label>
+                            <input type="text" name="sei" class="form-control" placeholder="Número do Processo SEI">
+                        </div>
+
+                        <!-- Nota Fiscal -->
+                        <div class="form-group col-md-3">
+                            <label for="nota_fiscal">Número da Nota Fiscal:</label>
+                            <input type="text" name="nota_fiscal" class="form-control" placeholder="Ex: 00012345">
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="fonte">Fonte:</label>
+                            <input type="text" name="fonte" class="form-control" list="fontes" placeholder="">
+                            <datalist id="fontes">
+                                <option value="SENASP">
+                                <option value="SEJUSP">
+                                <option value="VINCI">
+                                <option value="100">
+                                <option value="700">
+                                <option value="DOAÇÃO">
+                                <option value="FUNDO A FUNDO">
+                                <option value="OUTROS">
+                            </datalist>
+                        </div>
+
+
+                        <!-- Observações -->
+                        <div class="form-group col-md-12">
+                            <label for="fornecedor">Observações:</label>
+                            <input type="text" name="observacao" class="form-control" placeholder="Nome do Fornecedor">
+                        </div>
+
+
+
+
+
                 </div>
-
             </div>
 
-        </section>
-        <!-- /.content -->
+            <!-- Botões -->
+            <div class="form-group text-right">
+                <a href="{{ route('estoque.listar') }}?nome=&categoria=&unidade={{ Auth::user()->fk_unidade }}"
+                    class="btn btn-danger">
+                    Cancelar <i class="fa fa-arrow-left"></i>
+                </a>
+                <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Cadastrar</button>
+            </div>
+            </form>
+
+
+    </div>
+
+    </section>
+    <!-- /.content -->
     </div>
     <!-- /.content-wrapper -->
 
     <script>
-        $(document).ready(function() {});
-
-
         document.getElementById('valor').addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            value = (parseInt(value, 10) / 100).toLocaleString('pt-BR', {
-                minimumFractionDigits: 2
-            });
-            e.target.value = value !== "NaN" ? value : "";
+            let raw = e.target.value.replace(/\D/g, ''); // só números
+            let valorCentavos = raw ? parseInt(raw, 10) : 0;
+
+            // Atualiza o campo hidden com valor em centavos
+            document.getElementById('valor_limpo').value = valorCentavos;
+
+            // Atualiza o campo visível formatado com vírgula e ponto
+            let valorFormatado = (valorCentavos / 100).toFixed(2)
+                .replace('.', ',')
+                .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            e.target.value = valorFormatado;
         });
     </script>
 @endsection

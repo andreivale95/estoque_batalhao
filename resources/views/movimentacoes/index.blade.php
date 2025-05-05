@@ -81,6 +81,7 @@
                         <th>Fornecedor</th>
                         <th>N.F.</th>
                         <th>Qtd.</th>
+                        <th>Valor</th>
                         <th>Unidade</th>
                         <th>Responsável</th>
                         <th>Estoque</th>
@@ -104,6 +105,7 @@
                             <td>{{ $m->fornecedor }}</td>
                             <td>{{ $m->nota_fiscal }}</td>
                             <td>{{ $m->quantidade }}</td>
+                            <td>{{ number_format($m->valor_entrada, 2, ',', '.') }}</td>
                             <td>{{ $m->produto->unidade }}</td>
                             <td>{{ $m->responsavel }}</td>
                             <td>{{ $m->unidade->nome }}</td>
