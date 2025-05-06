@@ -16,7 +16,8 @@
                             @foreach ($produtos as $produto)
                                 <option value="{{ $produto->id }}"
                                     {{ request('produto') == $produto->id ? 'selected' : '' }}>
-                                    {{ $produto->nome }} - {{ optional($produto->tamanho()->first())->tamanho ?? 'Tamanho Único' }}
+                                    {{ $produto->nome }} -
+                                    {{ optional($produto->tamanho()->first())->tamanho ?? 'Tamanho Único' }}
                                 </option>
                             @endforeach
                         </select>
@@ -28,9 +29,12 @@
                             <option value="">Todos</option>
                             <option value="entrada" {{ request('tipo') == 'entrada' ? 'selected' : '' }}>Entrada</option>
                             <option value="saida" {{ request('tipo') == 'saida' ? 'selected' : '' }}>Saída</option>
-                            <option value="transferencia" {{ request('tipo') == 'transferencia' ? 'selected' : '' }}>Transferência</option>
-                            <option value="saida_kit" {{ request('tipo') == 'saida_kit' ? 'selected' : '' }}>Saída Kit</option>
-                            <option value="Saida_manual_multipla" {{ request('tipo') == 'Saida_manual_multipla' ? 'selected' : '' }}>Saída Múltipla</option>
+                            <option value="transferencia" {{ request('tipo') == 'transferencia' ? 'selected' : '' }}>
+                                Transferência</option>
+                            <option value="saida_kit" {{ request('tipo') == 'saida_kit' ? 'selected' : '' }}>Saída Kit
+                            </option>
+                            <option value="Saida_manual_multipla"
+                                {{ request('tipo') == 'Saida_manual_multipla' ? 'selected' : '' }}>Saída Múltipla</option>
                         </select>
                     </div>
 
@@ -89,17 +93,18 @@
                         <th>Destino</th>
                         <th>Militar</th>
                         <th>Setor</th>
-                        <th>Observação</th>
                         <th>Proc. SEI</th>
                         <th>D. TRP</th>
                         <th>Fonte</th>
+                        <th>Observação</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($movimentacoes as $m)
                         <tr>
                             <td>{{ \Carbon\Carbon::parse($m->data_movimentacao)->format('d/m/Y') }}</td>
-                            <td>{{ $m->produto->nome ?? '—' }} - {{ optional($m->produto()->first()?->tamanho()->first())->tamanho ?? 'Tamanho Único' }}
+                            <td>{{ $m->produto->nome ?? '—' }} -
+                                {{ optional($m->produto()->first()?->tamanho()->first())->tamanho ?? 'Tamanho Único' }}
                             </td>
                             <td>{{ ucfirst($m->tipo_movimentacao) }}</td>
                             <td>{{ $m->fornecedor }}</td>
@@ -112,11 +117,11 @@
                             <td>{{ $m->origem->nome ?? '-' }}</td>
                             <td>{{ $m->destino->nome ?? '-' }}</td>
                             <td>{{ $m->militar }}</td>
-                            <td>{{ $m->setor}}</td>
-                            <td>{{ $m->observacao }}</td>
+                            <td>{{ $m->setor }}</td>
                             <td>{{ $m->sei }}</td>
-                            <td>{{ $m->data_trp }}</td>
+                            <td>{{ \Carbon\Carbon::parse($m->data_trp)->format('d/m/Y') }}</td>
                             <td>{{ $m->fonte }}</td>
+                            <td>{{ $m->observacao }}</td>
                         </tr>
                     @empty
                         <tr>

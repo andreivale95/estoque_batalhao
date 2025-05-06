@@ -169,28 +169,13 @@ class EstoqueController extends Controller
                 $produto = $itemEstoque->produto;
                 $produto->valor = $novoValorMedio;
                 $produto->save();
-            } else {
-                // Se não existir o item, cria com o valor unitário informado
-                Itens_estoque::create([
-                    'quantidade' => $request->quantidade,
-
-                    'unidade' => $request->unidade,
-                    'data_entrada' => $dataEntrada,
-                    'fk_produto' => $request->fk_produto,
-                    'lote' => $request->lote,
-                    'fornecedor' => $request->fornecedor,
-                    'nota_fiscal' => $request->nota_fiscal,
-                    'observacao' => $request->observacao ?? 'Entrada de novo produto',
-                    'fonte' => $request->fonte,
-                    'data_trp' => $request->data_trp,
-                    'sei' => $request->sei,
-                ]);
-
-                // Atualiza valor do produto com o valor da primeira entrada
-                $produto = Produto::find($request->fk_produto);
-                $produto->valor = $valorFinal;
-                $produto->save();
             }
+
+            // Atualiza valor do produto com o valor da primeira entrada
+            $produto = Produto::find($request->fk_produto);
+            $produto->valor = $novoValorMedio;
+            $produto->save();
+
 
             // Cria histórico de movimentação
             HistoricoMovimentacao::create([
@@ -199,7 +184,7 @@ class EstoqueController extends Controller
                 'quantidade' => $request->quantidade,
                 'valor_entrada' => $valorFinal * $request->quantidade,
                 'responsavel' => Auth::user()->nome,
-                'observacao' => 'Entrada de novo produto',
+                'observacao' => $request->observacao ?? 'Entrada no estoque',
                 'data_movimentacao' => $dataEntrada,
                 'fk_unidade' => $request->unidade,
                 'fonte' => $request->fonte,
@@ -273,7 +258,11 @@ class EstoqueController extends Controller
 
             ]);
 
-            return redirect()->route('estoque.listar')->with('success', 'Produto cadastrado no estoque com sucesso!');
+            return redirect()->route('estoque.listar', [
+                'nome' => '',
+                'categoria' => '',
+                'unidade' => Auth::user()->fk_unidade
+            ])->with('success', 'Produto cadastrado no estoque com sucesso!');
         } catch (Exception $e) {
             Log::error('Erro ao dar entrada no Estoque', [$e]);
             return back()->with('warning', 'Houve um erro ao dar entrada no Estoque.');

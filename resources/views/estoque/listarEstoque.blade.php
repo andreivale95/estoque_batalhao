@@ -77,7 +77,7 @@
                                 <th>Unidade</th>
                                 <th>Categoria</th>
                                 <th>Estoque</th>
-                                <th>Valor Unitário</th>
+                                <th>Valor Médio</th>
                                 <th>Subtotal</th>
                                 <th>Ações</th>
                                 <th>Transferência</th>
