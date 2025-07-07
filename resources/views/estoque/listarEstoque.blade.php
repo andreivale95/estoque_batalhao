@@ -267,43 +267,89 @@
             const itemCheckboxes = document.querySelectorAll('.select-item');
             const openModalButton = document.getElementById('open-modal-saida');
             const produtosSelecionadosContainer = document.getElementById('produtosSelecionadosContainer');
+            const STORAGE_KEY = 'itensEstoqueSelecionados';
+
+            // Função para obter seleção do localStorage
+            function getSelecionados() {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+            }
+            // Função para salvar seleção no localStorage
+            function setSelecionados(obj) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+            }
+
+            // Restaurar seleção ao carregar página
+            const selecionados = getSelecionados();
+            itemCheckboxes.forEach(checkbox => {
+                const estoqueId = checkbox.name.match(/\d+/)[0];
+                if (selecionados[estoqueId]) {
+                    checkbox.checked = true;
+                }
+            });
+            toggleOpenModalButton();
 
             selectAllCheckbox.addEventListener('change', function() {
                 itemCheckboxes.forEach(checkbox => {
+                    const estoqueId = checkbox.name.match(/\d+/)[0];
+                    const row = checkbox.closest('tr');
+                    const produtoNome = row.querySelector('td:nth-child(2)').innerText.trim();
+                    const quantidadeDisponivel = row.querySelector('td:nth-child(3)').innerText.trim();
                     checkbox.checked = selectAllCheckbox.checked;
+                    if (checkbox.checked) {
+                        selecionados[estoqueId] = {
+                            nome: produtoNome,
+                            quantidade: quantidadeDisponivel
+                        };
+                    } else {
+                        delete selecionados[estoqueId];
+                    }
                 });
+                setSelecionados(selecionados);
                 toggleOpenModalButton();
             });
 
             itemCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', toggleOpenModalButton);
+                checkbox.addEventListener('change', function() {
+                    const estoqueId = checkbox.name.match(/\d+/)[0];
+                    const row = checkbox.closest('tr');
+                    const produtoNome = row.querySelector('td:nth-child(2)').innerText.trim();
+                    const quantidadeDisponivel = row.querySelector('td:nth-child(3)').innerText.trim();
+                    if (checkbox.checked) {
+                        selecionados[estoqueId] = {
+                            nome: produtoNome,
+                            quantidade: quantidadeDisponivel
+                        };
+                    } else {
+                        delete selecionados[estoqueId];
+                    }
+                    setSelecionados(selecionados);
+                    toggleOpenModalButton();
+                });
             });
 
             function toggleOpenModalButton() {
-                const anyChecked = Array.from(itemCheckboxes).some(checkbox => checkbox.checked);
+                const anyChecked = Object.keys(getSelecionados()).length > 0;
                 openModalButton.disabled = !anyChecked;
             }
 
             openModalButton.addEventListener('click', function() {
                 produtosSelecionadosContainer.innerHTML = '';
-                itemCheckboxes.forEach(checkbox => {
-                    if (checkbox.checked) {
-                        const row = checkbox.closest('tr');
-                        const produtoNome = row.querySelector('td:nth-child(2)').innerText.trim();
-                        const estoqueId = checkbox.name.match(/\d+/)[0];
-                        const quantidadeDisponivel = row.querySelector('td:nth-child(3)').innerText
-                            .trim();
-
-                        const html = `
-                            <div class="form-group">
-                                <label>${produtoNome} (Disponível: ${quantidadeDisponivel})</label>
-                                <input type="number" name="produtos[${estoqueId}][quantidade]" class="form-control" min="1" max="${quantidadeDisponivel}" required>
-                            </div>
-                        `;
-                        produtosSelecionadosContainer.insertAdjacentHTML('beforeend', html);
-                    }
+                const selecionadosAtual = getSelecionados();
+                Object.entries(selecionadosAtual).forEach(([estoqueId, info]) => {
+                    const html = `
+                        <div class=\"form-group\">
+                            <label>${info.nome} (Disponível: ${info.quantidade})</label>
+                            <input type=\"number\" name=\"produtos[${estoqueId}][quantidade]\" class=\"form-control\" min=\"1\" max=\"${info.quantidade}\" required>
+                        </div>
+                    `;
+                    produtosSelecionadosContainer.insertAdjacentHTML('beforeend', html);
                 });
                 $('#modalSaidaMultipla').modal('show');
+            });
+
+            // Limpar seleção ao submeter saída múltipla
+            document.getElementById('modal-saida-form').addEventListener('submit', function() {
+                localStorage.removeItem(STORAGE_KEY);
             });
         });
     </script>
