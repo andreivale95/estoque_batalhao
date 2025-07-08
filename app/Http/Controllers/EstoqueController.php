@@ -55,7 +55,7 @@ class EstoqueController extends Controller
             // Paginação com os mesmos filtros
             $itens_estoque = (clone $query)->paginate(10);
 
-            return view('estoque/listarEstoque', compact('itens_estoque', 'unidades', 'categorias', 'totalGeral', 'militares', ));
+            return view('estoque/listarEstoque', compact('itens_estoque', 'unidades', 'categorias', 'totalGeral', 'militares',));
         } catch (\Exception $e) {
             Log::error('Erro ao consultar estoque', [$e]);
             return back()->with('warning', 'Houve um erro ao consultar estoque.');
@@ -120,7 +120,6 @@ class EstoqueController extends Controller
             'categoria' => '',
             'unidade' => Auth::user()->fk_unidade
         ])->with('success', 'Produto transferido com sucesso!');
-
     }
     public function entradaEstoque(Request $request)
     {
@@ -317,7 +316,6 @@ class EstoqueController extends Controller
                         'categoria' => '',
                         'unidade' => Auth::user()->fk_unidade
                     ])->with('success', 'Saída realizada com sucesso.');
-
                 } else {
                     return back()->with('warning', 'Estoque insuficiente para essa saída.');
                 }
@@ -338,9 +336,6 @@ class EstoqueController extends Controller
             $produto = Itens_estoque::select('fk_produto', 'unidade')->where('id', $id)->first();
 
             return view('estoque/estoque_form_entrada', compact('produto'));
-
-
-
         } catch (Exception $e) {
             Log::error('Error ao consultar formulario', [$e]);
             return back()->with('warning', 'Houve um erro ao abrir Formulário');
@@ -356,9 +351,6 @@ class EstoqueController extends Controller
             $militares = EfetivoMilitar::all();
 
             return view('estoque/estoque_form_saida', compact('produto', 'militares'));
-
-
-
         } catch (Exception $e) {
             Log::error('Error ao consultar formulario', [$e]);
             return back()->with('warning', 'Houve um erro ao abrir Formulário');
@@ -382,7 +374,8 @@ class EstoqueController extends Controller
             // Busca o nome do militar pelo ID
             $militar = EfetivoMilitar::findOrFail($militarId);
             $destinatario = $militar->nome;
-
+            $loteSaida = uniqid('saida_');
+           
             foreach ($produtos as $estoqueId => $dados) {
                 // Verifica se a quantidade foi informada
                 if (empty($dados['quantidade'])) {
@@ -412,22 +405,27 @@ class EstoqueController extends Controller
                         'data_movimentacao' => $dataSaida,
                         'fk_unidade' => Auth::user()->fk_unidade,
                         'militar' => $destinatario,
+                        'lote_saida' => $loteSaida,
                     ]);
                 } else {
-                    // Se a quantidade solicitada for maior que a disponível, retorna um erro
                     return back()->with('warning', 'Quantidade solicitada maior que a disponível no estoque.');
                 }
             }
-
-            return redirect()->route('estoque.listar', [
-                'nome' => '',
-                'categoria' => '',
-                'unidade' => Auth::user()->fk_unidade
-            ])->with('success', 'Saída realizada com sucesso.');
-
+            return redirect()->route('estoque.recibo', $loteSaida);
         } catch (\Exception $e) {
             Log::error('Erro ao realizar saída múltipla', [$e]);
             return back()->with('warning', 'Houve um erro ao realizar a saída múltipla.');
         }
+    }
+    /**
+     * Exibe o recibo de entrega de itens após saída múltipla
+     */
+    public function recibo($loteSaida)
+    {
+        $itens = HistoricoMovimentacao::where('lote_saida', $loteSaida)->get();
+        // Pega o militar, data, etc, do primeiro item
+        $militar = $itens->first()->militar ?? '';
+        $data = $itens->first()->data_movimentacao ?? '';
+        return view('estoque.recibo', compact('itens', 'militar', 'data'));
     }
 }

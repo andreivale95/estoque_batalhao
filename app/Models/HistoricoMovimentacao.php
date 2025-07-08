@@ -30,6 +30,8 @@ class HistoricoMovimentacao extends Model
         'nota_fiscal',
         'valor_total',
         'valor_unitario',
+        'lote_saida',
+        'movimentacao_origem_id'
 
     ];
 

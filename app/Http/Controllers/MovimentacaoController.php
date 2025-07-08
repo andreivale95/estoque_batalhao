@@ -80,8 +80,18 @@ class MovimentacaoController extends Controller
     public function desfazer($id)
     {
         try {
-            // Buscar a movimentação
             $movimentacao = HistoricoMovimentacao::findOrFail($id);
+
+            // Não permitir desfazer se já for uma reversão
+            if (str_contains($movimentacao->observacao, 'Desfeito movimentação')) {
+                return back()->with('error', 'Não é possível desfazer uma movimentação já desfeita.');
+            }
+
+            // Não permitir desfazer se já existe uma reversão para esta movimentação
+            $jaDesfeita = HistoricoMovimentacao::where('movimentacao_origem_id', $movimentacao->id)->exists();
+            if ($jaDesfeita) {
+                return back()->with('error', 'Esta movimentação já foi desfeita anteriormente.');
+            }
 
             // Verificar o tipo de movimentação
             $tipoMovimentacao = $movimentacao->tipo_movimentacao;
@@ -100,12 +110,17 @@ class MovimentacaoController extends Controller
                 $itemEstoque->quantidade += $movimentacao->quantidade;
             }
 
+            if ($tipoMovimentacao === 'saida_manual_multipla') {
+                $itemEstoque->quantidade += $movimentacao->quantidade;
+            }
+
+
             // Se for uma entrada, retira a quantidade do estoque
             if ($tipoMovimentacao === 'entrada') {
                 $itemEstoque->quantidade -= $movimentacao->quantidade;
             }
 
-            // Se for uma transferência, a lógica pode ser diferente dependendo da origem e destino
+            // Se for uma transferência
             if ($tipoMovimentacao === 'transferencia') {
                 if ($movimentacao->origem) {
                     $itemEstoqueOrigem = Itens_estoque::where('fk_produto', $movimentacao->fk_produto)
@@ -147,6 +162,7 @@ class MovimentacaoController extends Controller
                 'sei' => $movimentacao->sei,
                 'fornecedor' => $movimentacao->fornecedor,
                 'nota_fiscal' => $movimentacao->nota_fiscal,
+                'movimentacao_origem_id' => $movimentacao->id,
             ]);
 
             return back()->with('success', 'Movimentação desfeita com sucesso!');
