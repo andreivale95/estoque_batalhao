@@ -72,13 +72,12 @@
                 <table class="table table-striped">
                     <thead>
                         <tr>
-
                             <th>PRODUTO</th>
+                            <th>PATRIMÔNIO</th>
                             <th>UNIDADE</th>
                             <th>DESCRICAO</th>
                             <th>MARCA</th>
                             <th>VALOR</th>
-
                             <th>CATEGORIA</th>
                         </tr>
                     </thead>
@@ -93,27 +92,22 @@
                                 </a>
                             </td>
                             <td>
+                                {{ $produto->patrimonio ?? '-' }}
+                            </td>
+                            <td>
                                 {{ $produto->unidade }}
                             </td>
-
                             <td>{{ $produto->descricao }}</td>
                             <td>{{ $produto->marca }}</td>
                             <td>{{ $produto->valor }}</td>
-
                             <td>{{ $produto->categoria->nome }}</td>
-
-
-
                             <td> <a class="btn btn-warning" href="{{ route('produto.editar', $produto->id) }}"
                                     style="color: white">
                                     <i class="fa fa-edit"></i></a>
-
                                 <a class="btn btn-primary" href="{{ route('produto.ver', $produto->id) }}"
                                     style="color: white">
                                     <i class="fa fa-television"></i></a>
                             </td>
-
-
                         </tr>
                         @endforeach
                     </tbody>

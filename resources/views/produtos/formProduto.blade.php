@@ -43,6 +43,7 @@
                                             <input type="text" class="form-control" placeholder="" name="marca"
                                                 value="" required>
                                         </div>
+                                        
 
                                         <div class="form-group has-feedback col-md-6">
                                             <label class="control-label" for="">Descrição:</label>
@@ -123,6 +124,11 @@
                                             <input type="text" class="form-control" placeholder="0,00"
                                                 name="valor_formatado" id="valor" required>
                                             <input type="hidden" name="valor" id="valor_limpo">
+                                        </div>
+
+                                        <div class="form-group has-feedback col-md-6">
+                                            <label class="control-label" for="patrimonio">Patrimônio (se houver)</label>
+                                            <input type="text" class="form-control" name="patrimonio" value="{{ old('patrimonio', $produto->patrimonio ?? '') }}">
                                         </div>
 
 

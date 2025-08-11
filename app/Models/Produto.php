@@ -21,7 +21,7 @@ class Produto extends Model
         'tamanho',
         'unidade',
         'ativo',
-
+        'patrimonio',
 
 
     ];

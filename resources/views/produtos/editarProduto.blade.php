@@ -142,6 +142,10 @@
                                             value="{{ number_format((float) $produto->valor, 2, ',', '.') }}">
                                         <input type="hidden" name="valor" id="valor_limpo">
                                     </div>
+                                    <div class="form-group has-feedback col-md-6">
+                                        <label class="control-label" for="patrimonio">Patrimônio (se houver)</label>
+                                        <input type="text" class="form-control" name="patrimonio" value="{{ old('patrimonio', $produto->patrimonio ?? '') }}">
+                                    </div>
                                 </div>
                             </div>
                             <div class="box-footer pull-right">
