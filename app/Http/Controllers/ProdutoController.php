@@ -72,6 +72,13 @@ class ProdutoController extends Controller
         $request['categoria'] = empty($request['categoria']) ? '' : $request->get('categoria');
         $request['marca'] = empty($request['marca']) ? '' : $request->get('marca');
 
+        $sort = $request->get('sort', 'nome');
+        $direction = $request->get('direction', 'asc');
+
+        $sortable = [
+            'nome', 'patrimonio', 'descricao', 'marca', 'categoria', 'unidade', 'valor'
+        ];
+
         try {
             $categorias = Categoria::all();
             $todasMarcas = Produto::select('marca')->distinct()->pluck('marca');
@@ -88,15 +95,23 @@ class ProdutoController extends Controller
                 ->when(filled($request->get('nome')), function (Builder $query) use ($request) {
                     return $query->where('nome', 'like', '%' . $request->get('nome') . '%');
                 })
-                ->paginate(10);
-
+                ->when(in_array($sort, $sortable), function (Builder $query) use ($sort, $direction) {
+                    if ($sort === 'categoria') {
+                        return $query->join('categorias', 'produtos.fk_categoria', '=', 'categorias.id')
+                            ->orderBy('categorias.nome', $direction)
+                            ->select('produtos.*');
+                    } else {
+                        return $query->orderBy($sort, $direction);
+                    }
+                })
+                ->paginate(10)
+                ->appends($request->all());
 
             return view('produtos/listarProdutos', compact('produtos', 'categorias', 'todasMarcas'));
         } catch (\Exception $e) {
             Log::error('Erro ao buscar produtos', [$e]);
             return back()->with('warning', 'Erro ao buscar produtos.');
         }
-
     }
 
     public function formProduto(Request $request)

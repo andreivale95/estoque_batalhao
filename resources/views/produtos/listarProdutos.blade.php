@@ -72,13 +72,42 @@
                 <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th>PRODUTO</th>
-                            <th>PATRIMÔNIO</th>
-                            <th>UNIDADE</th>
-                            <th>DESCRICAO</th>
-                            <th>MARCA</th>
-                            <th>VALOR</th>
-                            <th>CATEGORIA</th>
+                            <th><a href="{{ route('produtos.listar', array_merge(request()->all(), ['sort' => 'nome', 'direction' => (request('sort') == 'nome' && request('direction') == 'asc') ? 'desc' : 'asc'])) }}">PRODUTO
+                                @if(request('sort') == 'nome')
+                                    <i class="fa fa-sort-{{ request('direction') == 'asc' ? 'asc' : 'desc' }}"></i>
+                                @endif
+                            </a></th>
+                            <th><a href="{{ route('produtos.listar', array_merge(request()->all(), ['sort' => 'patrimonio', 'direction' => (request('sort') == 'patrimonio' && request('direction') == 'asc') ? 'desc' : 'asc'])) }}">PATRIMÔNIO
+                                @if(request('sort') == 'patrimonio')
+                                    <i class="fa fa-sort-{{ request('direction') == 'asc' ? 'asc' : 'desc' }}"></i>
+                                @endif
+                            </a></th>
+                            <th><a href="{{ route('produtos.listar', array_merge(request()->all(), ['sort' => 'unidade', 'direction' => (request('sort') == 'unidade' && request('direction') == 'asc') ? 'desc' : 'asc'])) }}">UNIDADE
+                                @if(request('sort') == 'unidade')
+                                    <i class="fa fa-sort-{{ request('direction') == 'asc' ? 'asc' : 'desc' }}"></i>
+                                @endif
+                            </a></th>
+                            <th><a href="{{ route('produtos.listar', array_merge(request()->all(), ['sort' => 'descricao', 'direction' => (request('sort') == 'descricao' && request('direction') == 'asc') ? 'desc' : 'asc'])) }}">DESCRIÇÃO
+                                @if(request('sort') == 'descricao')
+                                    <i class="fa fa-sort-{{ request('direction') == 'asc' ? 'asc' : 'desc' }}"></i>
+                                @endif
+                            </a></th>
+                            <th><a href="{{ route('produtos.listar', array_merge(request()->all(), ['sort' => 'marca', 'direction' => (request('sort') == 'marca' && request('direction') == 'asc') ? 'desc' : 'asc'])) }}">MARCA
+                                @if(request('sort') == 'marca')
+                                    <i class="fa fa-sort-{{ request('direction') == 'asc' ? 'asc' : 'desc' }}"></i>
+                                @endif
+                            </a></th>
+                            <th><a href="{{ route('produtos.listar', array_merge(request()->all(), ['sort' => 'valor', 'direction' => (request('sort') == 'valor' && request('direction') == 'asc') ? 'desc' : 'asc'])) }}">VALOR
+                                @if(request('sort') == 'valor')
+                                    <i class="fa fa-sort-{{ request('direction') == 'asc' ? 'asc' : 'desc' }}"></i>
+                                @endif
+                            </a></th>
+                            <th><a href="{{ route('produtos.listar', array_merge(request()->all(), ['sort' => 'categoria', 'direction' => (request('sort') == 'categoria' && request('direction') == 'asc') ? 'desc' : 'asc'])) }}">CATEGORIA
+                                @if(request('sort') == 'categoria')
+                                    <i class="fa fa-sort-{{ request('direction') == 'asc' ? 'asc' : 'desc' }}"></i>
+                                @endif
+                            </a></th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
