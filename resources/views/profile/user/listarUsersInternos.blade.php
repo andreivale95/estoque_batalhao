@@ -85,11 +85,13 @@
                                         <td>INATIVO</td>
                                     @endif
                                     <td>
-                                        <a href="{{ route('usi.ver', $user->cpf) }}" class="btn btn-success"><i
-                                                class="fa fa-desktop"></i></a>
-                                        <a href="{{ route('usi.editar', $user->cpf) }}" class="btn btn-warning"><i
-                                                class="fa fa-edit"></i></a>
-
+                                        <a href="{{ route('usi.ver', $user->cpf) }}" class="btn btn-success"><i class="fa fa-desktop"></i></a>
+                                        <a href="{{ route('usi.editar', $user->cpf) }}" class="btn btn-warning"><i class="fa fa-edit"></i></a>
+                                        <form action="{{ route('usi.excluir', $user->cpf) }}" method="POST" style="display:inline-block;" onsubmit="return confirm('Tem certeza que deseja excluir este usuário?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-danger"><i class="fa fa-trash"></i></button>
+                                        </form>
                                     </td>
                                 </tr>
                             @endforeach

@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Unidade;
@@ -8,50 +7,51 @@ use App\Models\Perfil;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Exception;
-use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
+    public function excluirUserInterno(Request $request, $cpf)
+    {
+        $this->authorize('autorizacao', 4);
+        try {
+            DB::beginTransaction();
+            $user = User::where('cpf', $cpf)->firstOrFail();
+            $user->delete();
+            DB::commit();
+            Log::info('Usuário excluído', [Auth::user(), $user]);
+            return redirect()->route('usi.listar')->with('success', 'Usuário excluído com sucesso.');
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Erro ao excluir usuário', [$e]);
+            return back()->with('warning', 'Houve um erro ao excluir o usuário');
+        }
+    }
     public function listarUsersInternos(Request $request)
     {
-
         $this->authorize('autorizacao', 4);
         $perfis = Perfil::all();
-
-
         try {
-
             $users = User::query()
-
-                ->when(filled($request->get('search')), function (Builder $query) {
-                    $query = $query
-
-                        ->where('nome', 'like', '%' . request()->search . '%')
-                        ->orWhere('cpf', 'like', '%' . request()->search . '%')
-                        ->orWhere('sobrenome', 'like', '%' . request()->search . '%')
-                        ->orWhere('email', 'like', '%' . request()->search . '%');
-
-
-                    return $query;
-
+                ->when(filled($request->get('search')), function ($query) use ($request) {
+                    return $query
+                        ->where('nome', 'like', '%' . $request->search . '%')
+                        ->orWhere('cpf', 'like', '%' . $request->search . '%')
+                        ->orWhere('sobrenome', 'like', '%' . $request->search . '%')
+                        ->orWhere('email', 'like', '%' . $request->search . '%');
                 })
-
-                ->when(filled($request->get('perfil')), function (Builder $query) {
-                    return $query->where('fk_perfil', request()->perfil);
+                ->when(filled($request->get('perfil')), function ($query) use ($request) {
+                    return $query->where('fk_perfil', $request->perfil);
                 })
-
-
-
                 ->paginate(10);
-
             return view('profile/user/listarUsersInternos', compact('users', 'perfis'));
         } catch (Exception $e) {
             Log::error('Erro ao consultar usuarios', [$e]);
             return back()->with('warning', 'Houve um erro ao consultar o usuario');
         }
     }
+
 
     public function verUserInterno(Request $request, string $id)
     {

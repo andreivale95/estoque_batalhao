@@ -105,6 +105,7 @@ Route::middleware(['auth', 'verified'])->controller(CategoriaController::class)-
 
 Route::middleware(['auth', 'verified'])->controller(UserController::class)->group(function () {
     Route::get('user/interno/listar', 'listarUsersInternos')->name('usi.listar');
+    Route::delete('user/interno/excluir/{cpf}', 'excluirUserInterno')->name('usi.excluir');
     Route::post('user/interno/criar', 'criarUserInterno')->name('usi.criar');
     Route::get('user/interno/form', 'formUserInterno')->name('usi.form');
     Route::get('user/interno/ver/{id}', 'verUserInterno')->name('usi.ver');
