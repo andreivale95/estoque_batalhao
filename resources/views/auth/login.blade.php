@@ -105,7 +105,7 @@
                     <label for="password" style="color:#ffffff" class="form-label">Senha</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                        <input type="password" name="password" id="password" class="form-control" placeholder="Digite sua senha" required>
+                        <input type="password" name="password" id="password" class="form-control" placeholder="Digite sua senha" required autocomplete="new-password">
                     </div>
                 </div>
 
