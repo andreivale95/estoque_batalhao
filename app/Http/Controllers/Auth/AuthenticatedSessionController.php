@@ -44,24 +44,32 @@ class AuthenticatedSessionController extends Controller
 
         $user = User::where('cpf', $credentials['cpf'])->first();
 
+        if (!$user) {
+            return back()->withErrors([
+                'cpf' => 'Cpf ou senha não conferem.',
+            ])->onlyInput('cpf');
+        }
 
         if ($user->status == 'n')
             return back()->withErrors(['cpf' => 'Esse usuário está inativo, contate o administrador do sistema para ativalo']);
 
+        // Verifica se o perfil do usuário possui permissões
+        $perfil = $user->perfil()->get()->first();
+        if (!$perfil || $perfil->permissoes()->count() == 0) {
+            return back()->withErrors([
+                'cpf' => 'Seu perfil não possui permissões cadastradas. Contate o administrador.'
+            ]);
+        }
 
         if (Auth::attempt($credentials)) {
-
             if (isset($request['remember'])&&!empty($request['remember']))  {
                 setcookie("cpf", $request['cpf'], time()+3600);
                 setcookie("password", $request['password'], time()+3600);
-
-
             }else{
                 setcookie("cpf", "");
                 setcookie("password", "");
             }
-                $request->session()->regenerate();
-
+            $request->session()->regenerate();
             Log::info('Usuário logado', [$user]);
             return redirect()->intended('dashboard')->with('success', 'Seja Bem-Vindo'.'‎ '.  $user->nome);
         }

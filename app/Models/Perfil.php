@@ -12,7 +12,7 @@ class Perfil extends Model
     protected $table = 'perfis';
 
     public function permissoes(){
-        return $this->belongsToMany(PerfilPermissao::class, 'perfis', 'id_perfil', 'id_perfil', 'id_perfil', 'fk_perfil');
+        return $this->hasMany(PerfilPermissao::class, 'fk_perfil', 'id_perfil');
     }
 
     protected $fillable = [
