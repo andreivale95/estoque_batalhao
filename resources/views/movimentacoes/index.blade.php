@@ -76,55 +76,84 @@
         </form>
         <br>
 
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="configMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Configurações de Colunas
+                    </button>
+                    <div class="dropdown-menu" aria-labelledby="configMenu" style="max-height:300px;overflow-y:auto;">
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="data" checked> Data</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="produto" checked> Produto</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="tipo" checked> Tipo</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="fornecedor" checked> Fornecedor</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="nota_fiscal" checked> N.F.</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="quantidade" checked> Qtd.</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="valor_unitario" checked> V. Unitário</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="valor_total" checked> V. Total</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="unidade" checked> Unidade</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="responsavel" checked> Responsável</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="estoque" checked> Estoque</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="origem" checked> Origem</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="destino" checked> Destino</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="militar" checked> Militar</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="setor" checked> Setor</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="sei" checked> Proc. SEI</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="data_trp" checked> D. TRP</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="fonte" checked> Fonte</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="observacao" checked> Observação</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <table class="table table-bordered table-hover">
             <thead class="bg-primary" style="color:white;">
                 <tr>
-                    <th>Data</th>
-                    <th>Produto</th>
-                    <th>Tipo</th>
-                    <th>Fornecedor</th>
-                    <th>N.F.</th>
-                    <th>Qtd.</th>
-                    <th>V. Unitário</th>
-                    <th>V. Total</th>
-                    <th>Unidade</th>
-                    <th>Responsável</th>
-                    <th>Estoque</th>
-                    <th>Origem</th>
-                    <th>Destino</th>
-                    <th>Militar</th>
-                    <th>Setor</th>
-                    <th>Proc. SEI</th>
-                    <th>D. TRP</th>
-                    <th>Fonte</th>
-                    <th>Observação</th>
+                    <th class="col-data">Data</th>
+                    <th class="col-produto">Produto</th>
+                    <th class="col-tipo">Tipo</th>
+                    <th class="col-fornecedor">Fornecedor</th>
+                    <th class="col-nota_fiscal">N.F.</th>
+                    <th class="col-quantidade">Qtd.</th>
+                    <th class="col-valor_unitario">V. Unitário</th>
+                    <th class="col-valor_total">V. Total</th>
+                    <th class="col-unidade">Unidade</th>
+                    <th class="col-responsavel">Responsável</th>
+                    <th class="col-estoque">Estoque</th>
+                    <th class="col-origem">Origem</th>
+                    <th class="col-destino">Destino</th>
+                    <th class="col-militar">Militar</th>
+                    <th class="col-setor">Setor</th>
+                    <th class="col-sei">Proc. SEI</th>
+                    <th class="col-data_trp">D. TRP</th>
+                    <th class="col-fonte">Fonte</th>
+                    <th class="col-observacao">Observação</th>
                     <th>Ações</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($movimentacoes as $m)
                 <tr>
-                    <td>{{ \Carbon\Carbon::parse($m->data_movimentacao)->format('d/m/Y H:i:s') }}</td>
-                    <td>{{ $m->produto->nome ?? '—' }} -
-                        {{ optional($m->produto()->first()?->tamanho()->first())->tamanho ?? 'Tamanho Único' }}
-                    </td>
-                    <td>{{ $m->tipo_movimentacao }}</td>
-                    <td>{{ $m->fornecedor }}</td>
-                    <td>{{ $m->nota_fiscal }}</td>
-                    <td>{{ $m->quantidade }}</td>
-                    <td>{{ number_format($m->valor_unitario, 2, ',', '.') }}</td>
-                    <td>{{ number_format($m->valor_total, 2, ',', '.') }}</td>
-                    <td>{{ $m->produto->unidade }}</td>
-                    <td>{{ $m->responsavel }}</td>
-                    <td>{{ $m->unidade->nome }}</td>
-                    <td>{{ $m->origem->nome ?? '-' }}</td>
-                    <td>{{ $m->destino->nome ?? '-' }}</td>
-                    <td>{{ $m->militar }}</td>
-                    <td>{{ $m->setor }}</td>
-                    <td>{{ $m->sei }}</td>
-                    <td>{{ \Carbon\Carbon::parse($m->data_trp)->format('d/m/Y') }}</td>
-                    <td>{{ $m->fonte }}</td>
-                    <td>{{ $m->observacao }}</td>
+                    <td class="col-data">{{ \Carbon\Carbon::parse($m->data_movimentacao)->format('d/m/Y H:i:s') }}</td>
+                    <td class="col-produto">{{ $m->produto->nome ?? '—' }} - {{ optional($m->produto()->first()?->tamanho()->first())->tamanho ?? 'Tamanho Único' }}</td>
+                    <td class="col-tipo">{{ $m->tipo_movimentacao }}</td>
+                    <td class="col-fornecedor">{{ $m->fornecedor }}</td>
+                    <td class="col-nota_fiscal">{{ $m->nota_fiscal }}</td>
+                    <td class="col-quantidade">{{ $m->quantidade }}</td>
+                    <td class="col-valor_unitario">{{ number_format($m->valor_unitario, 2, ',', '.') }}</td>
+                    <td class="col-valor_total">{{ number_format($m->valor_total, 2, ',', '.') }}</td>
+                    <td class="col-unidade">{{ $m->produto->unidade }}</td>
+                    <td class="col-responsavel">{{ $m->responsavel }}</td>
+                    <td class="col-estoque">{{ $m->unidade->nome }}</td>
+                    <td class="col-origem">{{ $m->origem->nome ?? '-' }}</td>
+                    <td class="col-destino">{{ $m->destino->nome ?? '-' }}</td>
+                    <td class="col-militar">{{ $m->militar }}</td>
+                    <td class="col-setor">{{ $m->setor }}</td>
+                    <td class="col-sei">{{ $m->sei }}</td>
+                    <td class="col-data_trp">{{ \Carbon\Carbon::parse($m->data_trp)->format('d/m/Y') }}</td>
+                    <td class="col-fonte">{{ $m->fonte }}</td>
+                    <td class="col-observacao">{{ $m->observacao }}</td>
                     <td>
                         <form action="{{ route('movimentacao.desfazer', $m->id) }}" method="POST" class="form-desfazer" style="display:inline-block;">
                             @csrf
@@ -140,7 +169,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="text-center">Nenhuma movimentação encontrada.</td>
+                    <td colspan="20" class="text-center">Nenhuma movimentação encontrada.</td>
                 </tr>
                 @endforelse
             </tbody>
@@ -190,6 +219,18 @@
             if (formDesfazerSelecionado) {
                 formDesfazerSelecionado.submit();
             }
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.toggle-col').forEach(function(checkbox) {
+            checkbox.addEventListener('change', function() {
+                var col = this.getAttribute('data-col');
+                var show = this.checked;
+                document.querySelectorAll('.col-' + col).forEach(function(cell) {
+                    cell.style.display = show ? '' : 'none';
+                });
+            });
         });
     });
 </script>
