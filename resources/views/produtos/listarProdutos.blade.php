@@ -147,24 +147,24 @@
                             <td>{{ $produto->valor }}</td>
                             <td>{{ $produto->categoria->nome }}</td>
                             <td> <a class="btn btn-warning" href="{{ route('produto.editar', $produto->id) }}"
-                                style="color: white">
+                                style="color: white" title="Editar Produto">
                                     <i class="fa fa-edit"></i></a>
                                 <a class="btn btn-primary" href="{{ route('produto.ver', $produto->id) }}"
-                                    style="color: white">
+                                    style="color: white" title="Visualizar Produto">
                                     <i class="fa fa-television"></i></a>
                                 @if($produto->ativo == 'Y')
                                     <form action="{{ route('produto.excluir', $produto->id) }}" method="POST" style="display:inline-block;">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-danger" onclick="return confirm('Tem certeza que deseja inativar este produto?')">
-                                            <i class="fa fa-times"></i>
+                                            <i class="fa fa-times" title="Inativar Produto"></i>
                                         </button>
                                     </form>
                                 @else
                                     <form action="{{ route('produto.ativar', $produto->id) }}" method="POST" style="display:inline-block;">
                                         @csrf
                                         <button type="submit" class="btn btn-success" onclick="return confirm('Deseja reativar este produto?')">
-                                            <i class="fa fa-check"></i>
+                                            <i class="fa fa-check" title="Reativar Produto"></i>
                                         </button>
                                     </form>
                                 @endif
