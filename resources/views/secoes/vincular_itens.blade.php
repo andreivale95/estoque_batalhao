@@ -17,6 +17,7 @@
                         <thead>
                             <tr>
                                 <th>Item</th>
+                                <th>Quantidade disponível</th>
                                 <th>Quantidade</th>
                                 <th>Ação</th>
                             </tr>
@@ -27,10 +28,11 @@
                                     <select name="itens[]" class="form-control">
                                         <option value="">Selecione o item</option>
                                         @foreach($itens as $item)
-                                            <option value="{{ $item->id }}">{{ $item->produto->nome }} ({{ $item->lote }}) - {{ $item->quantidade }} disponíveis</option>
+                                            <option value="{{ $item->id }}" data-qtd="{{ $item->quantidade }}">{{ $item->produto->nome }} ({{ $item->lote }})</option>
                                         @endforeach
                                     </select>
                                 </td>
+                                <td class="qtd-disponivel"></td>
                                 <td><input type="number" name="quantidades[]" class="form-control" min="1"></td>
                                 <td><button type="button" class="btn btn-danger btn-sm remove-item">Remover</button></td>
                             </tr>
@@ -47,6 +49,7 @@
     document.getElementById('addItem').addEventListener('click', function() {
         var row = document.querySelector('#itensTable tr').cloneNode(true);
         row.querySelectorAll('input, select').forEach(function(el) { el.value = ''; });
+        row.querySelector('.qtd-disponivel').textContent = '';
         document.getElementById('itensTable').appendChild(row);
     });
     document.getElementById('itensTable').addEventListener('click', function(e) {
@@ -54,6 +57,15 @@
             if(document.querySelectorAll('#itensTable tr').length > 1) {
                 e.target.closest('tr').remove();
             }
+        }
+    });
+    // Atualiza quantidade disponível ao selecionar item
+    document.getElementById('itensTable').addEventListener('change', function(e) {
+        if(e.target.tagName === 'SELECT') {
+            var selected = e.target.options[e.target.selectedIndex];
+            var qtd = selected.getAttribute('data-qtd');
+            var qtdCell = e.target.closest('tr').querySelector('.qtd-disponivel');
+            qtdCell.textContent = qtd ? qtd : '';
         }
     });
 </script>

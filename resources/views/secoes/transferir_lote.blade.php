@@ -28,7 +28,7 @@
                                     <select name="itens[]" class="form-control">
                                         <option value="">Selecione o item</option>
                                         @foreach($itens as $item)
-                                            <option value="{{ $item->id }}">{{ $item->produto->nome }} ({{ $item->lote }}) - {{ $item->quantidade }} disponíveis</option>
+                                            <option value="{{ $item->id }}" data-qtd="{{ $item->quantidade }}">{{ $item->produto->nome }} ({{ $item->lote }})</option>
                                         @endforeach
                                     </select>
                                 </td>
@@ -72,9 +72,9 @@
     document.getElementById('itensTable').addEventListener('change', function(e) {
         if(e.target.tagName === 'SELECT') {
             var selected = e.target.options[e.target.selectedIndex];
-            var qtd = selected.text.match(/(\d+) disponíveis/);
+            var qtd = selected.getAttribute('data-qtd');
             var qtdCell = e.target.closest('tr').querySelector('.qtd-disponivel');
-            qtdCell.textContent = qtd ? qtd[1] : '';
+            qtdCell.textContent = qtd ? qtd : '';
         }
     });
 </script>
