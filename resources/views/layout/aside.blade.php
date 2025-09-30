@@ -82,11 +82,9 @@
                     </a>
                     <ul class="treeview-menu">
                         @can('autorizacao', 5)
-
-
                             <li> <a href="{{ route('estoque.listar') }}?nome=&categoria=&unidade={{ Auth::user()->fk_unidade }}"
                                     class="small-box-footer">
-                                    Estoque
+                                    Inventário
                                 </a></li>
                         @endcan
                         @can('autorizacao', 5)

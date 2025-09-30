@@ -361,4 +361,40 @@ class ProdutoController extends Controller {
     }
 
 
+    public function createEstoque()
+    {
+        $categorias = Categoria::all();
+        $secoes = \App\Models\Secao::all();
+        return view('produtos.cadastrar_produto_estoque', compact('categorias', 'secoes'));
+    }
+
+    public function storeEstoque(Request $request)
+    {
+        $request->validate([
+            'nome' => 'required|string|max:255',
+            'categoria_id' => 'required|exists:categorias,id',
+            'quantidade' => 'required|integer|min:1',
+        ]);
+        \DB::beginTransaction();
+        try {
+            $produto = Produto::create([
+                'nome' => $request->nome,
+                'descricao' => $request->descricao,
+                'fk_categoria' => $request->categoria_id,
+                'ativo' => 'Y',
+            ]);
+            Itens_estoque::create([
+                'fk_produto' => $produto->id,
+                'quantidade' => $request->quantidade,
+                'lote' => $request->lote,
+                'fk_secao' => $request->secao_id,
+                'data_entrada' => now(),
+            ]);
+            \DB::commit();
+            return redirect()->route('produtos.estoque.create')->with('success', 'Produto cadastrado e adicionado ao estoque com sucesso!');
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return back()->with('error', 'Erro ao cadastrar produto ou adicionar ao estoque.');
+        }
+    }
 }

@@ -19,31 +19,16 @@
                     <h3 class="panel-title">Cadastro de Entrada</h3>
                 </div>
                 <div class="panel-body" style="background-color: white;">
-                    <form action="{{ route('estoque.entrada_novoproduto') }}" method="POST">
+                    <form action="{{ route('estoque.entrada_novoproduto') }}" method="POST" id="form-entrada-produto">
                         @csrf
-
                         <div class="row">
                             <!-- Unidade -->
                             <div class="form-group col-md-4">
                                 <label for="unidade">Unidade:</label>
-                                <input type="text" value="{{ Auth::user()->unidade->nome }}" class="form-control" disabled>
+                                <input type="text" value="{{ Auth::user()->unidade->nome }}" class="form-control"
+                                    disabled>
                                 <input type="hidden" name="unidade" value="{{ Auth::user()->fk_unidade }}">
                             </div>
-
-                            <!-- Produto -->
-                            <div class="form-group col-md-4">
-                                <label for="fk_produto">Produto:</label>
-                                <select name="fk_produto" class="form-control select2-produto" required>
-                                    <option value="">Selecione um Produto</option>
-                                    @foreach ($produtos as $produto)
-                                        <option value="{{ $produto->id }}">{{ $produto->nome }} -  {{ optional($produto->tamanho()->first())->tamanho ?? 'Tamanho Único' }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-
-
                             <!-- Data de Entrada -->
                             <div class="form-group col-md-4">
                                 <label for="data_entrada">Data de Entrada:</label>
@@ -53,35 +38,10 @@
                                 <label for="data_trp">Data TRP:</label>
                                 <input type="date" name="data_trp" class="form-control">
                             </div>
-
-                            <!-- Lote -->
-                            <div class="form-group col-md-4">
+                            <!-- Campos únicos para toda a entrada -->
+                            <div class="form-group col-md-2">
                                 <label for="lote">Lote:</label>
                                 <input type="text" name="lote" class="form-control" placeholder="Ex: LOTE123">
-                            </div>
-                            <!-- Quantidade -->
-                            <div class="form-group col-md-2">
-                                <label for="quantidade">Quantidade:</label>
-                                <input type="number" name="quantidade" class="form-control" required min="1"
-                                    placeholder="Digite a quantidade">
-                            </div>
-
-                            <!-- Fornecedor -->
-                            <div class="form-group col-md-3">
-                                <label for="fornecedor">Fornecedor:</label>
-                                <input type="text" name="fornecedor" class="form-control"
-                                    placeholder="Nome do Fornecedor">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label for="sei">Número do Processo SEI:</label>
-                                <input type="text" name="sei" class="form-control"
-                                    placeholder="Número do Processo SEI">
-                            </div>
-
-                            <!-- Nota Fiscal -->
-                            <div class="form-group col-md-3">
-                                <label for="nota_fiscal">Número da Nota Fiscal:</label>
-                                <input type="text" name="nota_fiscal" class="form-control" placeholder="Ex: 00012345">
                             </div>
                             <div class="form-group col-md-3">
                                 <label for="fonte">Fonte:</label>
@@ -97,21 +57,63 @@
                                     <option value="OUTROS">
                                 </datalist>
                             </div>
-
-                            <!-- Observações -->
-                            <div class="form-group col-md-12">
-                                <label for="fornecedor">Observações:</label>
-                                <input type="text" name="observacao" class="form-control"
+                            <div class="form-group col-md-3">
+                                <label for="fornecedor">Fornecedor:</label>
+                                <input type="text" name="fornecedor" class="form-control"
                                     placeholder="Nome do Fornecedor">
                             </div>
-
+                            <div class="form-group col-md-3">
+                                <label for="sei">Número do Processo SEI:</label>
+                                <input type="text" name="sei" class="form-control"
+                                    placeholder="Número do Processo SEI">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label for="nota_fiscal">Número da Nota Fiscal:</label>
+                                <input type="text" name="nota_fiscal" class="form-control"
+                                    placeholder="Ex: 00012345">
+                            </div>
                         </div>
-
-
-
-                        <!-- Botões -->
+                        <div class="row">
+                            <div class="form-group col-md-4">
+                                <label for="fk_produto_add">Produto:</label>
+                                <select id="fk_produto_add" class="form-control select2-produto">
+                                    <option value="">Selecione um Produto</option>
+                                    @foreach ($produtos as $produto)
+                                        <option value="{{ $produto->id }}">{{ $produto->nome }} -  {{ optional($produto->tamanho()->first())->tamanho ?? 'Tamanho Único' }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="form-group col-md-2">
+                                <label for="quantidade_add">Quantidade:</label>
+                                <input type="number" id="quantidade_add" class="form-control" min="1"
+                                    placeholder="Digite a quantidade">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="observacao_add">Observações:</label>
+                                <input type="text" id="observacao_add" class="form-control" placeholder="Observações">
+                            </div>
+                            <div class="form-group col-md-2">
+                                <button type="button" class="btn btn-info" id="add-item">Adicionar Item</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="tabela-itens">
+                                <thead>
+                                    <tr>
+                                        <th>Produto</th>
+                                        <th>Quantidade</th>
+                                        <th>Observações</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Linhas de itens adicionados -->
+                                </tbody>
+                            </table>
+                        </div>
                         <div class="form-group text-right">
-                            <a href="{{ route('estoque.listar') }}?nome=&categoria=&unidade={{ Auth::user()->fk_unidade }}" class="btn btn-danger">
+                            <a href="{{ route('estoque.listar') }}?nome=&categoria=&unidade={{ Auth::user()->fk_unidade }}"
+                                class="btn btn-danger">
                                 Cancelar <i class="fa fa-arrow-left"></i>
                             </a>
                             <button type="submit" class="btn btn-success"><i class="fa fa-save"></i> Cadastrar</button>
@@ -123,14 +125,44 @@
     </div>
 
     <!-- Scripts -->
-
-
     <script>
         $(document).ready(function() {
             $('.select2-produto').select2({
                 placeholder: "Selecione um Produto",
                 allowClear: true,
                 width: '100%'
+            });
+            function getProdutoText(select) {
+                return select.find('option:selected').text();
+            }
+            function addItemToTable(produtoId, produtoText, quantidade, observacao) {
+                var row = `<tr>
+                    <td><input type="hidden" name="fk_produto[]" value="${produtoId}">${produtoText}</td>
+                    <td><input type="hidden" name="quantidade[]" value="${quantidade}">${quantidade}</td>
+                    <td><input type="hidden" name="observacao[]" value="${observacao}">${observacao}</td>
+                    <td>
+                        <button type="button" class="btn btn-danger btn-sm remover-item">Remover</button>
+                    </td>
+                </tr>`;
+                $('#tabela-itens tbody').append(row);
+            }
+            $('#add-item').on('click', function(e) {
+                e.preventDefault();
+                var select = $('#fk_produto_add');
+                var produtoId = select.val();
+                var produtoText = getProdutoText(select);
+                var quantidade = $('#quantidade_add').val();
+                var observacao = $('#observacao_add').val();
+                if(produtoId && quantidade) {
+                    addItemToTable(produtoId, produtoText, quantidade, observacao);
+                    select.val('');
+                    $('#quantidade_add').val('');
+                    $('#observacao_add').val('');
+                    select.trigger('change');
+                }
+            });
+            $(document).on('click', '.remover-item', function() {
+                $(this).closest('tr').remove();
             });
         });
     </script>

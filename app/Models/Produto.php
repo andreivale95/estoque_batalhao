@@ -48,6 +48,11 @@ class Produto extends Model
         return $this->belongsTo(Tamanho::class, 'tamanho');
     }
 
+    public function unidade()
+    {
+        return $this->belongsTo(Unidade::class, 'unidade');
+    }
+
 
 
 

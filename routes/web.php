@@ -79,6 +79,7 @@ Route::middleware(['auth', 'verified'])->controller(ProdutoController::class)->g
     Route::get('registros/produto/editar', 'editarProduto')->name('produto.editar');
     Route::post('registros/produto/criar', 'cadastrarProduto')->name('produto.cadastrar');
     Route::get('registros/produto/forminserir', 'inserirProdutoForm')->name('produtoinserir.form');
+    Route::get('registros/produto/entrada', 'inserirProdutoForm')->name('produtos.entrada');
     Route::get('registros/produto/editar/{id}', 'editarProduto')->name('produto.editar');
     Route::post('registros/produto/atualizar/{id}', 'atualizarProduto')->name('produto.atualizar');
     Route::get('/api/produtos/unidade/{unidade}', [ProdutoController::class, 'getProdutosPorUnidade']);
@@ -164,3 +165,9 @@ Route::get('unidades/{unidade}/secoes/{secao}/ver', [SecaoController::class, 've
 Route::post('unidades/{unidade}/secoes/{secao}/transferir', [SecaoController::class, 'transferirItens'])->name('secoes.transferir');
 Route::get('unidades/{unidade}/secoes/{secao}/transferir-lote', [SecaoController::class, 'transferirLoteForm'])->name('secoes.transferir_lote_form');
 Route::post('unidades/{unidade}/secoes/{secao}/transferir-lote', [SecaoController::class, 'transferirLote'])->name('secoes.transferir_lote');
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('inventario', [App\Http\Controllers\InventarioController::class, 'index'])->name('inventario.index');
+    Route::get('inventario/cadastrar', [App\Http\Controllers\InventarioController::class, 'form'])->name('inventario.cadastrar');
+    Route::post('inventario/salvar', [App\Http\Controllers\InventarioController::class, 'salvar'])->name('inventario.salvar');
+});

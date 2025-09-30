@@ -205,64 +205,73 @@ class EstoqueController extends Controller
         }
     }
     public function entradaProdutoEstoque(Request $request)
-    {  //dd($request->all());
-
+    {
         try {
             if (Auth::user()->fk_unidade != $request->unidade) {
                 return redirect()->back()->with('error', 'Você não tem permissão para movimentar produtos de outra unidade.');
             }
-            // Validação dos dados
+            // Validação dos dados únicos
             $request->validate([
-                'quantidade' => 'required|integer|min:1',
                 'data_entrada' => 'required|date',
-                'fk_produto' => 'required|exists:produtos,id',
+                'lote' => 'nullable|string',
+                'fornecedor' => 'nullable|string',
+                'nota_fiscal' => 'nullable|string',
+                'fonte' => 'nullable|string',
+                'data_trp' => 'nullable|date',
+                'sei' => 'nullable|string',
             ]);
-
-            // Verifica se o produto já existe no estoque
-            $itemEstoque = Itens_estoque::where('fk_produto', $request->fk_produto)->where('unidade', $request->unidade)->first();
-
-            if ($itemEstoque) {
-                // Produto já existe — interrompe e avisa
-                return redirect()->back()->with('warning', 'Este produto já foi cadastrado no estoque.');
+            // Validação dos arrays
+            $produtos = $request->fk_produto;
+            $quantidades = $request->quantidade;
+            $observacoes = $request->observacao;
+            if (!is_array($produtos) || !is_array($quantidades)) {
+                return back()->with('warning', 'Nenhum item foi adicionado.');
             }
-
-            // Se não existe, cria um novo registro
-            Itens_estoque::create([
-                'unidade' => $request->unidade,
-                'quantidade' => $request->quantidade,
-                'data_entrada' => $request->data_entrada,
-                'fk_produto' => $request->fk_produto,
-                'lote' => $request->lote,
-                'fornecedor' => $request->fornecedor,
-                'nota_fiscal' => $request->nota_fiscal,
-                'observacao' => $request->observacao ?? 'Entrada de novo produto',
-                'fonte' => $request->fonte,
-                'data_trp' => $request->data_trp,
-                'sei' => $request->sei,
-            ]);
-
-            // Registrar no histórico
-            HistoricoMovimentacao::create([
-                'fk_produto' => $request->fk_produto,
-                'tipo_movimentacao' => 'entrada',
-                'quantidade' => $request->quantidade,
-                'responsavel' => Auth::user()->nome,
-                'observacao' => 'Entrada de novo produto',
-                'data_movimentacao' => now(),
-                'fk_unidade' => $request->unidade,
-                'fonte' => $request->fonte,
-                'data_trp' => $request->data_trp,
-                'sei' => $request->sei,
-                'fornecedor' => $request->fornecedor,
-                'nota_fiscal' => $request->nota_fiscal,
-
-            ]);
-
+            foreach ($produtos as $i => $produtoId) {
+                if (empty($produtoId) || empty($quantidades[$i])) continue;
+                // Validação individual
+                $produto = Produto::find($produtoId);
+                if (!$produto) continue;
+                // Verifica se o produto já existe no estoque
+                $itemEstoque = Itens_estoque::where('fk_produto', $produtoId)->where('unidade', $request->unidade)->first();
+                if ($itemEstoque) {
+                    // Produto já existe — interrompe e avisa
+                    continue;
+                }
+                // Cria novo registro
+                Itens_estoque::create([
+                    'unidade' => $request->unidade,
+                    'quantidade' => $quantidades[$i],
+                    'data_entrada' => $request->data_entrada,
+                    'fk_produto' => $produtoId,
+                    'lote' => $request->lote,
+                    'fornecedor' => $request->fornecedor,
+                    'nota_fiscal' => $request->nota_fiscal,
+                    'observacao' => $observacoes[$i] ?? 'Entrada de novo produto',
+                    'fonte' => $request->fonte,
+                    'data_trp' => $request->data_trp,
+                    'sei' => $request->sei,
+                ]);
+                HistoricoMovimentacao::create([
+                    'fk_produto' => $produtoId,
+                    'tipo_movimentacao' => 'entrada',
+                    'quantidade' => $quantidades[$i],
+                    'responsavel' => Auth::user()->nome,
+                    'observacao' => $observacoes[$i] ?? 'Entrada de novo produto',
+                    'data_movimentacao' => now(),
+                    'fk_unidade' => $request->unidade,
+                    'fonte' => $request->fonte,
+                    'data_trp' => $request->data_trp,
+                    'sei' => $request->sei,
+                    'fornecedor' => $request->fornecedor,
+                    'nota_fiscal' => $request->nota_fiscal,
+                ]);
+            }
             return redirect()->route('estoque.listar', [
                 'nome' => '',
                 'categoria' => '',
                 'unidade' => Auth::user()->fk_unidade
-            ])->with('success', 'Produto cadastrado no estoque com sucesso!');
+            ])->with('success', 'Produtos cadastrados no estoque com sucesso!');
         } catch (Exception $e) {
             Log::error('Erro ao dar entrada no Estoque', [$e]);
             return back()->with('warning', 'Houve um erro ao dar entrada no Estoque.');
