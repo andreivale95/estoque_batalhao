@@ -22,6 +22,7 @@
                         <th>Produto</th>
                         <th>Quantidade</th>
                         <th>Unidade</th>
+                        <th>Motivo</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -30,6 +31,7 @@
                         <td>{{ $item->produto->nome ?? $item->fk_produto }}</td>
                         <td>{{ $item->quantidade }}</td>
                         <td>{{ $item->produto->unidade ?? '-' }}</td>
+                        <td>{{ $item->observacao }}</td>
                     </tr>
                     @endforeach
                 </tbody>

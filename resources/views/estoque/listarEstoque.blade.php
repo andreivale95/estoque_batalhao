@@ -59,10 +59,10 @@
                                         style="height: 38px;">
                                         <i class="fa fa-plus"></i> Inserir Produto
                                     </a>
-                                    <button type="button" class="btn btn-warning" id="open-modal-saida"
-                                        style="height: 38px;" disabled>
+                                    <a href="{{ route('saida_estoque.saida_multipla') }}" class="btn btn-warning"
+                                        style="height: 38px;">
                                         <i class="fa fa-share-square"></i> Saída Múltipla
-                                    </button>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -75,7 +75,7 @@
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                                <th><input type="checkbox" id="select-all"></th>
+                                <!-- Coluna de seleção removida -->
                                 <th>Produto</th>
                                 <th>Quantidade</th>
                                 <th>Unidade</th>
@@ -94,16 +94,7 @@
                                     $subtotal = $estoque->quantidade * $valorUnitario;
                                 @endphp
                                 <tr>
-                                    <td>
-                                        @if (Auth::user()->fk_unidade == $estoque->unidade()->first()->id)
-                                            <input type="checkbox" class="select-item"
-                                                name="produtos[{{ $estoque->id }}][selecionado]">
-                                        @else
-                                            <input type="checkbox" class="select-item"
-                                                name="produtos[{{ $estoque->id }}][selecionado]"disabled>
-                                        @endif
-
-                                    </td>
+                                    <!-- Coluna de seleção removida -->
                                     <td>
                                         <a href="{{ route('produto.ver', $estoque->fk_produto) }}">
                                             {{ $estoque->produto()->first()->nome }} -
@@ -123,28 +114,10 @@
                                     <td>R$ {{ number_format($valorUnitario, 2, ',', '.') }}</td>
                                     <td>R$ {{ number_format($subtotal, 2, ',', '.') }}</td>
                                     <td>
-                                        @if (Auth::user()->fk_unidade == $estoque->unidade()->first()->id)
-                                            <a class="btn btn-primary" href="{{ route('entrada.form', $estoque->id) }}"
-                                                style="color: white">
-                                                <i class="fa fa-plus"></i>
-                                            </a>
-                                            <a class="btn btn-danger" href="{{ route('saida.form', $estoque->id) }}"
-                                                style="color: white">
-                                                <i class="fa fa-minus"></i>
-                                            </a>
-                                        @else
-                                            <span class="text-muted">Acesso restrito</span>
-                                        @endif
+                                        <span class="text-muted">Ação desativada</span>
                                     </td>
                                     <td>
-                                        @if (Auth::user()->fk_unidade == $estoque->unidade()->first()->id)
-                                            <button type="button" class="btn btn-warning" data-toggle="modal"
-                                                data-target="#modalTransferencia{{ $estoque->id }}">
-                                                <i class="fa fa-exchange-alt"></i>
-                                            </button>
-                                        @else
-                                            <span class="text-muted">Acesso restrito</span>
-                                        @endif
+                                        <span class="text-muted">Ação desativada</span>
                                     </td>
                                 </tr>
 

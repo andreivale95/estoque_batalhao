@@ -235,23 +235,25 @@ class EstoqueController extends Controller
                 // Verifica se o produto já existe no estoque
                 $itemEstoque = Itens_estoque::where('fk_produto', $produtoId)->where('unidade', $request->unidade)->first();
                 if ($itemEstoque) {
-                    // Produto já existe — interrompe e avisa
-                    continue;
+                    // Produto já existe — soma a quantidade
+                    $itemEstoque->quantidade += $quantidades[$i];
+                    $itemEstoque->save();
+                } else {
+                    // Cria novo registro
+                    Itens_estoque::create([
+                        'unidade' => $request->unidade,
+                        'quantidade' => $quantidades[$i],
+                        'data_entrada' => $request->data_entrada,
+                        'fk_produto' => $produtoId,
+                        'lote' => $request->lote,
+                        'fornecedor' => $request->fornecedor,
+                        'nota_fiscal' => $request->nota_fiscal,
+                        'observacao' => $observacoes[$i] ?? 'Entrada de novo produto',
+                        'fonte' => $request->fonte,
+                        'data_trp' => $request->data_trp,
+                        'sei' => $request->sei,
+                    ]);
                 }
-                // Cria novo registro
-                Itens_estoque::create([
-                    'unidade' => $request->unidade,
-                    'quantidade' => $quantidades[$i],
-                    'data_entrada' => $request->data_entrada,
-                    'fk_produto' => $produtoId,
-                    'lote' => $request->lote,
-                    'fornecedor' => $request->fornecedor,
-                    'nota_fiscal' => $request->nota_fiscal,
-                    'observacao' => $observacoes[$i] ?? 'Entrada de novo produto',
-                    'fonte' => $request->fonte,
-                    'data_trp' => $request->data_trp,
-                    'sei' => $request->sei,
-                ]);
                 HistoricoMovimentacao::create([
                     'fk_produto' => $produtoId,
                     'tipo_movimentacao' => 'entrada',
@@ -368,62 +370,82 @@ class EstoqueController extends Controller
     public function saidaMultiplos(Request $request)
     {
         try {
-            // Valida os dados recebidos
             $request->validate([
                 'militar' => 'required|exists:efetivo_militar,id',
                 'data_saida' => 'required|date',
-                'produtos' => 'required|array',
+                'fk_produto' => 'required|array',
+                'quantidade' => 'required|array',
+            ], [
+                'militar.required' => 'Selecione o militar responsável pela saída.',
+                'militar.exists' => 'Militar selecionado não encontrado.',
+                'data_saida.required' => 'Informe a data da saída.',
+                'data_saida.date' => 'Data da saída inválida.',
+                'fk_produto.required' => 'Adicione pelo menos um item à lista.',
+                'quantidade.required' => 'Informe a quantidade para cada item.',
             ]);
-
-            $produtos = $request->input('produtos', []);
+            $produtos = $request->fk_produto;
+            $quantidades = $request->quantidade;
+            $observacoes = $request->observacao;
             $militarId = $request->input('militar');
             $dataSaida = Carbon::parse($request->data_saida);
             $obsGeral = $request->input('observacao');
-
-            // Busca o nome do militar pelo ID
             $militar = EfetivoMilitar::findOrFail($militarId);
             $destinatario = $militar->nome;
             $loteSaida = uniqid('saida_');
-           
-            foreach ($produtos as $estoqueId => $dados) {
-                // Verifica se a quantidade foi informada
-                if (empty($dados['quantidade'])) {
+            $erros = [];
+            $itensProcessar = [];
+            foreach ($produtos as $i => $estoqueId) {
+                $quantidadeSolicitada = isset($quantidades[$i]) ? (int)$quantidades[$i] : 0;
+                if (empty($estoqueId)) {
+                    $erros[] = "Produto não selecionado na linha " . ($i+1);
                     continue;
                 }
-                // Verifica se o produto existe no estoque
-
-
-                $quantidadeSolicitada = (int) $dados['quantidade'];
+                if ($quantidadeSolicitada <= 0) {
+                    $erros[] = "Quantidade inválida para o produto na linha " . ($i+1);
+                    continue;
+                }
                 $estoque = Itens_estoque::where('id', $estoqueId)
                     ->where('unidade', Auth::user()->fk_unidade)
-                    ->firstOrFail();
-
-
-                if ($quantidadeSolicitada > 0 && $quantidadeSolicitada <= $estoque->quantidade) {
-                    // Atualiza o estoque
-                    $estoque->quantidade -= $quantidadeSolicitada;
-                    $estoque->save();
-
-                    // Registra no histórico de movimentação
-                    HistoricoMovimentacao::create([
-                        'fk_produto' => $estoque->fk_produto,
-                        'tipo_movimentacao' => 'saida_manual_multipla',
-                        'quantidade' => $quantidadeSolicitada,
-                        'responsavel' => Auth::user()->nome,
-                        'observacao' => "Saída para {$destinatario}. Obs: {$obsGeral}",
-                        'data_movimentacao' => $dataSaida,
-                        'fk_unidade' => Auth::user()->fk_unidade,
-                        'militar' => $destinatario,
-                        'lote_saida' => $loteSaida,
-                    ]);
-                } else {
-                    return back()->with('warning', 'Quantidade solicitada maior que a disponível no estoque.');
+                    ->first();
+                if (!$estoque) {
+                    $erros[] = "Produto não encontrado no estoque (ID: $estoqueId) na linha " . ($i+1);
+                    continue;
                 }
+                if ($quantidadeSolicitada > $estoque->quantidade) {
+                    $erros[] = "Quantidade solicitada maior que a disponível para o produto " . ($estoque->produto->nome ?? $estoqueId) . " (Disponível: $estoque->quantidade) na linha " . ($i+1);
+                    continue;
+                }
+                $itensProcessar[] = [
+                    'estoque' => $estoque,
+                    'quantidade' => $quantidadeSolicitada,
+                    'observacao' => $observacoes[$i] ?? ''
+                ];
+            }
+            if (!empty($erros)) {
+                return back()->withErrors($erros)->withInput();
+            }
+            $motivo = $request->input('motivo');
+            foreach ($itensProcessar as $item) {
+                $estoque = $item['estoque'];
+                $quantidadeSolicitada = $item['quantidade'];
+                $estoque->quantidade -= $quantidadeSolicitada;
+                $estoque->save();
+                HistoricoMovimentacao::create([
+                    'fk_produto' => $estoque->fk_produto,
+                    'tipo_movimentacao' => 'saida_manual_multipla',
+                    'quantidade' => $quantidadeSolicitada,
+                    'responsavel' => Auth::user()->nome,
+                    'observacao' => "Motivo: {$motivo}. Obs: {$obsGeral}",
+                    'data_movimentacao' => $dataSaida,
+                    'fk_unidade' => Auth::user()->fk_unidade,
+                    'militar' => $destinatario,
+                    'lote_saida' => $loteSaida,
+                ]);
             }
             return redirect()->route('estoque.recibo', $loteSaida);
         } catch (\Exception $e) {
             Log::error('Erro ao realizar saída múltipla', [$e]);
-            return back()->with('warning', 'Houve um erro ao realizar a saída múltipla.');
+            return back()->with('warning', 'Houve um erro ao realizar a saída múltipla: ' . $e->getMessage())->withInput();
         }
     }
     /**
@@ -436,5 +458,11 @@ class EstoqueController extends Controller
         $militar = $itens->first()->militar ?? '';
         $data = $itens->first()->data_movimentacao ?? '';
         return view('estoque.recibo', compact('itens', 'militar', 'data'));
+    }
+    public function saidaMultiplosForm()
+    {
+        $itens_estoque = Itens_estoque::with('produto')->where('unidade', Auth::user()->fk_unidade)->get();
+        $militares = \App\Models\EfetivoMilitar::all();
+        return view('estoque.saidaMultiplos', compact('itens_estoque', 'militares'));
     }
 }

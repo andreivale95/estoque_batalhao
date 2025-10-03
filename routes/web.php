@@ -47,6 +47,7 @@ Route::middleware(['auth', 'verified'])->controller(EstoqueController::class)->g
     Route::post('/estoque/transferencia', [EstoqueController::class, 'transferir'])->name('estoque.transferir');
     Route::post('/estoque/saida-multiplos', [EstoqueController::class, 'saidaMultiplos'])->name('estoque.saidaMultiplos');
     Route::get('/estoque/recibo/{saida}',  [EstoqueController::class, 'recibo'])->name('estoque.recibo');
+    Route::get('registros/estoque/saida-multipla', 'saidaMultiplosForm')->name('saida_estoque.saida_multipla');
 
 });
 
