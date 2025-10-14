@@ -25,7 +25,7 @@
                         <tbody id="itensTable">
                             <tr>
                                 <td>
-                                    <select name="itens[]" class="form-control">
+                                    <select name="item_id[]" class="form-control">
                                         <option value="">Selecione o item</option>
                                         @foreach($itens as $item)
                                             <option value="{{ $item->id }}" data-qtd="{{ $item->quantidade }}">{{ $item->produto->nome }} ({{ $item->lote }})</option>
@@ -33,7 +33,7 @@
                                     </select>
                                 </td>
                                 <td class="qtd-disponivel"></td>
-                                <td><input type="number" name="quantidades[]" class="form-control" min="1"></td>
+                                <td><input type="number" name="quantidade_transferir[]" class="form-control" min="1"></td>
                                 <td><button type="button" class="btn btn-danger btn-sm remove-item">Remover</button></td>
                             </tr>
                         </tbody>

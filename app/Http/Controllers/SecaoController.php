@@ -24,9 +24,9 @@ class SecaoController extends Controller
             'nova_secao' => 'required|integer',
         ]);
         $quantidades = $request->input('quantidade_transferir', []);
-        foreach ($request->item_id as $itemId) {
+        foreach ($request->item_id as $idx => $itemId) {
             $item = Itens_estoque::find($itemId);
-            $qtdTransferir = isset($quantidades[$itemId]) ? intval($quantidades[$itemId]) : 0;
+            $qtdTransferir = isset($quantidades[$idx]) ? intval($quantidades[$idx]) : 0;
             if ($item && $qtdTransferir > 0 && $qtdTransferir <= $item->quantidade) {
                 $itemDestino = Itens_estoque::where('fk_secao', $request->nova_secao)
                     ->where('fk_produto', $item->fk_produto)
@@ -137,7 +137,10 @@ class SecaoController extends Controller
     public function vincularItensForm($secaoId)
     {
         $secao = Secao::findOrFail($secaoId);
-        $itens = Itens_estoque::where('unidade', $secao->fk_unidade)->get();
+        // Apenas itens que não estão vinculados a nenhuma seção
+        $itens = Itens_estoque::where('unidade', $secao->fk_unidade)
+            ->whereNull('fk_secao')
+            ->get();
         return view('secoes.vincular_itens', compact('secao', 'itens'));
     }
 
@@ -146,16 +149,48 @@ class SecaoController extends Controller
         $secao = Secao::findOrFail($secaoId);
         $itens = $request->input('itens', []);
         $quantidades = $request->input('quantidades', []);
+        $erros = [];
+
         foreach ($itens as $idx => $itemId) {
-            if ($itemId && isset($quantidades[$idx]) && $quantidades[$idx] > 0) {
-                $item = Itens_estoque::find($itemId);
-                if ($item) {
-                    $item->fk_secao = $secaoId;
-                    $item->quantidade += $quantidades[$idx]; // Soma à quantidade existente
-                    $item->save();
-                }
+            $qtdSolicitada = isset($quantidades[$idx]) ? intval($quantidades[$idx]) : 0;
+            if (!$itemId || $qtdSolicitada <= 0) {
+                continue;
             }
+            $item = Itens_estoque::find($itemId);
+            if (!$item) {
+                $erros[] = "Item (ID: {$itemId}) não encontrado.";
+                continue;
+            }
+            if ($qtdSolicitada > $item->quantidade) {
+                $erros[] = "Quantidade solicitada ({$qtdSolicitada}) maior que disponível ({$item->quantidade}) para o produto {$item->fk_produto}.";
+                continue;
+            }
+
+            // Procura item igual na seção destino (mesmo produto e lote)
+            $itemDestino = Itens_estoque::where('fk_secao', $secaoId)
+                ->where('fk_produto', $item->fk_produto)
+                ->where('lote', $item->lote)
+                ->first();
+
+            if ($itemDestino) {
+                $itemDestino->quantidade += $qtdSolicitada;
+                $itemDestino->save();
+            } else {
+                $novoItem = $item->replicate();
+                $novoItem->fk_secao = $secaoId;
+                $novoItem->quantidade = $qtdSolicitada;
+                $novoItem->save();
+            }
+
+            // Deduz do item origem
+            $item->quantidade -= $qtdSolicitada;
+            $item->save();
         }
-        return redirect()->route('secoes.vincular_itens_form', ['unidade' => $secao->fk_unidade, 'secao' => $secao->id])->with('success', 'Itens vinculados à seção com sucesso!');
+
+        $redirect = redirect()->route('secoes.vincular_itens_form', ['unidade' => $secao->fk_unidade, 'secao' => $secao->id]);
+        if (!empty($erros)) {
+            return $redirect->with('warning', implode('; ', $erros));
+        }
+        return $redirect->with('success', 'Itens vinculados à seção com sucesso!');
     }
 }
