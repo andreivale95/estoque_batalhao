@@ -270,6 +270,8 @@ class EstoqueController extends Controller
 
                 // Atualiza o estoque
                 $itemEstoque->quantidade = $novaQuantidade;
+                $itemEstoque->valor_total = $novoValorMedio * $novaQuantidade;
+                $itemEstoque->valor_unitario = $valorFinal;
                 $itemEstoque->save();
 
                 // Atualiza o valor médio do produto
@@ -469,6 +471,20 @@ class EstoqueController extends Controller
             return back()->with('warning', 'Houve um erro ao registrar a saída do Estoque.');
         }
     }
+    public function formEntradaExistente(Request $request)
+    {
+        try {
+            $produtos = Produto::where('ativo', 'Y')->orderBy('nome')->get();
+            $secoes = Secao::all();
+            $unidades = Unidade::all();
+
+            return view('estoque/estoque_form_entrada_existente', compact('produtos', 'secoes', 'unidades'));
+        } catch (Exception $e) {
+            Log::error('Erro ao carregar formulário de entrada', ['exception' => $e->getMessage()]);
+            return back()->with('warning', 'Houve um erro ao carregar o formulário de entrada.');
+        }
+    }
+
     public function formEntrada(Request $request, $id)
     {
 

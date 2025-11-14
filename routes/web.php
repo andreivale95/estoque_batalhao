@@ -40,6 +40,7 @@ Route::middleware(['auth', 'verified'])->controller(PerfilController::class)->gr
 
 Route::middleware(['auth', 'verified'])->controller(EstoqueController::class)->group(function () {
     Route::get('registros/estoque/listar', 'listarEstoque')->name('estoque.listar');
+    Route::get('registros/estoque/entrada/form', 'formEntradaExistente')->name('estoque.entrada.form');
     Route::post('registros/estoque/entrada/', 'entradaEstoque')->name('estoque.entrada');
     Route::post('registros/estoque/entradanovoproduto/', 'entradaProdutoEstoque')->name('estoque.entrada_novoproduto');
     Route::post('registros/estoque/saida/', 'saidaEstoque')->name('estoque.saida');

@@ -270,22 +270,30 @@ class ProdutoController extends Controller {
 
     public function cadastrarProduto(Request $request)
     {
-
         try {
+            $request->validate([
+                'nome' => 'required|string|max:255',
+                'unidade' => 'required|exists:unidades,id',
+                'categoria_id' => 'required|exists:categorias,id',
+            ]);
 
             DB::beginTransaction();
 
+            // Converte valor formatado para centavos se necessário
+            $valor = $request->get('valor') ?? 0;
+            if ($valor && $valor < 100) {
+                // Se for muito pequeno, assume que é em formato decimal (e.g., 100.00)
+                $valorFinal = $valor;
+            } else if ($valor) {
+                // Converte de centavos para decimal
+                $valorFinal = $valor / 100;
+            } else {
+                $valorFinal = 0;
+            }
 
-            // Converte valor formatado brasileiro ("1.500,00") para formato decimal ("1500.00")
-            $valorBr = $request->get('valor'); // "250000"
-            $valorFinal = ((float) $valorBr) / 100; // resultado: 250.00
-
-
-
-
-            // Verifica se o número já existe no banco de dados
-            $existeMesmoProduto = Produto::where('nome', $request->get('nome'))
-                ->where('tamanho', $request->get('tamanho'))
+            // Verifica se o produto já existe
+            $existeMesmoProduto = Produto::where('nome', $request->nome)
+                ->where('tamanho', $request->tamanho)
                 ->exists();
 
             if ($existeMesmoProduto) {
@@ -293,27 +301,27 @@ class ProdutoController extends Controller {
                 return redirect()->back()->with('error', 'Esse produto já existe nesse tamanho!');
             }
 
-            // Se não existir, criar o produto
+            // Cria o produto
             $produto = Produto::create([
-                'nome' => $request->get('nome'),
-                'descricao' => $request->get('descricao'),
-                'marca' => $request->get('marca'),
-                'tamanho' => $request->get('tamanho'),
-                'unidade' => $request->get('unidade'),
-                'valor' => $valorFinal, // agora decimal válido
-                'fk_categoria' => $request->get('categoria'),
-                'fk_kit' => $request->get('kit'),
+                'nome' => $request->nome,
+                'descricao' => $request->descricao,
+                'marca' => $request->marca,
+                'tamanho' => $request->tamanho,
+                'unidade' => $request->unidade,
+                'valor' => $valorFinal,
+                'fk_categoria' => $request->categoria_id,
+                'patrimonio' => $request->patrimonio,
                 'ativo' => 'Y',
             ]);
 
             DB::commit();
-            Log::info('Produto registrado com sucesso', [$produto, Auth::user()->cpf]);
+            Log::info('Produto registrado com sucesso', ['produto_id' => $produto->id, 'usuario' => Auth::user()->cpf]);
 
-            return redirect()->route('produto.ver', $produto->id)->with('success', 'Produto registrado com sucesso');
-        } catch (Exception $e) {
+            return redirect()->route('estoque.listar')->with('success', 'Produto cadastrado com sucesso!');
+        } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error ao cadastrar novo Produto', [$e]);
-            return back()->with('warning', 'Houve um erro ao registrar Produto');
+            Log::error('Erro ao cadastrar produto', ['exception' => $e->getMessage()]);
+            return back()->with('error', 'Erro ao cadastrar produto: ' . $e->getMessage());
         }
     }
 

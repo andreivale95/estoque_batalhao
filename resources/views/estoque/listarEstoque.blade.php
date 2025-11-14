@@ -75,8 +75,12 @@
                                 <label class="control-label">&nbsp;</label>
                                 <div style="display: flex; gap: 8px;">
                                     <a href="{{ route('produtoinserir.form') }}" class="btn btn-success"
-                                        style="height: 38px;">
-                                        <i class="fa fa-plus"></i> Inserir Produto
+                                        style="height: 38px;" title="Cadastrar um novo produto no sistema">
+                                        <i class="fa fa-plus"></i> Cadastrar Produto
+                                    </a>
+                                    <a href="{{ route('estoque.entrada.form') }}" class="btn btn-info"
+                                        style="height: 38px;" title="Registrar entrada de produto existente">
+                                        <i class="fa fa-arrow-down"></i> Registrar Entrada
                                     </a>
                                     <a href="{{ route('saida_estoque.saida_multipla') }}" class="btn btn-warning"
                                         style="height: 38px;">

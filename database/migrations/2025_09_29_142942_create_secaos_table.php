@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('secaos', function (Blueprint $table) {
             $table->id();
             $table->string('nome');
-            $table->unsignedInteger('fk_unidade');
+            $table->unsignedBigInteger('fk_unidade');
             $table->foreign('fk_unidade')->references('id')->on('unidades')->onDelete('cascade');
             $table->timestamps();
         });
