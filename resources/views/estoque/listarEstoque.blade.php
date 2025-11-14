@@ -1,4 +1,19 @@
 @extends('layout/app')
+@section('styles')
+<style>
+    .item-row:hover {
+        background-color: #f5f5f5;
+    }
+    .item-row td {
+        transition: background-color 0.2s;
+    }
+    .btn-warning {
+        z-index: 2;
+        position: relative;
+    }
+</style>
+@endsection
+
 @section('content')
     <div class="content-wrapper">
         <!-- Content Header (Page header) -->
@@ -94,28 +109,31 @@
                         <tbody>
                             @foreach ($itens_estoque as $estoque)
                                 @php
-                                    $valorUnitario = $estoque->produto->valor ?? 0;
-                                    $subtotal = $estoque->quantidade * $valorUnitario;
+                                    $valorUnitario = $estoque->valor ?? 0;
+                                    $subtotal = $estoque->quantidade_total * $valorUnitario;
                                 @endphp
-                                <tr>
-                                    <!-- Coluna de seleção removida -->
+                                <tr class="item-row" style="cursor: pointer;" 
+                                    onclick="window.location='{{ route('estoque.produto.detalhes', $estoque->id) }}'"
+                                    title="Clique para ver detalhes">
                                     <td>
-                                        <a href="{{ route('produto.ver', $estoque->fk_produto) }}">
-                                            {{ $estoque->produto()->first()->nome }} -
-                                            {{ optional($estoque->produto()->first()?->tamanho()->first())->tamanho ?? 'Tamanho Único' }}
-                                        </a>
+                                        {{ $estoque->nome }}
                                     </td>
-                                    <td>{{ $estoque->produto()->first()->patrimonio ?? '-' }}</td>
+                                    <td>{{ $estoque->patrimonio ?? '-' }}</td>
                                     <td>
-                                        @if ($estoque->quantidade <= 0)
+                                        @if ($estoque->quantidade_total <= 0)
                                             <span class="text-danger">Produto esgotado</span>
                                         @else
-                                            {{ $estoque->quantidade }}
+                                            {{ $estoque->quantidade_total }}
                                         @endif
                                     </td>
-                                    <td>{{ $estoque->produto->unidade }}</td>
-                                    <td>{{ $estoque->produto->categoria->nome }}</td>
-                                    <td>{{ $estoque->unidade()->first()->nome }}</td>
+                                    <td>{{ $estoque->unidade_nome }}</td>
+                                    <td>
+                                        @php
+                                            $categoria = App\Models\Categoria::find($estoque->categoria_id);
+                                        @endphp
+                                        {{ $categoria ? $categoria->nome : 'N/A' }}
+                                    </td>
+                                    <td>{{ $estoque->unidade_nome }}</td>
                                     <td>R$ {{ number_format($valorUnitario, 2, ',', '.') }}</td>
                                     <td>R$ {{ number_format($subtotal, 2, ',', '.') }}</td>
                                     <td>
@@ -149,16 +167,16 @@
                                                 </div>
 
                                                 <div class="modal-body">
-                                                    <p><strong>Produto:</strong> {{ $estoque->produto->nome }}</p>
+                                                    <p><strong>Produto:</strong> {{ $estoque->nome }}</p>
                                                     <p><strong>Unidade atual:</strong>
-                                                        {{ $estoque->unidade()->first()->nome ?? 'Não definida' }}</p>
+                                                        {{ $estoque->unidade }}</p>
 
                                                     <div class="form-group">
                                                         <label for="nova_unidade">Nova Unidade:</label>
                                                         <select class="form-control" name="nova_unidade" required>
                                                             <option value="">Selecione</option>
                                                             @foreach ($unidades as $unidade)
-                                                                @if ($unidade->id != $estoque->fk_unidade)
+                                                                @if ($unidade->id != $estoque->unidade)
                                                                     <option value="{{ $unidade->id }}">
                                                                         {{ $unidade->nome }}</option>
                                                                 @endif
@@ -333,4 +351,68 @@
             });
         });
     </script>
+    <!-- Modal para detalhes por seção -->
+    <div class="modal fade" id="modalDetalhesSecao" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Detalhes por Seção</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Seção</th>
+                                <th>Quantidade</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detalhesSecaoBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    // Impedir que o clique no botão de transferência abra os detalhes
+    $('.btn-warning').click(function(e) {
+        e.stopPropagation();
+    });
+
+    // Função para ver detalhes da seção
+    function verDetalhesSecao(produtoId) {
+        $.get(`/api/produtos/${produtoId}/detalhes-secao`, function(data) {
+            let tbody = $('#detalhesSecaoBody');
+            tbody.empty();
+            
+            data.forEach(function(item) {
+                tbody.append(`
+                    <tr>
+                        <td>${item.secao_nome || 'Sem seção'}</td>
+                        <td>${item.quantidade}</td>
+                    </tr>
+                `);
+            });
+            
+            $('#modalDetalhesSecao').modal('show');
+        });
+    }
+
+    // Adicionar evento de clique nas linhas
+    $('.item-row').click(function() {
+        const produtoId = $(this).data('produto-id');
+        verDetalhesSecao(produtoId);
+    });
+});
+</script>
+@endpush

@@ -18,14 +18,68 @@ use App\Models\Fonte;
 use App\Models\Produto;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\Secao;
 
 
 class ProdutoController extends Controller {
+
+    public function getDetalhesPorSecao($id)
+    {
+        try {
+            $detalhes = Itens_estoque::select(
+                'secaos.nome as secao_nome',
+                DB::raw('SUM(itens_estoque.quantidade) as quantidade')
+            )
+            ->leftJoin('secaos', 'secaos.id', '=', 'itens_estoque.fk_secao')
+            ->where('itens_estoque.fk_produto', $id)
+            ->groupBy('secaos.id', 'secaos.nome')
+            ->get();
+
+            return response()->json($detalhes);
+        } catch (Exception $e) {
+            Log::error('Erro ao buscar detalhes por seção', [$e]);
+            return response()->json(['error' => 'Erro ao buscar detalhes'], 500);
+        }
+    }
+    
+    /**
+     * Página de detalhes do produto com quebra por seção
+     */
+    public function detalhes($id)
+    {
+        try {
+            $produto = Produto::findOrFail($id);
+
+            $quantidadeTotal = Itens_estoque::where('fk_produto', $id)->sum('quantidade');
+
+            $detalhesSecao = Itens_estoque::select(
+                'itens_estoque.fk_secao',
+                'secaos.nome as secao_nome',
+                DB::raw('SUM(itens_estoque.quantidade) as quantidade')
+            )
+            ->leftJoin('secaos', 'secaos.id', '=', 'itens_estoque.fk_secao')
+            ->where('itens_estoque.fk_produto', $id)
+            ->groupBy('itens_estoque.fk_secao', 'secaos.nome')
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'secao_id' => $row->fk_secao,
+                    'secao_nome' => $row->secao_nome ?? 'Sem seção',
+                    'quantidade' => $row->quantidade,
+                ];
+            });
+
+            return view('produtos.detalhes', compact('produto', 'quantidadeTotal', 'detalhesSecao'));
+        } catch (Exception $e) {
+            Log::error('Erro ao carregar detalhes do produto', [$e]);
+            return back()->with('warning', 'Erro ao carregar detalhes do produto.');
+        }
+    }
     public function ativarProduto(Request $request, $id)
     {
         try {
@@ -202,6 +256,18 @@ class ProdutoController extends Controller {
         }
     }
 
+    public function formInserirProduto()
+    {
+        try {
+            $categorias = Categoria::all();
+            $unidades = Unidade::all();
+            return view('produtos.inserirProduto', compact('categorias', 'unidades'));
+        } catch (Exception $e) {
+            Log::error('Erro ao carregar formulário de inserção de produto', [$e]);
+            return back()->with('warning', 'Erro ao carregar o formulário de inserção de produto.');
+        }
+    }
+
     public function cadastrarProduto(Request $request)
     {
 
@@ -375,7 +441,7 @@ class ProdutoController extends Controller {
             'categoria_id' => 'required|exists:categorias,id',
             'quantidade' => 'required|integer|min:1',
         ]);
-        \DB::beginTransaction();
+        DB::beginTransaction();
         try {
             $produto = Produto::create([
                 'nome' => $request->nome,
@@ -390,10 +456,10 @@ class ProdutoController extends Controller {
                 'fk_secao' => $request->secao_id,
                 'data_entrada' => now(),
             ]);
-            \DB::commit();
+            DB::commit();
             return redirect()->route('produtos.estoque.create')->with('success', 'Produto cadastrado e adicionado ao estoque com sucesso!');
         } catch (\Exception $e) {
-            \DB::rollBack();
+            DB::rollBack();
             return back()->with('error', 'Erro ao cadastrar produto ou adicionar ao estoque.');
         }
     }

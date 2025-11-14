@@ -56,6 +56,16 @@
                                 <label for="lote">Lote:</label>
                                 <input type="text" name="lote" class="form-control" placeholder="Ex: LOTE123">
                             </div>
+                            <!-- Seção -->
+                            <div class="form-group col-md-4">
+                                <label for="fk_secao">Seção:</label>
+                                <select name="fk_secao" class="form-control" required>
+                                    <option value="">-- Selecione a Seção --</option>
+                                    @foreach($secoes as $secao)
+                                        <option value="{{ $secao->id }}">{{ $secao->nome }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
                             <!-- Data de Entrada -->
                             <div class="form-group col-md-4">
                                 <label for="data_entrada">Data de Entrada:</label>

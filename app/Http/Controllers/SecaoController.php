@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Secao;
 use App\Models\Unidade;
 use App\Models\Itens_estoque;
+use Illuminate\Support\Facades\Log; // Adicionando o uso do Log
 
 class SecaoController extends Controller
 {
@@ -47,6 +48,35 @@ class SecaoController extends Controller
         }
         return redirect()->route('secoes.ver', ['unidade' => $unidadeId, 'secao' => $secaoId])->with('success', 'Itens transferidos com sucesso!');
     }
+    /**
+     * Get the items for a specific section.
+     *
+     * @param Secao $secao
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getItems(Secao $secao)
+    {
+        $items = $secao->produtos()
+            ->select('produtos.*')
+            ->selectRaw('COALESCE(
+                (SELECT SUM(quantidade) 
+                FROM produto_secao 
+                WHERE produto_id = produtos.id 
+                AND secao_id = ?), 0) - 
+                COALESCE(
+                    (SELECT SUM(quantidade) 
+                    FROM cautela_produto cp 
+                    JOIN cautelas c ON c.id = cp.cautela_id 
+                    WHERE cp.produto_id = produtos.id 
+                    AND c.data_devolucao IS NULL), 0) as quantidade', 
+                [$secao->id]
+            )
+            ->having('quantidade', '>', 0)
+            ->get();
+
+        return response()->json($items);
+    }
+
     public function ver($unidadeId, $secaoId)
     {
         $secao = Secao::with(['unidade'])->findOrFail($secaoId);
@@ -61,31 +91,61 @@ class SecaoController extends Controller
             'item_id' => 'required|array',
             'nova_secao' => 'required|integer',
         ]);
+
         $quantidades = $request->input('quantidade_transferir', []);
-        foreach ($request->item_id as $itemId) {
+
+        foreach ($request->item_id as $idx => $itemId) {
             $item = Itens_estoque::find($itemId);
-            $qtdTransferir = isset($quantidades[$itemId]) ? intval($quantidades[$itemId]) : 0;
+            $qtdTransferir = isset($quantidades[$idx]) ? intval($quantidades[$idx]) : 0;
+
+            Log::info("Processando item", [
+                'item_id' => $itemId,
+                'quantidade_transferir' => $qtdTransferir,
+                'nova_secao' => $request->nova_secao,
+            ]);
+
             if ($item && $qtdTransferir > 0 && $qtdTransferir <= $item->quantidade) {
-                // Se já existe um item igual na seção destino, soma; senão, cria novo registro
+                Log::info("Item encontrado e quantidade válida", [
+                    'item' => $item,
+                    'quantidade_atual' => $item->quantidade,
+                ]);
+
+                // Verifica se já existe um item igual na seção destino
                 $itemDestino = Itens_estoque::where('fk_secao', $request->nova_secao)
                     ->where('fk_produto', $item->fk_produto)
                     ->where('lote', $item->lote)
                     ->first();
+
                 if ($itemDestino) {
+                    Log::info("Item já existe na seção destino", ['item_destino' => $itemDestino]);
+                    // Atualiza a quantidade na seção destino
                     $itemDestino->quantidade += $qtdTransferir;
                     $itemDestino->save();
                 } else {
+                    Log::info("Criando novo item na seção destino", ['item' => $item]);
+                    // Cria um novo registro na seção destino
                     $novoItem = $item->replicate();
                     $novoItem->fk_secao = $request->nova_secao;
                     $novoItem->quantidade = $qtdTransferir;
                     $novoItem->save();
                 }
-                // Atualiza quantidade na seção origem
+
+                // Atualiza a quantidade na seção origem
                 $item->quantidade -= $qtdTransferir;
                 $item->save();
+
+                Log::info("Quantidade atualizada na seção origem", ['item' => $item]);
+            } else {
+                Log::warning("Item não encontrado ou quantidade inválida", [
+                    'item_id' => $itemId,
+                    'quantidade_transferir' => $qtdTransferir,
+                    'quantidade_disponivel' => $item ? $item->quantidade : null,
+                ]);
             }
         }
-        return redirect()->route('secoes.ver', ['unidade' => $unidadeId, 'secao' => $secaoId])->with('success', 'Itens transferidos com sucesso!');
+
+        return redirect()->route('secoes.ver', ['unidade' => $unidadeId, 'secao' => $secaoId])
+            ->with('success', 'Itens transferidos com sucesso!');
     }
     public function index($unidadeId)
     {

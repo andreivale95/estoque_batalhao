@@ -1,0 +1,126 @@
+Resumo do Sistema
+
+Visão geral
+- Sistema Laravel para gestão de almoxarifado militar: produtos, inventário, seções, transferências, cautelas (empréstimos), movimentações.
+- Autenticação e autorização de acesso por nível
+
+Modelos principais (resumo de campos e relações)
+1) Produto (table: produtos)
+   - Campos relevantes: id, nome, descricao, marca, valor, fk_categoria, tamanho, unidade, ativo, patrimonio
+   - Relações: categoria() -> Categoria via fk_categoria
+               kit() -> Kit via fk_kit
+               tamanho() -> Tamanho
+
+2) Itens_estoque (table: itens_estoque)
+   - Campos: id, quantidade, preco_unitario, unidade (id), fk_secao, data_entrada, data_saida, fk_produto, lote, fornecedor, nota_fiscal, observacao, fonte
+   - Relações: secao() -> Secao via fk_secao
+               produto() -> Produto via fk_produto
+               unidade() -> Unidade
+
+3) Secao (table: secaos)
+   - Campos: id, nome, fk_unidade
+   - Relação: unidade()
+
+4) Cautela (table: cautelas) e CautelaProduto (table: cautela_produto)
+   - Cautela: nome_responsavel, telefone, instituicao, data_cautela, data_prevista_devolucao, data_devolucao, etc.
+   - CautelaProduto: cautela_id, produto_id, quantidade
+
+5) Unidade, Categoria, Kit, Tamanho, Condicao, etc. (modelos auxiliares existentes)
+
+Controladores e endpoints (principais)
+- ProdutoController
+  - formInserirProduto() -> GET /produtos/inserir (view 'produtos.inserirProduto')
+  - cadastrarProduto(Request) -> POST /produtos/cadastrar (cadastra produto)
+  - verProduto($id) -> GET /registros/produto/ver/{id}
+  - getDetalhesPorSecao($id) -> GET /api/produtos/{id}/detalhes-secao (JSON)
+  - detalhes($id) -> GET /estoque/produto/{id}/detalhes (view com quebra por seção)
+  - createEstoque(), storeEstoque() -> criar produto + entrada em estoque
+  - editarProdutoForm, editarProduto/update
+
+- EstoqueController
+  - listarEstoque(Request) -> GET /registros/estoque/listar (agrupa por produto e soma quantidades)
+  - entradaEstoque / entradaProdutoEstoque / saidaEstoque / formEntrada / formSaida
+  - transferir(Request) -> POST /estoque/transferencia (transferência entre unidades)
+  - saidaMultiplos(Request) -> POST /estoque/saida-multiplos
+  - recibo($saida) -> /estoque/recibo/{saida}
+
+- SecaoController
+  - ver($unidadeId, $secaoId) -> view da seção
+  - transferirLoteForm / transferirLote / transferirItens -> transferências entre seções
+  - getItems(Secao $secao) -> GET /api/secoes/{secao}/items (retorna itens disponíveis na seção)
+  - vincularItensForm / vincularItens -> vincular itens "soltos" a uma seção
+
+- CautelaController
+  - create() -> GET form de cautela (view: cautelas.create)
+  - store(Request) -> POST salvar cautela e itens (cautela_produto)
+
+- InventarioController
+  - form() -> GET /inventario/cadastrar (view inventario.form)
+  - salvar(Request) -> POST /inventario/salvar (cria produto e opcionalmente cria registro em itens_estoque se informada secao+quantidade)
+
+Rotas API (AJAX)
+- GET /api/secoes/{secao}/items -> retorna items disponíveis na seção
+  - Response: [{ id, nome, quantidade, ... }]
+- GET /api/produtos/{id}/detalhes-secao -> retorna agregação por seção
+  - Response: [{ secao_id, secao_nome, quantidade }, ...]
+
+Fluxos importantes
+1) Cadastro com vínculo de seção
+   - Criar Produto via formulário
+   - Se informado secao_id + quantidade_inicial > 0: cria-se um registro em itens_estoque com fk_produto, fk_secao e quantidade
+
+2) Transferência entre seções/unidades
+   - Deduz do registro origem (itens_estoque.quantidade -= qtd)
+   - Se item igual (mesmo fk_produto e lote) existir na seção destino: incrementa quantidade; caso contrário réplicate() para criar novo registro com fk_secao destino e quantidade transferida
+
+3) Cautela (empréstimo)
+   - Form permite selecionar seção -> carregar itens via AJAX -> selecionar item e quantidade
+   - Ao salvar, cria Cautela e registros em cautela_produto
+
+Views principais
+- estoque/listarEstoque.blade.php: inventário agregado por produto; linha clicável abre página de detalhes por seção
+- produtos/inserirProduto.blade.php: formulário de inserção
+- produtos/detalhes.blade.php: detalhe do produto com tabela quantidade por seção
+- cautelas/create.blade.php: formulário dinâmico para emprestar múltiplos itens
+- inventario/form.blade.php: formulário para cadastrar produto com opção de seção e quantidade inicial
+- layout/aside.blade.php: menu lateral (contém listagem dinâmica de seções)
+
+Seeds / dados iniciais
+- SecaoSeeder: popula seções típicas (Armamento, Munição, Equipamento Individual, etc.) e cria 'Unidade Principal'
+
+Observações técnicas e mapeamentos
+- Campos FK: atenção a nomes não-padrão: produtos.fk_categoria (não categoria_id)
+- Transações: operações que envolvem múltiplas alterações (cadastrar produto + criar estoque; transferir quantidades) utilizam DB transactions
+- Validação server-side: presente em controllers (ex.: validar arrays em cautela, validar quantidade<=disponível)
+- JS: jQuery usado para AJAX, clonagem de linhas e máscaras (telefone / possível máscara monetária)
+
+Sugestões para portar para outra plataforma/IA
+- Padronizar nomes de FK durante a migração (usar category_id etc.) para facilitar mapeamento
+- Implementar endpoints JSON conforme especificado e testes automatizados para:
+  - Transferência de estoque
+  - Vinculação de itens a seção
+  - Cadastro com estoque inicial
+  - Cautela create/store
+
+Trechos de exemplo (payloads)
+- GET /api/secoes/5/items -> 200
+  [ { "id":123, "nome":"Lanterna", "quantidade":10 }, ... ]
+
+- GET /api/produtos/12/detalhes-secao -> 200
+  [ { "secao_id":3, "secao_nome":"Armamento", "quantidade":5 }, { "secao_id":7, "secao_nome":"Almoxarifado", "quantidade":12 } ]
+
+- POST /produtos/cadastrar (form)
+  nome=Fuzil&descricao=...&marca=X&tamanho=N&unidade=1&valor=250000&categoria=2
+
+- POST /inventario/salvar
+  nome=Lanterna&categoria_id=3&unidade_id=1&secao_id=4&quantidade_inicial=10
+
+Local do arquivo gerado neste workspace:
+c:\laragon\www\sisalmox\system_export\sistema_resumo.txt
+
+Próximos passos sugeridos
+- Gerar OpenAPI (YAML) com os endpoints JSON para importar em outra IA/plataforma
+- Gerar ERD (lista de tabelas + campos) e migrations correspondentes
+- Gerar scripts curl e exemplos de payload para testes automatizados
+
+Fim do arquivo

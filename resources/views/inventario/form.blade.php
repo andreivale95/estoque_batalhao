@@ -24,6 +24,19 @@
                 @endforeach
             </select>
         </div>
+        <div class="form-group">
+            <label for="secao">Seção (opcional)</label>
+            <select name="secao_id" id="secao" class="form-control">
+                <option value="">-- Nenhuma --</option>
+                @foreach($secoes as $secao)
+                    <option value="{{ $secao->id }}">{{ $secao->nome }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="quantidade_inicial">Quantidade Inicial (opcional)</label>
+            <input type="number" name="quantidade_inicial" id="quantidade_inicial" class="form-control" min="0" value="0">
+        </div>
         <button type="submit" class="btn btn-primary">Salvar</button>
         <a href="{{ route('inventario.index') }}" class="btn btn-secondary">Voltar</a>
     </form>

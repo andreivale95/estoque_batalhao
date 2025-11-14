@@ -12,11 +12,24 @@ class ModuloSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('modulos')->insert(['id_modulo' => '1', 'nome' => 'Dashboard']);
-        DB::table('modulos')->insert(['id_modulo' => '2', 'nome' => 'Administração']);
-        DB::table('modulos')->insert(['id_modulo' => '3', 'nome' => 'Segurança']);
-        DB::table('modulos')->insert(['id_modulo' => '4', 'nome' => 'Registros']);
-        DB::table('modulos')->insert(['id_modulo' => '5', 'nome' => 'Relatórios']);
+        if (!DB::table('modulos')->where('id_modulo', 1)->exists()) {
+            DB::table('modulos')->insert(['id_modulo' => '1', 'nome' => 'Dashboard']);
+        }
+        if (!DB::table('modulos')->where('id_modulo', 2)->exists()) {
+            DB::table('modulos')->insert(['id_modulo' => '2', 'nome' => 'Administração']);
+        }
+        if (!DB::table('modulos')->where('id_modulo', 3)->exists()) {
+            DB::table('modulos')->insert(['id_modulo' => '3', 'nome' => 'Segurança']);
+        }
+        if (!DB::table('modulos')->where('id_modulo', 4)->exists()) {
+            DB::table('modulos')->insert(['id_modulo' => '4', 'nome' => 'Registros']);
+        }
+        if (!DB::table('modulos')->where('id_modulo', 5)->exists()) {
+            DB::table('modulos')->insert(['id_modulo' => '5', 'nome' => 'Relatórios']);
+        }
+        if (!DB::table('modulos')->where('id_modulo', 6)->exists()) {
+            DB::table('modulos')->insert(['id_modulo' => '6', 'nome' => 'Cautelas']);
+        }
 
     }
 }

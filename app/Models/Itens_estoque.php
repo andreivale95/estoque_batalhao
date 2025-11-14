@@ -26,6 +26,9 @@ class Itens_estoque extends Model
         'sei',
         'data_trp',
         'fonte',
+        'valor_total',
+        'valor_unitario',
+        'quantidade_inicial',
     ];
     public function secao()
     {

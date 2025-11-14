@@ -17,6 +17,11 @@ use App\Models\Utils;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\SecaoController;
+use App\Http\Controllers\ProdutoController;
+
+Route::get('/secoes/{secao}/items', [SecaoController::class, 'getItems']);
+Route::get('/produtos/{id}/detalhes-secao', [ProdutoController::class, 'getDetalhesPorSecao']);
 
 use function Psy\debug;
 

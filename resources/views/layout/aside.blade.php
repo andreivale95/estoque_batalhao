@@ -133,6 +133,36 @@
                     </li>
                 </ul>
             </li>
+            @can('modulo', '6')
+                <li class="treeview">
+                    <a href="#">
+                        <i class="fa fa-archive"></i> <span>Cautelas</span>
+                        <span class="pull-right-container">
+                            <i class="fa fa-angle-left pull-right"></i>
+                        </span>
+                    </a>
+                    <ul class="treeview-menu">
+                        <li><a href="{{ route('cautelas.index') }}"><i class="fa fa-list"></i> Listar Cautelas</a></li>
+                        <li><a href="{{ route('cautelas.create') }}"><i class="fa fa-plus"></i> Nova Cautela</a></li>
+                        <li><a href="{{ route('cautelas.historico') }}"><i class="fa fa-history"></i> Histórico</a></li>
+                    </ul>
+                </li>
+            @endcan
+            @can('modulo', '5')
+                <li class="treeview">
+                    <a href="#">
+                        <i class="fa fa-building"></i> <span>Seções</span>
+                        <span class="pull-right-container">
+                            <i class="fa fa-angle-left pull-right"></i>
+                        </span>
+                    </a>
+                    <ul class="treeview-menu">
+                        @foreach(App\Models\Secao::all() as $secao)
+                            <li><a href="{{ route('secoes.show', $secao->id) }}">{{ $secao->nome }}</a></li>
+                        @endforeach
+                    </ul>
+                </li>
+            @endcan
         </ul>
         <!-- /.sidebar-menu -->
     </section>

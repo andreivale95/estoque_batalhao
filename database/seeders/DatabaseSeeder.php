@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
 
             ModuloSeeder::class,
             PermissaoSeeder::class,
+            SecaoSeeder::class,
             PerfilSeeder::class,
             UserSeeder::class,
             ParametrosSeeder::class,

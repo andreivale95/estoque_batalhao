@@ -18,6 +18,7 @@ use App\Http\Controllers\UnidadeController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\MovimentacaoController;
 use App\Http\Controllers\SecaoController;
+use App\Http\Controllers\CautelaController;
 
 Route::get('/movimentacoes', [MovimentacaoController::class, 'index'])->name('movimentacoes.index');
 Route::put('movimentacoes/desfazer/{id}', [MovimentacaoController::class, 'desfazer'])->name('movimentacao.desfazer');
@@ -45,8 +46,12 @@ Route::middleware(['auth', 'verified'])->controller(EstoqueController::class)->g
     Route::get('registros/estoque/form_entrada/{id}', 'formEntrada')->name('entrada.form');
     Route::get('registros/estoque/form_saida/{id}', 'formSaida')->name('saida.form');
     Route::post('/estoque/transferencia', [EstoqueController::class, 'transferir'])->name('estoque.transferir');
+    Route::post('/estoque/transferencia-secoes', [EstoqueController::class, 'transferirEntreSeccoes'])->name('estoque.transferir.secoes');
     Route::post('/estoque/saida-multiplos', [EstoqueController::class, 'saidaMultiplos'])->name('estoque.saidaMultiplos');
     Route::get('/estoque/recibo/{saida}',  [EstoqueController::class, 'recibo'])->name('estoque.recibo');
+
+    // Detalhes do produto (quebra por seção)
+    Route::get('estoque/produto/{id}/detalhes', [ProdutoController::class, 'detalhes'])->name('estoque.produto.detalhes');
     Route::get('registros/estoque/saida-multipla', 'saidaMultiplosForm')->name('saida_estoque.saida_multipla');
 
 });
@@ -77,15 +82,12 @@ Route::middleware(['auth', 'verified'])->controller(ProdutoController::class)->g
     Route::get('registros/produto/listar', 'listarProdutos')->name('produtos.listar');
     Route::get('registros/produto/ver/{id}', 'verProduto')->name('produto.ver');
     Route::get('registros/produto/form', 'formProduto')->name('produto.form');
-    Route::get('registros/produto/editar', 'editarProduto')->name('produto.editar');
+    Route::get('registros/produto/editar/{id}', 'editarProdutoForm')->name('produto.editar');
+    Route::post('registros/produto/editar/{id}', 'editarProduto')->name('produto.editarPost');
+    Route::get('/produtos/inserir', [ProdutoController::class, 'formInserirProduto'])->name('produtoinserir.form');
+    Route::post('/produtos/cadastrar', [ProdutoController::class, 'cadastrarProduto'])->name('produtos.cadastrar');
     Route::post('registros/produto/criar', 'cadastrarProduto')->name('produto.cadastrar');
-    Route::get('registros/produto/forminserir', 'inserirProdutoForm')->name('produtoinserir.form');
-    Route::get('registros/produto/entrada', 'inserirProdutoForm')->name('produtos.entrada');
-    Route::get('registros/produto/editar/{id}', 'editarProduto')->name('produto.editar');
-    Route::post('registros/produto/atualizar/{id}', 'atualizarProduto')->name('produto.atualizar');
-    Route::get('/api/produtos/unidade/{unidade}', [ProdutoController::class, 'getProdutosPorUnidade']);
-
-}); //testehhhhhhhh
+});
 
 
 Route::middleware(['auth', 'verified'])->controller(UnidadeController::class)->group(function () {
@@ -172,3 +174,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('inventario/cadastrar', [App\Http\Controllers\InventarioController::class, 'form'])->name('inventario.cadastrar');
     Route::post('inventario/salvar', [App\Http\Controllers\InventarioController::class, 'salvar'])->name('inventario.salvar');
 });
+
+
+Route::middleware(['auth', 'verified'])->controller(CautelaController::class)->group(function () {
+    Route::get('cautelas', 'index')->name('cautelas.index');
+    Route::get('cautelas/create', 'create')->name('cautelas.create');
+    Route::post('cautelas', 'store')->name('cautelas.store');
+    Route::get('cautelas/{cautela}', 'show')->name('cautelas.show');
+    Route::get('cautelas/{cautela}/devolucao', 'devolucao')->name('cautelas.devolucao');
+    Route::get('cautelas/historico', 'historico')->name('cautelas.historico');
+});
+
+// Rota da API para buscar itens por seção
+Route::get('api/secoes/{secao}/items', [CautelaController::class, 'getItensPorSecao']);

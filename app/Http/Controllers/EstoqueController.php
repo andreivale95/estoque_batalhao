@@ -8,6 +8,7 @@ use App\Models\HistoricoMovimentacao;
 use App\Models\Itens_estoque;
 use App\Models\Unidade;
 use App\Models\Produto;
+use App\Models\Secao;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\EfetivoMilitar;
@@ -15,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 
 class EstoqueController extends Controller
@@ -30,40 +32,64 @@ class EstoqueController extends Controller
         $militares = EfetivoMilitar::all();
 
         try {
+            Log::info('Iniciando consulta de estoque', [
+                'filtros' => $request->all()
+            ]);
+
             // Query base com filtros aplicados
             $query = Itens_estoque::query()
-                ->with('produto')
+                ->select(
+                    'produtos.id',
+                    'produtos.nome',
+                    'produtos.patrimonio',
+                    'produtos.valor',
+                    'itens_estoque.unidade',
+                    'unidades.nome as unidade_nome',
+                    'produtos.fk_categoria as categoria_id',
+                    DB::raw('SUM(itens_estoque.quantidade) as quantidade_total')
+                )
+                ->join('produtos', 'produtos.id', '=', 'itens_estoque.fk_produto')
+                ->join('unidades', 'unidades.id', '=', 'itens_estoque.unidade')
+                ->leftJoin('categorias', 'categorias.id', '=', 'produtos.fk_categoria')
                 ->when(filled(request()->get('unidade')), function (Builder $query) use ($request) {
-                    return $query->where('unidade', $request->get('unidade'));
+                    return $query->where('itens_estoque.unidade', $request->get('unidade'));
                 })
                 ->when(filled($request->get('nome')), function (Builder $query) use ($request) {
-                    return $query->whereHas('produto', function ($q) use ($request) {
-                        $q->where('nome', 'like', '%' . $request->get('nome') . '%');
-                    });
+                    return $query->where('produtos.nome', 'like', '%' . $request->get('nome') . '%');
                 })
                 ->when(filled($request->get('patrimonio')), function (Builder $query) use ($request) {
-                    return $query->whereHas('produto', function ($q) use ($request) {
-                        $q->where('patrimonio', 'like', '%' . $request->get('patrimonio') . '%');
-                    });
+                    return $query->where('produtos.patrimonio', 'like', '%' . $request->get('patrimonio') . '%');
                 })
                 ->when(filled($request->get('categoria')), function (Builder $query) use ($request) {
-                    return $query->whereHas('produto.categoria', function ($q) use ($request) {
-                        $q->where('id', $request->get('categoria'));
-                    });
-                });
+                    return $query->where('produtos.fk_categoria', $request->get('categoria'));
+                })
+                ->groupBy(
+                    'produtos.id',
+                    'produtos.nome',
+                    'produtos.patrimonio',
+                    'produtos.valor',
+                    'itens_estoque.unidade',
+                    'unidades.nome',
+                    'produtos.fk_categoria'
+                );
 
-            // Clona a query para calcular o total geral com base nos filtros
-            $totalGeral = $query->get()->sum(function ($item) {
-                return $item->quantidade * ($item->produto->valor ?? 0);
+            // Executar a query principal
+            $itens_estoque = $query->paginate(10);
+
+            // Calcular o total geral
+            $totalGeral = $itens_estoque->sum(function ($item) {
+                return $item->quantidade_total * ($item->valor ?? 0);
             });
-
-            // Paginação com os mesmos filtros
-            $itens_estoque = (clone $query)->paginate(10);
 
             return view('estoque/listarEstoque', compact('itens_estoque', 'unidades', 'categorias', 'totalGeral', 'militares',));
         } catch (\Exception $e) {
-            Log::error('Erro ao consultar estoque', [$e]);
-            return back()->with('warning', 'Houve um erro ao consultar estoque.');
+            Log::error('Erro ao consultar estoque', [
+                'erro' => $e->getMessage(),
+                'linha' => $e->getLine(),
+                'arquivo' => $e->getFile(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->with('warning', 'Houve um erro ao consultar estoque. Erro: ' . $e->getMessage());
         }
     }
     public function transferir(Request $request)
@@ -126,6 +152,73 @@ class EstoqueController extends Controller
             'unidade' => Auth::user()->fk_unidade
         ])->with('success', 'Produto transferido com sucesso!');
     }
+
+    public function transferirEntreSeccoes(Request $request)
+    {
+        try {
+            $request->validate([
+                'fk_produto' => 'required|exists:produtos,id',
+                'fk_secao_origem' => 'required|exists:secaos,id',
+                'fk_secao_destino' => 'required|exists:secaos,id',
+                'quantidade' => 'required|integer|min:1',
+                'observacao' => 'nullable|string',
+            ]);
+
+            if ($request->fk_secao_origem === $request->fk_secao_destino) {
+                return back()->with('warning', 'A seção de origem deve ser diferente da seção de destino.');
+            }
+
+            // Busca item na seção origem
+            $itemOrigem = Itens_estoque::where('fk_produto', $request->fk_produto)
+                ->where('fk_secao', $request->fk_secao_origem)
+                ->where('unidade', Auth::user()->fk_unidade)
+                ->first();
+
+            if (!$itemOrigem || $itemOrigem->quantidade < $request->quantidade) {
+                return back()->with('warning', 'Quantidade insuficiente na seção de origem.');
+            }
+
+            // Deduz da origem
+            $itemOrigem->quantidade -= $request->quantidade;
+            $itemOrigem->save();
+
+            // Busca ou cria item na seção destino
+            $itemDestino = Itens_estoque::where('fk_produto', $request->fk_produto)
+                ->where('fk_secao', $request->fk_secao_destino)
+                ->where('unidade', Auth::user()->fk_unidade)
+                ->first();
+
+            if ($itemDestino) {
+                $itemDestino->quantidade += $request->quantidade;
+                $itemDestino->save();
+            } else {
+                Itens_estoque::create([
+                    'fk_produto' => $request->fk_produto,
+                    'fk_secao' => $request->fk_secao_destino,
+                    'unidade' => Auth::user()->fk_unidade,
+                    'quantidade' => $request->quantidade,
+                    'data_entrada' => now(),
+                ]);
+            }
+
+            // Log de movimentação
+            HistoricoMovimentacao::create([
+                'fk_produto' => $request->fk_produto,
+                'tipo_movimentacao' => 'transferencia_secoes',
+                'quantidade' => $request->quantidade,
+                'responsavel' => Auth::user()->nome,
+                'observacao' => $request->observacao ?? 'Transferência entre seções',
+                'data_movimentacao' => now(),
+                'fk_unidade' => Auth::user()->fk_unidade,
+            ]);
+
+            return back()->with('success', 'Produto transferido entre seções com sucesso!');
+        } catch (\Exception $e) {
+            Log::error('Erro ao transferir entre seções', ['exception' => $e->getMessage()]);
+            return back()->with('warning', 'Houve um erro ao transferir entre seções.');
+        }
+    }
+
     public function entradaEstoque(Request $request)
     {
         try {
@@ -144,15 +237,26 @@ class EstoqueController extends Controller
                 'quantidade' => 'required|integer|min:1',
                 'data_entrada' => 'required|date',
                 'fk_produto' => 'required|exists:produtos,id',
-
+                'fk_secao' => 'required|exists:secaos,id',
+                'lote' => 'nullable|string',
+                'fornecedor' => 'nullable|string',
+                'nota_fiscal' => 'nullable|string',
+                'fonte' => 'nullable|string',
+                'data_trp' => 'nullable|date',
+                'sei' => 'nullable|string',
+                'valor' => 'nullable|numeric',
+                'observacao' => 'nullable|string',
             ]);
 
             $dataEntrada = Carbon::parse($request->data_entrada);
 
-            // Busca o item no estoque
+            // Busca o item no estoque pela seção específica
             $itemEstoque = Itens_estoque::where('fk_produto', $request->fk_produto)
                 ->where('unidade', $request->unidade)
+                ->where('fk_secao', $request->fk_secao)
                 ->first();
+
+            $novoValorMedio = $valorFinal;
 
             if ($itemEstoque) {
                 // Calcula a nova média ponderada
@@ -166,16 +270,38 @@ class EstoqueController extends Controller
 
                 // Atualiza o estoque
                 $itemEstoque->quantidade = $novaQuantidade;
-
                 $itemEstoque->save();
 
                 // Atualiza o valor médio do produto
                 $produto = $itemEstoque->produto;
                 $produto->valor = $novoValorMedio;
                 $produto->save();
+            } else {
+                // Cria novo registro de estoque na seção específica
+                Itens_estoque::create([
+                    'fk_produto' => $request->fk_produto,
+                    'fk_secao' => $request->fk_secao,
+                    'unidade' => $request->unidade,
+                    'quantidade' => $request->quantidade,
+                    'valor_total' => $valorFinal * $request->quantidade,
+                    'valor_unitario' => $valorFinal,
+                    'quantidade_inicial' => $request->quantidade,
+                    'data_entrada' => $dataEntrada,
+                    'lote' => $request->lote ?? null,
+                    'fornecedor' => $request->fornecedor ?? null,
+                    'nota_fiscal' => $request->nota_fiscal ?? null,
+                    'fonte' => $request->fonte ?? null,
+                    'data_trp' => $request->data_trp ?? null,
+                    'sei' => $request->sei ?? null,
+                ]);
+
+                // Atualiza valor do produto
+                $produto = Produto::find($request->fk_produto);
+                $produto->valor = $novoValorMedio;
+                $produto->save();
             }
 
-            // Atualiza valor do produto com o valor da primeira entrada
+            // Atualiza valor do produto com o valor da entrada
             $produto = Produto::find($request->fk_produto);
             $produto->valor = $novoValorMedio;
             $produto->save();
@@ -350,8 +476,9 @@ class EstoqueController extends Controller
 
 
             $produto = Itens_estoque::select('fk_produto', 'unidade')->where('id', $id)->first();
+            $secoes = Secao::all();
 
-            return view('estoque/estoque_form_entrada', compact('produto'));
+            return view('estoque/estoque_form_entrada', compact('produto', 'secoes'));
         } catch (Exception $e) {
             Log::error('Error ao consultar formulario', [$e]);
             return back()->with('warning', 'Houve um erro ao abrir Formulário');
