@@ -626,7 +626,27 @@ class EstoqueController extends Controller
     }
     public function saidaMultiplosForm()
     {
-        $itens_estoque = Itens_estoque::with('produto')->where('unidade', Auth::user()->fk_unidade)->get();
+        // Carrega todos os itens da unidade e agrupa por produto+seção para evitar duplicatas
+        $rawItems = Itens_estoque::with('produto', 'secao')
+            ->where('unidade', Auth::user()->fk_unidade)
+            ->get();
+
+        $grouped = $rawItems->groupBy(function ($item) {
+            return $item->fk_produto . '_' . ($item->fk_secao ?? 0);
+        });
+
+        // Para cada grupo, mantém o primeiro registro como referência e soma as quantidades
+        $itens_estoque = $grouped->map(function ($group) {
+            $first = $group->first();
+            $quantidade = $group->sum('quantidade');
+            return (object) [
+                'id' => $first->id,
+                'produto' => $first->produto,
+                'secao' => $first->secao,
+                'quantidade' => $quantidade,
+            ];
+        })->values();
+
         $militares = \App\Models\EfetivoMilitar::all();
         return view('estoque.saidaMultiplos', compact('itens_estoque', 'militares'));
     }

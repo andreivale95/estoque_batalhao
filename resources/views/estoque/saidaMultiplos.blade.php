@@ -57,13 +57,17 @@
                             <select id="fk_produto_add" class="form-control select2-produto">
                                 <option value="">Selecione um Produto</option>
                                 @foreach ($itens_estoque as $item)
-                                    <option value="{{ $item->id }}" data-qtd="{{ $item->quantidade }}">{{ $item->produto->nome }} - {{ optional($item->produto->tamanho()->first())->tamanho ?? 'Tamanho Único' }}</option>
+                                    <option value="{{ $item->id }}" data-qtd="{{ $item->quantidade }}" data-secao="{{ optional($item->secao)->nome ?? 'Sem seção' }}">{{ $item->produto->nome }} - {{ optional($item->produto->tamanho()->first())->tamanho ?? 'Tamanho Único' }} [{{ optional($item->secao)->nome ?? 'Sem seção' }}]</option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="form-group col-md-2">
                             <label for="qtd_disponivel">Qtd. disponível:</label>
                             <input type="text" id="qtd_disponivel" class="form-control" readonly>
+                        </div>
+                        <div class="form-group col-md-2">
+                            <label for="secao_display">Seção:</label>
+                            <input type="text" id="secao_display" class="form-control" readonly>
                         </div>
                         <div class="form-group col-md-2">
                             <label for="quantidade_add">Quantidade:</label>
@@ -78,6 +82,7 @@
                             <thead>
                                 <tr>
                                     <th>Produto</th>
+                                    <th>Seção</th>
                                     <th>Quantidade</th>
                                     <th>Ações</th>
                                 </tr>
@@ -108,9 +113,10 @@ $(document).ready(function() {
     function getProdutoText(select) {
         return select.find('option:selected').text();
     }
-    function addItemToTable(produtoId, produtoText, quantidade) {
+    function addItemToTable(produtoId, produtoText, quantidade, secao) {
         var row = `<tr>
             <td><input type="hidden" name="fk_produto[]" value="${produtoId}">${produtoText}</td>
+            <td><input type="hidden" name="secao[]" value="${secao}">${secao}</td>
             <td><input type="hidden" name="quantidade[]" value="${quantidade}">${quantidade}</td>
             <td>
                 <button type="button" class="btn btn-danger btn-sm remover-item">Remover</button>
@@ -124,10 +130,12 @@ $(document).ready(function() {
         var produtoId = select.val();
         var produtoText = select.find('option:selected').text();
         var quantidade = $('#quantidade_add').val();
+        var secao = select.find('option:selected').data('secao');
         if(produtoId && quantidade) {
-            addItemToTable(produtoId, produtoText, quantidade);
+            addItemToTable(produtoId, produtoText, quantidade, secao);
             select.val('');
             $('#quantidade_add').val('');
+            $('#secao_display').val('');
             select.trigger('change');
         } else {
             alert('Selecione o produto e informe a quantidade!');
@@ -154,7 +162,9 @@ $(document).ready(function() {
     });
     $('#fk_produto_add').on('change', function() {
         var qtd = $(this).find('option:selected').data('qtd');
+        var secao = $(this).find('option:selected').data('secao');
         $('#qtd_disponivel').val(qtd ? qtd : '');
+        $('#secao_display').val(secao ? secao : '');
     });
 });
 </script>
