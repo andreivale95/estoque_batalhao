@@ -23,6 +23,23 @@ class EstoqueController extends Controller
 {
     public function listarEstoque(Request $request)
     {
+        // Lógica de redirecionamento:
+        // 1. Se vem de 'from=parametros' (menu Parâmetros), mostra sem filtro de unidade específica
+        // 2. Se acessa sem parâmetros de filtro (direto na URL), redireciona com a unidade do usuário
+        $fromParametros = $request->query('from') === 'parametros';
+        $hasNome = $request->query('nome') !== null;
+        $hasCategoria = $request->query('categoria') !== null;
+        $hasUnidade = $request->query('unidade') !== null;
+
+        // Se não vem de parâmetros e não tem filtros, redireciona com a unidade do usuário
+        if (!$fromParametros && !$hasNome && !$hasCategoria && !$hasUnidade) {
+            return redirect()->route('estoque.listar', [
+                'nome' => '',
+                'categoria' => '',
+                'unidade' => Auth::user()->fk_unidade
+            ]);
+        }
+
         $request['unidade'] = empty($request['unidade']) ? '' : $request->get('unidade');
         $request['categoria'] = empty($request['categoria']) ? '' : $request->get('categoria');
         $request['nome'] = empty($request['nome']) ? '' : $request->get('nome');

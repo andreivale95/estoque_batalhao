@@ -47,7 +47,7 @@
                     </a>
                     <ul class="treeview-menu">
                         @can('modulo', '2')
-                            <li><a href="{{ route('produtos.listar') }}">Listar Produtos</a></li>
+                            <li><a href="{{ route('produtos.listar', ['from' => 'parametros']) }}">Listar Produtos</a></li>
                             <li><a href="{{ route('kits.listar') }}">Listar Kits</a></li>
                             <li><a href="{{ route('categorias.listar') }}">Listar Categorias</a></li>
                             <li><a href="{{ route('unidades.listar') }}">Listar Unidades</a></li>
