@@ -626,28 +626,52 @@ class EstoqueController extends Controller
     }
     public function saidaMultiplosForm()
     {
-        // Carrega todos os itens da unidade e agrupa por produto+seção para evitar duplicatas
+        // Carrega todos os itens da unidade
         $rawItems = Itens_estoque::with('produto', 'secao')
             ->where('unidade', Auth::user()->fk_unidade)
             ->get();
 
-        $grouped = $rawItems->groupBy(function ($item) {
+        // Agrupa por produto+seção e soma quantidades, mas manteremos um representante (primeiro id) por combinação
+        $groupedByProdSec = $rawItems->groupBy(function ($item) {
             return $item->fk_produto . '_' . ($item->fk_secao ?? 0);
         });
 
-        // Para cada grupo, mantém o primeiro registro como referência e soma as quantidades
-        $itens_estoque = $grouped->map(function ($group) {
+        $sectionsMap = [];
+        foreach ($groupedByProdSec as $key => $group) {
             $first = $group->first();
+            $parts = explode('_', $key);
+            $prodId = (int)$parts[0];
+            $secaoId = (int)$parts[1];
             $quantidade = $group->sum('quantidade');
-            return (object) [
-                'id' => $first->id,
-                'produto' => $first->produto,
-                'secao' => $first->secao,
+
+            if ($quantidade <= 0) continue; // não incluir se estoque zero
+
+            if (!isset($sectionsMap[$prodId])) $sectionsMap[$prodId] = [];
+            $sectionsMap[$prodId][] = [
+                'estoque_id' => $first->id,
+                'secao_id' => $secaoId,
+                'secao_nome' => optional($first->secao)->nome ?? 'Sem seção',
                 'quantidade' => $quantidade,
             ];
-        })->values();
+        }
 
+        // Monta lista de produtos únicos com estoque total > 0
+        $productsGrouped = [];
+        foreach ($sectionsMap as $prodId => $secs) {
+            $produto = $rawItems->firstWhere('fk_produto', $prodId)->produto ?? null;
+            if (!$produto) continue;
+            $total = array_sum(array_column($secs, 'quantidade'));
+            if ($total <= 0) continue;
+            $productsGrouped[] = [
+                'id' => $produto->id,
+                'nome' => $produto->nome,
+                'quantidade_total' => $total,
+            ];
+        }
+
+        $itens_estoque = collect($productsGrouped);
         $militares = \App\Models\EfetivoMilitar::all();
-        return view('estoque.saidaMultiplos', compact('itens_estoque', 'militares'));
+        // Passa o mapa de seções como JSON para a view
+        return view('estoque.saidaMultiplos', compact('itens_estoque', 'militares'))->with('sectionsMap', $sectionsMap);
     }
 }

@@ -57,8 +57,15 @@
                             <select id="fk_produto_add" class="form-control select2-produto">
                                 <option value="">Selecione um Produto</option>
                                 @foreach ($itens_estoque as $item)
-                                    <option value="{{ $item->id }}" data-qtd="{{ $item->quantidade }}" data-secao="{{ optional($item->secao)->nome ?? 'Sem seção' }}">{{ $item->produto->nome }} - {{ optional($item->produto->tamanho()->first())->tamanho ?? 'Tamanho Único' }} [{{ optional($item->secao)->nome ?? 'Sem seção' }}]</option>
+                                    <option value="{{ $item['id'] }}" data-total="{{ $item['quantidade_total'] }}">{{ $item['nome'] }}</option>
                                 @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="fk_secao_add">Seção (origem):</label>
+                            <select id="fk_secao_add" class="form-control">
+                                <option value="">Selecione a seção</option>
+                                {{-- opções populadas via JS quando escolher o produto --}}
                             </select>
                         </div>
                         <div class="form-group col-md-2">
@@ -126,20 +133,50 @@ $(document).ready(function() {
     }
     $('#add-item').on('click', function(e) {
         e.preventDefault();
-        var select = $('#fk_produto_add');
-        var produtoId = select.val();
-        var produtoText = select.find('option:selected').text();
-        var quantidade = $('#quantidade_add').val();
-        var secao = select.find('option:selected').data('secao');
-        if(produtoId && quantidade) {
-            addItemToTable(produtoId, produtoText, quantidade, secao);
-            select.val('');
-            $('#quantidade_add').val('');
-            $('#secao_display').val('');
-            select.trigger('change');
-        } else {
-            alert('Selecione o produto e informe a quantidade!');
+        var produtoSelect = $('#fk_produto_add');
+        var produtoId = produtoSelect.val();
+        var produtoText = produtoSelect.find('option:selected').text();
+        var secaoSelect = $('#fk_secao_add');
+        var estoqueId = secaoSelect.val(); // este é o id do registro em itens_estoque (valor esperado pelo controller)
+        var secaoText = secaoSelect.find('option:selected').text();
+        var quantidade = parseInt($('#quantidade_add').val() || 0, 10);
+
+        if (!produtoId) {
+            alert('Selecione um produto.');
+            return;
         }
+        if (!estoqueId) {
+            alert('Selecione a seção de origem.');
+            return;
+        }
+        if (!quantidade || quantidade <= 0) {
+            alert('Informe uma quantidade válida.');
+            return;
+        }
+
+        // Verifica quantidade disponível para o estoque selecionado
+        var available = 0;
+        if (typeof sectionsMap !== 'undefined' && sectionsMap[produtoId]) {
+            for (var i = 0; i < sectionsMap[produtoId].length; i++) {
+                if (sectionsMap[produtoId][i].estoque_id == estoqueId) {
+                    available = sectionsMap[produtoId][i].quantidade;
+                    break;
+                }
+            }
+        }
+        if (quantidade > available) {
+            alert('Quantidade informada excede o disponível na seção selecionada (disponível: ' + available + ').');
+            return;
+        }
+
+        // Para manter compatibilidade com o controller existente, enviamos o id do registro de estoque
+        addItemToTable(estoqueId, produtoText, quantidade, secaoText);
+        // Limpa campos
+        produtoSelect.val('');
+        $('#quantidade_add').val('');
+        $('#secao_display').val('');
+        secaoSelect.html('<option value="">Selecione a seção</option>');
+        produtoSelect.trigger('change');
     });
     $(document).on('click', '.remover-item', function() {
         $(this).closest('tr').remove();
@@ -160,11 +197,45 @@ $(document).ready(function() {
             return false;
         }
     });
+    // Mapa de seções por produto passado do controller
+    var sectionsMap = {!! json_encode($sectionsMap ?? []) !!};
+
     $('#fk_produto_add').on('change', function() {
-        var qtd = $(this).find('option:selected').data('qtd');
-        var secao = $(this).find('option:selected').data('secao');
-        $('#qtd_disponivel').val(qtd ? qtd : '');
-        $('#secao_display').val(secao ? secao : '');
+        var produtoId = $(this).val();
+        var secaoSelect = $('#fk_secao_add');
+        secaoSelect.html('<option value="">Selecione a seção</option>');
+        $('#qtd_disponivel').val('');
+        $('#secao_display').val('');
+        if (!produtoId) return;
+
+        var sections = sectionsMap[produtoId] || [];
+        var total = 0;
+        for (var i = 0; i < sections.length; i++) {
+            var s = sections[i];
+            var optionText = s.secao_nome + ' (Disponível: ' + s.quantidade + ')';
+            secaoSelect.append('<option value="' + s.estoque_id + '" data-qty="' + s.quantidade + '">' + optionText + '</option>');
+            total += s.quantidade;
+        }
+        $('#qtd_disponivel').val(total > 0 ? total : '');
+    });
+
+    // Ao selecionar seção, mostra a seção escolhida e a quantidade disponível naquela seção
+    $('#fk_secao_add').on('change', function() {
+        var estoqueId = $(this).val();
+        var prodId = $('#fk_produto_add').val();
+        if (!estoqueId || !prodId) {
+            $('#secao_display').val('');
+            $('#qtd_disponivel').val('');
+            return;
+        }
+        var sections = sectionsMap[prodId] || [];
+        for (var i = 0; i < sections.length; i++) {
+            if (sections[i].estoque_id == estoqueId) {
+                $('#secao_display').val(sections[i].secao_nome || '');
+                $('#qtd_disponivel').val(sections[i].quantidade);
+                break;
+            }
+        }
     });
 });
 </script>

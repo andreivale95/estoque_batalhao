@@ -50,61 +50,60 @@
                 <h3 class="box-title">Itens da Cautela</h3>
             </div>
             <div class="box-body">
-                <div id="itemList">
-                    <div class="item-row">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label>Seção</label>
-                                    <select name="secoes[]" class="form-control secao-select" required>
-                                        <option value="">Selecione a Seção</option>
-                                        @if($secoes->isEmpty())
-                                            <option value="" disabled>Nenhuma seção cadastrada</option>
-                                        @else
-                                            @foreach($secoes as $secao)
-                                                <option value="{{ $secao->id }}">{{ $secao->nome }}</option>
-                                            @endforeach
-                                        @endif
-                                    </select>
-                                    <!-- Debug Info -->
-                                    @if(config('app.debug'))
-                                        <small class="text-muted">
-                                            Total de seções: {{ $secoes->count() }}
-                                        </small>
-                                    @endif
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label>Item</label>
-                                    <select name="items[]" class="form-control item-select" required disabled>
-                                        <option value="">Selecione o Item</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Quantidade</label>
-                                    <input type="number" name="quantidades[]" class="form-control quantidade-input" min="1" required>
-                                </div>
-                            </div>
-                            <div class="col-md-1">
-                                <div class="form-group">
-                                    <label>&nbsp;</label>
-                                    <button type="button" class="btn btn-danger btn-block remove-item">
-                                        <i class="fa fa-trash"></i>
-                                    </button>
-                                </div>
-                            </div>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Produto</label>
+                            <select id="fk_produto_add" class="form-control select2-produto">
+                                <option value="">Selecione um Produto</option>
+                                @foreach ($itens_estoque as $item)
+                                    <option value="{{ $item['id'] }}" data-total="{{ $item['quantidade_total'] }}">{{ $item['nome'] }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Seção (origem)</label>
+                            <select id="fk_secao_add" class="form-control">
+                                <option value="">Selecione a seção</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>Disponível</label>
+                            <input type="text" id="qtd_disponivel" class="form-control" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>Quantidade</label>
+                            <input type="number" id="quantidade_add" class="form-control" min="1" placeholder="0">
                         </div>
                     </div>
                 </div>
-                <div class="row mt-3">
+                <div class="row mb-3">
                     <div class="col-md-12">
                         <button type="button" class="btn btn-success" id="addItem">
                             <i class="fa fa-plus"></i> Adicionar Item
                         </button>
                     </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="tabela-itens">
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th>Seção</th>
+                                <th>Quantidade</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Itens adicionados via JS -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -120,54 +119,119 @@ $(document).ready(function() {
     // Máscara para o campo de telefone
     $('#telefone').mask('(00) 00000-0000');
 
-    // Função para carregar itens de uma seção
-    function carregarItens(secaoId, itemSelect) {
-        if (secaoId) {
-            $.get(`/api/secoes/${secaoId}/items`, function(data) {
-                itemSelect.prop('disabled', false);
-                itemSelect.empty().append('<option value="">Selecione o Item</option>');
-                data.forEach(function(item) {
-                    itemSelect.append(`<option value="${item.id}">${item.nome} (Disponível: ${item.quantidade})</option>`);
-                });
-            });
-        } else {
-            itemSelect.prop('disabled', true);
-            itemSelect.empty().append('<option value="">Selecione o Item</option>');
-        }
-    }
-
-    // Quando uma seção é selecionada
-    $(document).on('change', '.secao-select', function() {
-        var itemSelect = $(this).closest('.item-row').find('.item-select');
-        carregarItens($(this).val(), itemSelect);
+    // Inicializar Select2
+    $('#fk_produto_add').select2({
+        placeholder: "Selecione um Produto",
+        allowClear: true,
+        width: '100%'
     });
 
-    // Adicionar novo item
+    // Mapa de seções por produto passado do controller
+    var sectionsMap = {!! json_encode($sectionsMap ?? []) !!};
+
+    // Ao selecionar produto, popula seções
+    $('#fk_produto_add').on('change', function() {
+        var produtoId = $(this).val();
+        var secaoSelect = $('#fk_secao_add');
+        secaoSelect.html('<option value="">Selecione a seção</option>');
+        $('#qtd_disponivel').val('');
+        if (!produtoId) return;
+
+        var sections = sectionsMap[produtoId] || [];
+        for (var i = 0; i < sections.length; i++) {
+            var s = sections[i];
+            var optionText = s.secao_nome + ' (Disponível: ' + s.quantidade + ')';
+            secaoSelect.append('<option value="' + s.estoque_id + '" data-qty="' + s.quantidade + '">' + optionText + '</option>');
+        }
+    });
+
+    // Ao selecionar seção, exibe quantidade disponível
+    $('#fk_secao_add').on('change', function() {
+        var estoqueId = $(this).val();
+        var prodId = $('#fk_produto_add').val();
+        if (!estoqueId || !prodId) {
+            $('#qtd_disponivel').val('');
+            return;
+        }
+        var sections = sectionsMap[prodId] || [];
+        for (var i = 0; i < sections.length; i++) {
+            if (sections[i].estoque_id == estoqueId) {
+                $('#qtd_disponivel').val(sections[i].quantidade);
+                break;
+            }
+        }
+    });
+
+    // Função para adicionar item à tabela
+    function addItemToTable(produtoId, produtoText, secaoId, secaoText, quantidade) {
+        var row = `<tr>
+            <td><input type="hidden" name="produtos[]" value="${produtoId}">${produtoText}</td>
+            <td><input type="hidden" name="secoes[]" value="${secaoId}">${secaoText}</td>
+            <td><input type="hidden" name="quantidades[]" value="${quantidade}">${quantidade}</td>
+            <td>
+                <button type="button" class="btn btn-danger btn-sm remover-item">
+                    <i class="fa fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
+        $('#tabela-itens tbody').append(row);
+    }
+
+    // Adicionar item
     $('#addItem').click(function() {
-        var newItem = $('.item-row:first').clone();
-        newItem.find('select').val('');
-        newItem.find('input').val('');
-        newItem.find('.item-select').prop('disabled', true);
-        $('#itemList').append(newItem);
+        var produtoId = $('#fk_produto_add').val();
+        var produtoText = $('#fk_produto_add').find('option:selected').text();
+        var secaoId = $('#fk_secao_add').val();
+        var secaoText = $('#fk_secao_add').find('option:selected').text();
+        var quantidade = parseInt($('#quantidade_add').val() || 0, 10);
+
+        if (!produtoId) {
+            alert('Selecione um produto.');
+            return;
+        }
+        if (!secaoId) {
+            alert('Selecione a seção de origem.');
+            return;
+        }
+        if (!quantidade || quantidade <= 0) {
+            alert('Informe uma quantidade válida.');
+            return;
+        }
+
+        // Verifica quantidade disponível
+        var available = 0;
+        if (sectionsMap[produtoId]) {
+            for (var i = 0; i < sectionsMap[produtoId].length; i++) {
+                if (sectionsMap[produtoId][i].estoque_id == secaoId) {
+                    available = sectionsMap[produtoId][i].quantidade;
+                    break;
+                }
+            }
+        }
+        if (quantidade > available) {
+            alert('Quantidade informada excede o disponível (disponível: ' + available + ').');
+            return;
+        }
+
+        addItemToTable(produtoId, produtoText, secaoId, secaoText, quantidade);
+        
+        // Limpa campos
+        $('#fk_produto_add').val('').trigger('change');
+        $('#quantidade_add').val('');
     });
 
     // Remover item
-    $(document).on('click', '.remove-item', function() {
-        if ($('.item-row').length > 1) {
-            $(this).closest('.item-row').remove();
-        }
+    $(document).on('click', '.remover-item', function() {
+        $(this).closest('tr').remove();
     });
 
-    // Validar quantidade disponível
-    $(document).on('change', '.item-select', function() {
-        var option = $(this).find('option:selected');
-        var quantidadeInput = $(this).closest('.item-row').find('.quantidade-input');
-        if (option.length) {
-            var matches = option.text().match(/Disponível: (\d+)/);
-            if (matches) {
-                var disponivel = parseInt(matches[1]);
-                quantidadeInput.attr('max', disponivel);
-            }
+    // Validar antes de submeter
+    $('form').on('submit', function(e) {
+        var temItens = $('#tabela-itens tbody tr').length > 0;
+        if (!temItens) {
+            alert('Adicione pelo menos um item à cautela!');
+            e.preventDefault();
+            return false;
         }
     });
 });
