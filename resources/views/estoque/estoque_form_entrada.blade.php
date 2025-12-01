@@ -45,11 +45,32 @@
                                 <input type="hidden" name="fk_produto" value="{{ $produto->fk_produto }}">
 
                             </div>
-                            <div>
-                                <!-- Campo oculto com o ID do produto (será enviado no form) -->
-                                <input type="hidden" name="unidade" value="{{ $produto->unidade }}">
-
-                            </div>
+                            
+                            @if($isAdmin)
+                                <!-- Unidade editável para admin -->
+                                <div class="form-group col-md-4">
+                                    <label for="unidade">Unidade:</label>
+                                    <select name="unidade" id="unidade" class="form-control" required>
+                                        <option value="">-- Selecione a Unidade --</option>
+                                        @php
+                                            $unidades = \App\Models\Unidade::all();
+                                        @endphp
+                                        @foreach($unidades as $unidade)
+                                            <option value="{{ $unidade->id }}" {{ $produto->unidade == $unidade->id ? 'selected' : '' }}>
+                                                {{ $unidade->nome }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @else
+                                <!-- Unidade fixa para não-admin -->
+                                <div class="form-group col-md-4">
+                                    <label for="unidade">Unidade:</label>
+                                    <input type="hidden" name="unidade" value="{{ $produto->unidade }}">
+                                    <input type="text" class="form-control" 
+                                        value="{{ $unidadeUsuario->nome ?? 'Unidade não encontrada' }}" disabled>
+                                </div>
+                            @endif
 
                             <!-- Lote -->
                             <div class="form-group col-md-4">

@@ -77,6 +77,24 @@ class UserController extends Controller
         $this->authorize('autorizacao', 4);
 
         try {
+            // Validação dos dados
+            $request->validate([
+                'nome' => 'required|string|max:255',
+                'sobrenome' => 'required|string|max:255',
+                'cpf' => 'required|string|size:14|unique:users,cpf',
+                'email' => 'required|email|max:255|unique:users,email',
+                'telefone' => 'required|string|max:20',
+                'unidade' => 'required|exists:unidades,id',
+                'fk_perfil' => 'required|exists:perfis,id_perfil',
+                'password' => 'required|string|min:6|confirmed',
+            ], [
+                'email.required' => 'O campo email é obrigatório.',
+                'email.email' => 'Formato de email inválido.',
+                'email.unique' => 'Este email já está cadastrado.',
+                'cpf.unique' => 'Este CPF já está cadastrado.',
+                'password.confirmed' => 'As senhas não coincidem.',
+            ]);
+
             DB::beginTransaction();
 
             $cpf = str_replace(['.', '-'], '', $request->get('cpf'));

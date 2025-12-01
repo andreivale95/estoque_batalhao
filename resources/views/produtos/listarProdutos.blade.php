@@ -113,11 +113,7 @@
                                     <i class="fa fa-sort-{{ request('direction') == 'asc' ? 'asc' : 'desc' }}"></i>
                                 @endif
                             </a></th>
-                            <th><a href="{{ route('produtos.listar', array_merge(request()->all(), ['sort' => 'valor', 'direction' => (request('sort') == 'valor' && request('direction') == 'asc') ? 'desc' : 'asc'])) }}">VALOR
-                                @if(request('sort') == 'valor')
-                                    <i class="fa fa-sort-{{ request('direction') == 'asc' ? 'asc' : 'desc' }}"></i>
-                                @endif
-                            </a></th>
+                            {{-- coluna VALOR removida (valor unitário está no histórico/estoque) --}}
                             <th><a href="{{ route('produtos.listar', array_merge(request()->all(), ['sort' => 'categoria', 'direction' => (request('sort') == 'categoria' && request('direction') == 'asc') ? 'desc' : 'asc'])) }}">CATEGORIA
                                 @if(request('sort') == 'categoria')
                                     <i class="fa fa-sort-{{ request('direction') == 'asc' ? 'asc' : 'desc' }}"></i>
@@ -144,7 +140,7 @@
                             </td>
                             <td>{{ $produto->descricao }}</td>
                             <td>{{ $produto->marca }}</td>
-                            <td>{{ $produto->valor }}</td>
+                            {{-- valor removido --}}
                             <td>{{ $produto->categoria->nome }}</td>
                             <td> <a class="btn btn-warning" href="{{ route('produto.editar', $produto->id) }}"
                                 style="color: white" title="Editar Produto">
@@ -200,7 +196,7 @@
         /* Mantém a proporção */
     }
 
-    .btn-person
+    .btn-person { }
 </style>
 
 <!-- /.content-wrapper -->

@@ -59,7 +59,7 @@ class EstoqueController extends Controller
                     'produtos.id',
                     'produtos.nome',
                     'produtos.patrimonio',
-                    'produtos.valor',
+                    DB::raw('MAX(itens_estoque.valor_unitario) as valor'),
                     'itens_estoque.unidade',
                     'unidades.nome as unidade_nome',
                     'produtos.fk_categoria as categoria_id',
@@ -84,7 +84,6 @@ class EstoqueController extends Controller
                     'produtos.id',
                     'produtos.nome',
                     'produtos.patrimonio',
-                    'produtos.valor',
                     'itens_estoque.unidade',
                     'unidades.nome',
                     'produtos.fk_categoria'
@@ -175,21 +174,36 @@ class EstoqueController extends Controller
         try {
             $request->validate([
                 'fk_produto' => 'required|exists:produtos,id',
-                'fk_secao_origem' => 'required|exists:secaos,id',
+                'fk_secao_origem' => 'required|integer', // allow 0 for 'Sem seção'
                 'fk_secao_destino' => 'required|exists:secaos,id',
                 'quantidade' => 'required|integer|min:1',
                 'observacao' => 'nullable|string',
             ]);
+
+            // If origem is not 0 (unassigned), ensure it exists
+            if (intval($request->fk_secao_origem) !== 0) {
+                $secaoOrig = Secao::find(intval($request->fk_secao_origem));
+                if (!$secaoOrig) {
+                    return back()->with('warning', 'Seção de origem inválida.');
+                }
+            }
 
             if ($request->fk_secao_origem === $request->fk_secao_destino) {
                 return back()->with('warning', 'A seção de origem deve ser diferente da seção de destino.');
             }
 
             // Busca item na seção origem
-            $itemOrigem = Itens_estoque::where('fk_produto', $request->fk_produto)
-                ->where('fk_secao', $request->fk_secao_origem)
-                ->where('unidade', Auth::user()->fk_unidade)
-                ->first();
+            $queryOrigem = Itens_estoque::where('fk_produto', $request->fk_produto)
+                ->where('unidade', Auth::user()->fk_unidade);
+
+            if (intval($request->fk_secao_origem) === 0) {
+                // itens sem seção (fk_secao IS NULL)
+                $queryOrigem->whereNull('fk_secao');
+            } else {
+                $queryOrigem->where('fk_secao', $request->fk_secao_origem);
+            }
+
+            $itemOrigem = $queryOrigem->first();
 
             if (!$itemOrigem || $itemOrigem->quantidade < $request->quantidade) {
                 return back()->with('warning', 'Quantidade insuficiente na seção de origem.');
@@ -278,7 +292,7 @@ class EstoqueController extends Controller
             if ($itemEstoque) {
                 // Calcula a nova média ponderada
                 $quantidadeAtual = $itemEstoque->quantidade;
-                $valorAtual = $itemEstoque->produto->valor ?? 0;
+                $valorAtual = $itemEstoque->valor_unitario ?? 0;
 
                 $novaQuantidade = $quantidadeAtual + $request->quantidade;
                 $novoValorMedio = $novaQuantidade > 0
@@ -291,10 +305,7 @@ class EstoqueController extends Controller
                 $itemEstoque->valor_unitario = $valorFinal;
                 $itemEstoque->save();
 
-                // Atualiza o valor médio do produto
-                $produto = $itemEstoque->produto;
-                $produto->valor = $novoValorMedio;
-                $produto->save();
+                // Não mais atualiza campo 'produtos.valor' — média é mantida no estoque
             } else {
                 // Cria novo registro de estoque na seção específica
                 Itens_estoque::create([
@@ -314,16 +325,10 @@ class EstoqueController extends Controller
                     'sei' => $request->sei ?? null,
                 ]);
 
-                // Atualiza valor do produto
-                $produto = Produto::find($request->fk_produto);
-                $produto->valor = $novoValorMedio;
-                $produto->save();
+                // não atualizamos campo 'produtos.valor'
             }
 
-            // Atualiza valor do produto com o valor da entrada
-            $produto = Produto::find($request->fk_produto);
-            $produto->valor = $novoValorMedio;
-            $produto->save();
+            // Não atualiza 'produtos.valor'; valor unitário fica em itens_estoque
 
 
             // Cria histórico de movimentação
@@ -494,8 +499,10 @@ class EstoqueController extends Controller
             $produtos = Produto::where('ativo', 'Y')->orderBy('nome')->get();
             $secoes = Secao::all();
             $unidades = Unidade::all();
+            $unidadeUsuario = Unidade::find(Auth::user()->fk_unidade);
+            $isAdmin = Auth::user()->fk_perfil == 1;
 
-            return view('estoque/estoque_form_entrada_existente', compact('produtos', 'secoes', 'unidades'));
+            return view('estoque/estoque_form_entrada_existente', compact('produtos', 'secoes', 'unidades', 'unidadeUsuario', 'isAdmin'));
         } catch (Exception $e) {
             Log::error('Erro ao carregar formulário de entrada', ['exception' => $e->getMessage()]);
             return back()->with('warning', 'Houve um erro ao carregar o formulário de entrada.');
@@ -510,8 +517,10 @@ class EstoqueController extends Controller
 
             $produto = Itens_estoque::select('fk_produto', 'unidade')->where('id', $id)->first();
             $secoes = Secao::all();
+            $unidadeUsuario = Unidade::find(Auth::user()->fk_unidade);
+            $isAdmin = Auth::user()->fk_perfil == 1;
 
-            return view('estoque/estoque_form_entrada', compact('produto', 'secoes'));
+            return view('estoque/estoque_form_entrada', compact('produto', 'secoes', 'unidadeUsuario', 'isAdmin'));
         } catch (Exception $e) {
             Log::error('Error ao consultar formulario', [$e]);
             return back()->with('warning', 'Houve um erro ao abrir Formulário');

@@ -60,23 +60,11 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Unidade <span style="color: red;">*</span></label>
-                                <select name="unidade" class="form-control" required>
-                                    <option value="">-- Selecione --</option>
-                                    @foreach($unidades as $u)
-                                        <option value="{{ $u->id }}" {{ old('unidade') == $u->id ? 'selected' : '' }}>
-                                            {{ $u->nome }}
-                                        </option>
-                                    @endforeach
-                                </select>
+                                <input type="hidden" name="unidade" value="{{ Auth::user()->fk_unidade }}">
+                                <input type="text" class="form-control" value="{{ $unidadeUsuario->nome ?? 'Unidade não encontrada' }}" disabled>
                             </div>
 
-                            <div class="form-group">
-                                <label>Valor Unitário (R$)</label>
-                                <input type="text" name="valor_formatado" class="form-control" 
-                                    placeholder="0,00" value="{{ old('valor_formatado') }}">
-                                <input type="hidden" name="valor" id="valor_limpo">
-                                <small class="form-text text-muted">Digite o valor unitário do produto</small>
-                            </div>
+                            {{-- valor unitário removido do cadastro do produto --}}
 
                             <div class="form-group">
                                 <label>Categoria <span style="color: red;">*</span></label>
@@ -120,20 +108,5 @@
     </section>
 </div>
 
-<script>
-    document.querySelector('input[name="valor_formatado"]').addEventListener('input', function(e) {
-        let raw = e.target.value.replace(/\D/g, ''); // só números
-        let valorCentavos = raw ? parseInt(raw, 10) : 0;
-
-        // Atualiza o campo hidden com valor em centavos
-        document.getElementById('valor_limpo').value = valorCentavos;
-
-        // Formata para exibição
-        let valor_centavos_float = valorCentavos / 100;
-        e.target.value = valor_centavos_float.toLocaleString('pt-BR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-    });
-</script>
+{{-- script de formatação de valor removido (campo valor eliminado) --}}
 @endsection

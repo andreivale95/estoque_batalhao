@@ -52,17 +52,8 @@
                                         </div>
                                         <div class="form-group has-feedback col-md-6">
                                             <label class="control-label" for="unidade">Unidade</label>
-                                            <select name="unidade" id="unidade" class="form-control" required>
-                                                <option value="">Escolha</option>
-
-                                                <option value="UN">UN</option>
-                                                <option value="CX">CX</option>
-                                                <option value="PCT">PCT</option>
-                                                <option value="kG">KG</option>
-                                                <option value="LT">LT</option>
-
-
-                                            </select>
+                                            <input type="hidden" name="unidade" id="unidade" value="{{ Auth::user()->fk_unidade }}">
+                                            <input type="text" class="form-control" value="{{ $unidadeUsuario->nome ?? 'Unidade não encontrada' }}" disabled>
                                         </div>
 
 
@@ -79,6 +70,16 @@
                                                 @endforeach
                                             </select>
 
+                                        </div>
+
+                                        <div class="form-group has-feedback col-md-6">
+                                            <label class="control-label" for="fk_secao">Seção padrão</label>
+                                            <select name="fk_secao" id="fk_secao" class="form-control">
+                                                <option value="">Nenhuma</option>
+                                                @foreach($secoes as $secao)
+                                                    <option value="{{ $secao->id }}">{{ $secao->nome }}</option>
+                                                @endforeach
+                                            </select>
                                         </div>
 
 
@@ -119,12 +120,7 @@
 
                                         </div>
 
-                                        <div class="form-group has-feedback col-md-6">
-                                            <label class="control-label" for="valor">Valor (R$):</label>
-                                            <input type="text" class="form-control" placeholder="0,00"
-                                                name="valor_formatado" id="valor" required>
-                                            <input type="hidden" name="valor" id="valor_limpo">
-                                        </div>
+                                        {{-- valor removido: agora o valor unitário é gerenciado apenas via entradas no estoque --}}
 
                                         <div class="form-group has-feedback col-md-6">
                                             <label class="control-label" for="patrimonio">Patrimônio (se houver)</label>
@@ -152,21 +148,7 @@
     </div>
     <!-- /.content-wrapper -->
 
-    <script>
-        document.getElementById('valor').addEventListener('input', function(e) {
-            let raw = e.target.value.replace(/\D/g, ''); // só números
-            let valorCentavos = raw ? parseInt(raw, 10) : 0;
-
-            // Atualiza o campo hidden com valor em centavos
-            document.getElementById('valor_limpo').value = valorCentavos;
-
-            // Atualiza o campo visível formatado com vírgula e ponto
-            let valorFormatado = (valorCentavos / 100).toFixed(2)
-                .replace('.', ',')
-                .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-            e.target.value = valorFormatado;
-        });
-    </script>
+    {{-- valor removed script --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const categoriaSelect = document.getElementById('categoria');

@@ -103,10 +103,7 @@
                                             @endif
                                         </select>
                                     </div>
-                                    <div class="form-group has-feedback col-md-6">
-                                        <label class="control-label" for="valor">Valor (R$):</label>
-                                        <input type="text" class="form-control" name="valor" value="{{ number_format((float) $produto->valor, 2, ',', '.') }}" disabled>
-                                    </div>
+                                    {{-- campo valor removido (agora controlado pelo histórico/itens_estoque) --}}
                                     <div class="form-group has-feedback col-md-6">
                                         <label class="control-label" for="patrimonio">Patrimônio (se houver):</label>
                                         <input type="text" class="form-control" name="patrimonio" value="{{ $produto->patrimonio ?? '' }}" disabled>

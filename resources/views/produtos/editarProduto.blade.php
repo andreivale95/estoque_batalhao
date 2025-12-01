@@ -55,19 +55,8 @@
 
                                     <div class="form-group has-feedback col-md-6">
                                         <label class="control-label" for="unidade">Unidade</label>
-                                        <select name="unidade" id="unidade" class="form-control" required>
-                                            <option value="">Escolha</option>
-                                            <option value="UN" {{ $valorSelecionado == 'UN' ? 'selected' : '' }}>UN
-                                            </option>
-                                            <option value="CX" {{ $valorSelecionado == 'CX' ? 'selected' : '' }}>CX
-                                            </option>
-                                            <option value="PCT" {{ $valorSelecionado == 'PCT' ? 'selected' : '' }}>
-                                                PCT</option>
-                                            <option value="KG" {{ $valorSelecionado == 'KG' ? 'selected' : '' }}>
-                                                KG</option>
-                                            <option value="LT" {{ $valorSelecionado == 'LT' ? 'selected' : '' }}>
-                                                LT</option>
-                                        </select>
+                                        <input type="hidden" name="unidade" id="unidade" value="{{ Auth::user()->fk_unidade }}">
+                                        <input type="text" class="form-control" value="{{ $unidadeUsuario->nome ?? 'Unidade não encontrada' }}" disabled>
                                     </div>
 
                                     <div class="form-group has-feedback col-md-6">
@@ -78,6 +67,16 @@
                                                 {{ $produto->fk_categoria == $categoria->id ? 'selected' : '' }}>
                                                 {{ $categoria->nome }}
                                             </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group has-feedback col-md-6">
+                                        <label for="fk_secao">Seção padrão</label>
+                                        <select name="fk_secao" class="form-control">
+                                            <option value="">Nenhuma</option>
+                                            @foreach($secoes as $secao)
+                                                <option value="{{ $secao->id }}" {{ isset($produto) && $produto->fk_secao == $secao->id ? 'selected' : '' }}>{{ $secao->nome }}</option>
                                             @endforeach
                                         </select>
                                     </div>
@@ -135,13 +134,7 @@
                                         </select>
                                     </div>
 
-                                    <div class="form-group has-feedback col-md-6">
-                                        <label class="control-label" for="valor">Valor (R$):</label>
-                                        <input type="text" class="form-control" placeholder="0,00"
-                                            name="valor_formatado" id="valor" required
-                                            value="{{ number_format((float) $produto->valor, 2, ',', '.') }}">
-                                        <input type="hidden" name="valor" id="valor_limpo">
-                                    </div>
+                                    {{-- campo valor removido; valor unitário é controlado pelas entradas de estoque --}}
                                     <div class="form-group has-feedback col-md-6">
                                         <label class="control-label" for="patrimonio">Patrimônio (se houver)</label>
                                         <input type="text" class="form-control" name="patrimonio" value="{{ old('patrimonio', $produto->patrimonio ?? '') }}">
@@ -175,21 +168,7 @@
         </div>
 </div>
 
-<script>
-    document.getElementById('valor').addEventListener('input', function(e) {
-        let raw = e.target.value.replace(/\D/g, ''); // só números
-        let valorCentavos = raw ? parseInt(raw, 10) : 0;
-
-        // Atualiza o campo hidden com valor em centavos
-        document.getElementById('valor_limpo').value = valorCentavos;
-
-        // Atualiza o campo visível formatado com vírgula e ponto
-        let valorFormatado = (valorCentavos / 100).toFixed(2)
-            .replace('.', ',')
-            .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        e.target.value = valorFormatado;
-    });
-</script>
+{{-- script de formatação de valor removido (campo valor eliminado) --}}
 
 
 <style>

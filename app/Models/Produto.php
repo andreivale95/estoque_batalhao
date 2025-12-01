@@ -15,8 +15,8 @@ class Produto extends Model
         'nome',
         'descricao',
         'marca',
-        'valor',
         'fk_categoria',
+        'fk_secao',
         'fk_kit',
         'tamanho',
         'unidade',
@@ -51,6 +51,11 @@ class Produto extends Model
     public function unidade()
     {
         return $this->belongsTo(Unidade::class, 'unidade');
+    }
+
+    public function secao()
+    {
+        return $this->belongsTo(Secao::class, 'fk_secao');
     }
 
 

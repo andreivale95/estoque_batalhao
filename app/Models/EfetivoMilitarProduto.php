@@ -17,7 +17,7 @@ class EfetivoMilitarProduto extends Model
         'fk_produto',
 
 
-
+           'entregue',
     ];
 
     public function militar()

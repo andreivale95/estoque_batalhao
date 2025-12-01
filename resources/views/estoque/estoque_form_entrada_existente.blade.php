@@ -64,14 +64,19 @@
                             <!-- Unidade -->
                             <div class="form-group col-md-4">
                                 <label for="unidade">Unidade <span style="color: red;">*</span>:</label>
-                                <select name="unidade" id="unidade" class="form-control" required>
-                                    <option value="">-- Selecione a Unidade --</option>
-                                    @foreach($unidades as $unidade)
-                                        <option value="{{ $unidade->id }}" {{ old('unidade') == $unidade->id ? 'selected' : '' }}>
-                                            {{ $unidade->nome }}
-                                        </option>
-                                    @endforeach
-                                </select>
+                                @if($isAdmin)
+                                    <select name="unidade" id="unidade" class="form-control" required>
+                                        <option value="">-- Selecione a Unidade --</option>
+                                        @foreach($unidades as $unidade)
+                                            <option value="{{ $unidade->id }}" {{ old('unidade', Auth::user()->fk_unidade) == $unidade->id ? 'selected' : '' }}>
+                                                {{ $unidade->nome }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                @else
+                                    <input type="hidden" name="unidade" value="{{ Auth::user()->fk_unidade }}">
+                                    <input type="text" class="form-control" value="{{ $unidadeUsuario->nome ?? 'Unidade não encontrada' }}" disabled>
+                                @endif
                             </div>
 
                             <!-- Data de Entrada -->

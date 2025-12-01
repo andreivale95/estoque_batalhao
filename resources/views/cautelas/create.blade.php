@@ -14,6 +14,23 @@
         </ol>
     </section>
 
+    <!-- DEBUG -->
+    <div class="alert alert-info" style="margin: 20px;">
+        <strong>DEBUG:</strong><br>
+        Unidade do usuário: {{ Auth::user()->fk_unidade }}<br>
+        Total de produtos disponíveis: {{ count($itens_estoque) }}<br>
+        SectionsMap keys: {{ json_encode(array_keys($sectionsMap ?? [])) }}<br>
+        <details>
+            <summary>Ver sectionsMap completo</summary>
+            <pre>{{ json_encode($sectionsMap ?? [], JSON_PRETTY_PRINT) }}</pre>
+        </details>
+        <details>
+            <summary>Ver itens_estoque</summary>
+            <pre>{{ json_encode($itens_estoque, JSON_PRETTY_PRINT) }}</pre>
+        </details>
+    </div>
+    <!-- FIM DEBUG -->
+
     <!-- Main content -->
     <section class="content container-fluid">
         <div class="box box-primary">
@@ -110,6 +127,9 @@
 
         <button type="submit" class="btn btn-primary">Salvar</button>
     </form>
+            </div>
+        </div>
+    </section>
 </div>
 @endsection
 
@@ -119,30 +139,63 @@ $(document).ready(function() {
     // Máscara para o campo de telefone
     $('#telefone').mask('(00) 00000-0000');
 
-    // Inicializar Select2
-    $('#fk_produto_add').select2({
-        placeholder: "Selecione um Produto",
-        allowClear: true,
-        width: '100%'
-    });
-
     // Mapa de seções por produto passado do controller
-    var sectionsMap = {!! json_encode($sectionsMap ?? []) !!};
+    var sectionsMap = @json($sectionsMap ?? []);
+    console.log('sectionsMap (renderizado do @@json):', sectionsMap);
+    console.log('Type de sectionsMap:', typeof sectionsMap);
+    console.log('Chaves de sectionsMap:', Object.keys(sectionsMap));
 
-    // Ao selecionar produto, popula seções
-    $('#fk_produto_add').on('change', function() {
+    // Inicializar Select2 (protege caso o plugin não esteja carregado)
+    if ($.fn && $.fn.select2) {
+        $('#fk_produto_add').select2({
+            placeholder: "Selecione um Produto",
+            allowClear: true,
+            width: '100%'
+        });
+    } else {
+        console.warn('Select2 não está disponível nesta página.');
+    }
+    console.log('sectionsMap carregado:', sectionsMap);
+
+    // Ao selecionar produto, popula seções onde esse produto existe
+    // Usa 'select2:select' para compatibilidade com Select2
+    $('#fk_produto_add').on('change select2:select', function() {
         var produtoId = $(this).val();
+        console.log('=== EVENTO CHANGE DISPARADO ===');
+        console.log('Produto selecionado:', produtoId);
+        console.log('Type:', typeof produtoId);
+        
         var secaoSelect = $('#fk_secao_add');
         secaoSelect.html('<option value="">Selecione a seção</option>');
         $('#qtd_disponivel').val('');
-        if (!produtoId) return;
-
-        var sections = sectionsMap[produtoId] || [];
-        for (var i = 0; i < sections.length; i++) {
-            var s = sections[i];
-            var optionText = s.secao_nome + ' (Disponível: ' + s.quantidade + ')';
-            secaoSelect.append('<option value="' + s.estoque_id + '" data-qty="' + s.quantidade + '">' + optionText + '</option>');
+        
+        if (!produtoId) {
+            console.log('Nenhum produto selecionado, retornando');
+            return;
         }
+
+        // Busca seções usando String como chave (controller converte keys para string)
+        var produtoIdStr = String(produtoId);
+        console.log('Buscando sectionsMap[' + produtoIdStr + ']');
+        var sections = sectionsMap[produtoIdStr] || [];
+        console.log('Seções encontradas:', sections);
+        console.log('Quantidade de seções:', sections.length);
+        
+        if (sections.length === 0) {
+            secaoSelect.append('<option value="">Nenhuma seção com este produto</option>');
+            console.warn('Produto sem estoque em nenhuma seção');
+            return;
+        }
+
+        // Popula dropdown com seções onde o produto existe
+        sections.forEach(function(s) {
+            var optionText = s.secao_nome + ' (Qtd: ' + s.quantidade + ')';
+            console.log('Adicionando opção:', optionText, 'value:', s.estoque_id);
+            secaoSelect.append('<option value="' + s.estoque_id + '" data-qty="' + s.quantidade + '">' + optionText + '</option>');
+        });
+        
+        console.log('Total de seções adicionadas ao select:', sections.length);
+        console.log('HTML do select após adição:', secaoSelect.html());
     });
 
     // Ao selecionar seção, exibe quantidade disponível

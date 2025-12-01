@@ -33,19 +33,19 @@
                                 <div class="form-group has-feedback">
                                     <label class="control-label" for="">Nome:</label>
 
-                                    <input type="text" class="form-control" placeholder="" name="nome">
+                                    <input type="text" class="form-control" placeholder="" name="nome" required>
 
                                 </div>
                                 <div class="form-group has-feedback">
                                     <label class="control-label" for="">Sobrenome:</label>
 
-                                    <input type="text" class="form-control" placeholder="" name="sobrenome">
+                                    <input type="text" class="form-control" placeholder="" name="sobrenome" required>
 
                                 </div>
                                 <div class="form-group has-feedback">
                                     <label class="control-label" for="">CPF:</label>
 
-                                    <input id="cpf" type="text" class="form-control" placeholder="" name="cpf">
+                                    <input id="cpf" type="text" class="form-control" placeholder="" name="cpf" required>
 
                                 </div>
                                 <div class="form-group has-feedback">
@@ -55,7 +55,7 @@
                                             <i class="fa fa-phone"></i>
                                         </div>
 
-                                        <input id="telefone" type="text" class="form-control" placeholder="" name="telefone">
+                                        <input id="telefone" type="text" class="form-control" placeholder="" name="telefone" required>
 
                                     </div>
                                 </div>
@@ -66,7 +66,7 @@
                                             <i class="fa fa-envelope"></i>
                                         </div>
 
-                                        <input type="text" class="form-control" placeholder="" name="email">
+                                        <input type="email" class="form-control" placeholder="" name="email" required>
 
                                     </div>
                                 </div>
@@ -84,8 +84,8 @@
 
                                 <div class="form-group has-feedback">
                                     <label class="control-label" for="">Perfil de Acesso:</label>
-                                    <select name="fk_perfil" class="form-control">
-
+                                    <select name="fk_perfil" class="form-control" required>
+                                        <option value="">-- Selecione --</option>
                                         @foreach ($perfis as $perfil)
                                         <option value="{{ $perfil->id_perfil }}"> {{ $perfil->nome }} </option>
                                         @endforeach
@@ -94,8 +94,8 @@
 
                                 <div class="form-group has-feedback">
                                     <label class="control-label" for="">Unidade de Lotação:</label>
-                                    <select name="unidade" class="form-control">
-
+                                    <select name="unidade" class="form-control" required>
+                                        <option value="">-- Selecione --</option>
                                         @foreach ($unidades as $unidade)
                                         <option value="{{ $unidade->id }}"> {{ $unidade->nome }} </option>
                                         @endforeach
@@ -104,13 +104,13 @@
                                 <div class="form-group has-feedback">
                                     <label class="control-label" for="">SENHA:</label>
 
-                                    <input type="password" class="form-control" data-validate="Password is required" id="password" placeholder="" name="password">
+                                    <input type="password" class="form-control" data-validate="Password is required" id="password" placeholder="" name="password" required minlength="6">
 
                                 </div>
                                 <div class="form-group has-feedback">
                                     <label class="control-label" for="">REPITA A SENHA:</label>
 
-                                    <input type="password" class="form-control" data-validate="Password is required" id="confirm_password" placeholder="" name="confirm_password">
+                                    <input type="password" class="form-control" data-validate="Password is required" id="confirm_password" placeholder="" name="password_confirmation" required minlength="6">
 
                                 </div>
 

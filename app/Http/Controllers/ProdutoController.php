@@ -164,7 +164,7 @@ class ProdutoController extends Controller {
         $direction = $request->get('direction', 'asc');
 
         $sortable = [
-            'nome', 'patrimonio', 'descricao', 'marca', 'categoria', 'unidade', 'valor'
+            'nome', 'patrimonio', 'descricao', 'marca', 'categoria', 'unidade'
         ];
 
         $patrimonio = $request->get('patrimonio', '');
@@ -225,8 +225,10 @@ class ProdutoController extends Controller {
             $tamanhos = Tamanho::all();
 
             $kits = Kit::all();
+            $secoes = Secao::all();
+            $unidadeUsuario = Unidade::find(Auth::user()->fk_unidade);
 
-            return view('produtos/formProduto', compact('categorias', 'condicoes', 'kits', 'tamanhos'));
+            return view('produtos/formProduto', compact('categorias', 'condicoes', 'kits', 'tamanhos', 'secoes', 'unidadeUsuario'));
 
 
 
@@ -261,7 +263,8 @@ class ProdutoController extends Controller {
         try {
             $categorias = Categoria::all();
             $unidades = Unidade::all();
-            return view('produtos.inserirProduto', compact('categorias', 'unidades'));
+            $unidadeUsuario = Unidade::find(Auth::user()->fk_unidade);
+            return view('produtos.inserirProduto', compact('categorias', 'unidades', 'unidadeUsuario'));
         } catch (Exception $e) {
             Log::error('Erro ao carregar formulário de inserção de produto', [$e]);
             return back()->with('warning', 'Erro ao carregar o formulário de inserção de produto.');
@@ -273,23 +276,11 @@ class ProdutoController extends Controller {
         try {
             $request->validate([
                 'nome' => 'required|string|max:255',
-                'unidade' => 'required|exists:unidades,id',
                 'categoria_id' => 'required|exists:categorias,id',
+                'fk_secao' => 'nullable|exists:secaos,id',
             ]);
 
             DB::beginTransaction();
-
-            // Converte valor formatado para centavos se necessário
-            $valor = $request->get('valor') ?? 0;
-            if ($valor && $valor < 100) {
-                // Se for muito pequeno, assume que é em formato decimal (e.g., 100.00)
-                $valorFinal = $valor;
-            } else if ($valor) {
-                // Converte de centavos para decimal
-                $valorFinal = $valor / 100;
-            } else {
-                $valorFinal = 0;
-            }
 
             // Verifica se o produto já existe
             $existeMesmoProduto = Produto::where('nome', $request->nome)
@@ -301,15 +292,15 @@ class ProdutoController extends Controller {
                 return redirect()->back()->with('error', 'Esse produto já existe nesse tamanho!');
             }
 
-            // Cria o produto
+            // Cria o produto: unidade fixada à unidade do usuário
             $produto = Produto::create([
                 'nome' => $request->nome,
                 'descricao' => $request->descricao,
                 'marca' => $request->marca,
                 'tamanho' => $request->tamanho,
-                'unidade' => $request->unidade,
-                'valor' => $valorFinal,
+                'unidade' => Auth::user()->fk_unidade,
                 'fk_categoria' => $request->categoria_id,
+                'fk_secao' => $request->get('fk_secao'),
                 'patrimonio' => $request->patrimonio,
                 'ativo' => 'Y',
             ]);
@@ -337,6 +328,8 @@ class ProdutoController extends Controller {
             $produtos = Produto::all();
             $categorias = Categoria::all();
             $tamanhos = Tamanho::all();
+            $secoes = Secao::all();
+            $unidadeUsuario = Unidade::find(Auth::user()->fk_unidade);
 
             //dd($tipoprodutos);
 
@@ -349,7 +342,8 @@ class ProdutoController extends Controller {
                 'kit',
                 'produtos',
                 'tamanhos',
-
+                'secoes',
+                'unidadeUsuario'
 
             ));
         } catch (Exception $e) {
@@ -369,13 +363,8 @@ class ProdutoController extends Controller {
                 'descricao' => 'nullable|string',
                 'marca' => 'nullable|string',
                 'categoria' => 'required|exists:categorias,id',
+                'fk_secao' => 'nullable|exists:secaos,id',
             ]);
-
-
-
-            $valorBr = $request->get('valor'); // "250000"
-            $valorFinal = ((float) $valorBr) / 100; // resultado: 250.00
-           // dd($valorFinal);
 
 
 
@@ -397,11 +386,11 @@ class ProdutoController extends Controller {
                 'nome' => $request->get('nome'),
                 'descricao' => $request->get('descricao'),
                 'marca' => $request->get('marca'),
-                'valor' => $valorFinal,
                 'tamanho' => $request->get('tamanho'),
-                'unidade' => $request->get('unidade'),
+                'unidade' => Auth::user()->fk_unidade,
                 'fk_kit' => $request->get('fk_kit'),
                 'fk_categoria' => $request->get('categoria'),
+                'fk_secao' => $request->get('fk_secao'),
             ]);
 
             DB::commit();

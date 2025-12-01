@@ -8,13 +8,15 @@ use App\Models\CautelaProduto;
 use App\Models\Produto;
 use App\Models\Secao;
 use App\Models\Itens_estoque;
+use Illuminate\Support\Facades\Auth;
 
 class CautelaController extends Controller
 {
     public function create()
     {
-        // Carrega todos os itens de estoque agrupados por produto+seção
-        $rawItems = \App\Models\Itens_estoque::with('produto', 'secao')
+        // Carrega todos os itens de estoque da unidade do usuário agrupados por produto+seção
+        $rawItems = Itens_estoque::with('produto', 'secao')
+            ->where('unidade', Auth::user()->fk_unidade)
             ->where('quantidade', '>', 0)  // apenas com estoque > 0
             ->get();
 
@@ -35,29 +37,41 @@ class CautelaController extends Controller
 
             if (!isset($sectionsMap[$prodId])) $sectionsMap[$prodId] = [];
             $sectionsMap[$prodId][] = [
-                'estoque_id' => $first->id,
+                'estoque_id' => (int)$first->id,
                 'secao_id' => $secaoId,
                 'secao_nome' => optional($first->secao)->nome ?? 'Sem seção',
-                'quantidade' => $quantidade,
+                'quantidade' => (int)$quantidade,
             ];
         }
+
+        // Converte chaves para string para garantir compatibilidade com JS
+        $sectionsMap = array_combine(
+            array_map('strval', array_keys($sectionsMap)),
+            array_values($sectionsMap)
+        );
 
         // Lista de produtos únicos
         $productsGrouped = [];
         foreach ($sectionsMap as $prodId => $secs) {
-            $produto = $rawItems->firstWhere('fk_produto', $prodId)->produto ?? null;
+            $produto = $rawItems->firstWhere('fk_produto', (int)$prodId)->produto ?? null;
             if (!$produto) continue;
             $total = array_sum(array_column($secs, 'quantidade'));
             if ($total <= 0) continue;
             $productsGrouped[] = [
-                'id' => $produto->id,
+                'id' => (int)$produto->id,
                 'nome' => $produto->nome,
-                'quantidade_total' => $total,
+                'quantidade_total' => (int)$total,
             ];
         }
 
         $itens_estoque = collect($productsGrouped);
         $secoes = Secao::all();
+        \Log::info('Debug Cautela Create', [
+            'user_unidade' => Auth::user()->fk_unidade,
+            'raw_items_count' => $rawItems->count(),
+            'sections_map' => $sectionsMap,
+            'produtos_count' => count($productsGrouped),
+        ]);
         return view('cautelas.create', compact('itens_estoque', 'secoes'))->with('sectionsMap', $sectionsMap);
     }
 
