@@ -50,6 +50,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"
         integrity="sha512-bnIvzh6FU75ZKxp0GXLH9bewza/OIw6dLVh9ICg0gogclmYGguQJWl8U30WpbsGTqbIiAwxTsbe76DErLq5EDQ=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-mask-plugin/1.14.16/jquery.mask.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/3.3.11/jquery.inputmask.bundle.min.js"
         integrity="sha512-J1L8ODHEJNJVTzXzQ0upzmDuYY7J1Uk9okiVZYQIrNz/Hd+nXAAnzFiyf2WaOcBB7K8rRSc5a917I7gCYMQ/yg=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -122,6 +123,8 @@
 
         });
     </script>
+    
+    @stack('scripts')
 </body>
 
 </html>

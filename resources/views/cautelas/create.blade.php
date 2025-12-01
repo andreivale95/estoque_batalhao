@@ -14,23 +14,6 @@
         </ol>
     </section>
 
-    <!-- DEBUG -->
-    <div class="alert alert-info" style="margin: 20px;">
-        <strong>DEBUG:</strong><br>
-        Unidade do usuário: {{ Auth::user()->fk_unidade }}<br>
-        Total de produtos disponíveis: {{ count($itens_estoque) }}<br>
-        SectionsMap keys: {{ json_encode(array_keys($sectionsMap ?? [])) }}<br>
-        <details>
-            <summary>Ver sectionsMap completo</summary>
-            <pre>{{ json_encode($sectionsMap ?? [], JSON_PRETTY_PRINT) }}</pre>
-        </details>
-        <details>
-            <summary>Ver itens_estoque</summary>
-            <pre>{{ json_encode($itens_estoque, JSON_PRETTY_PRINT) }}</pre>
-        </details>
-    </div>
-    <!-- FIM DEBUG -->
-
     <!-- Main content -->
     <section class="content container-fluid">
         <div class="box box-primary">
@@ -136,113 +119,73 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Máscara para o campo de telefone
-    $('#telefone').mask('(00) 00000-0000');
-
     // Mapa de seções por produto passado do controller
     var sectionsMap = @json($sectionsMap ?? []);
-    console.log('sectionsMap (renderizado do @@json):', sectionsMap);
-    console.log('Type de sectionsMap:', typeof sectionsMap);
-    console.log('Chaves de sectionsMap:', Object.keys(sectionsMap));
-
-    // Inicializar Select2 (protege caso o plugin não esteja carregado)
-    if ($.fn && $.fn.select2) {
-        $('#fk_produto_add').select2({
-            placeholder: "Selecione um Produto",
-            allowClear: true,
-            width: '100%'
-        });
-    } else {
-        console.warn('Select2 não está disponível nesta página.');
-    }
-    console.log('sectionsMap carregado:', sectionsMap);
 
     // Ao selecionar produto, popula seções onde esse produto existe
-    // Usa 'select2:select' para compatibilidade com Select2
-    $('#fk_produto_add').on('change select2:select', function() {
-        var produtoId = $(this).val();
-        console.log('=== EVENTO CHANGE DISPARADO ===');
-        console.log('Produto selecionado:', produtoId);
-        console.log('Type:', typeof produtoId);
+    $('#fk_produto_add').on('change', function() {
+        var produtoId = String($(this).val());
         
-        var secaoSelect = $('#fk_secao_add');
-        secaoSelect.html('<option value="">Selecione a seção</option>');
+        var $secaoSelect = $('#fk_secao_add');
+        $secaoSelect.empty();
+        $secaoSelect.append('<option value="">Selecione a seção</option>');
         $('#qtd_disponivel').val('');
         
         if (!produtoId) {
-            console.log('Nenhum produto selecionado, retornando');
             return;
         }
 
-        // Busca seções usando String como chave (controller converte keys para string)
-        var produtoIdStr = String(produtoId);
-        console.log('Buscando sectionsMap[' + produtoIdStr + ']');
-        var sections = sectionsMap[produtoIdStr] || [];
-        console.log('Seções encontradas:', sections);
-        console.log('Quantidade de seções:', sections.length);
+        var sections = sectionsMap[produtoId];
         
-        if (sections.length === 0) {
-            secaoSelect.append('<option value="">Nenhuma seção com este produto</option>');
-            console.warn('Produto sem estoque em nenhuma seção');
+        if (!sections || sections.length === 0) {
+            $secaoSelect.append('<option value="">Nenhuma seção disponível</option>');
             return;
         }
 
-        // Popula dropdown com seções onde o produto existe
-        sections.forEach(function(s) {
-            var optionText = s.secao_nome + ' (Qtd: ' + s.quantidade + ')';
-            console.log('Adicionando opção:', optionText, 'value:', s.estoque_id);
-            secaoSelect.append('<option value="' + s.estoque_id + '" data-qty="' + s.quantidade + '">' + optionText + '</option>');
+        // Adiciona cada seção ao select
+        $.each(sections, function(index, secao) {
+            var optionText = secao.secao_nome + ' (Qtd: ' + secao.quantidade + ')';
+            var option = $('<option></option>')
+                .attr('value', secao.estoque_id)
+                .attr('data-qty', secao.quantidade)
+                .text(optionText);
+            $secaoSelect.append(option);
         });
-        
-        console.log('Total de seções adicionadas ao select:', sections.length);
-        console.log('HTML do select após adição:', secaoSelect.html());
     });
 
     // Ao selecionar seção, exibe quantidade disponível
     $('#fk_secao_add').on('change', function() {
-        var estoqueId = $(this).val();
-        var prodId = $('#fk_produto_add').val();
-        if (!estoqueId || !prodId) {
-            $('#qtd_disponivel').val('');
-            return;
-        }
-        var sections = sectionsMap[prodId] || [];
-        for (var i = 0; i < sections.length; i++) {
-            if (sections[i].estoque_id == estoqueId) {
-                $('#qtd_disponivel').val(sections[i].quantidade);
-                break;
-            }
-        }
+        var qty = $(this).find('option:selected').data('qty');
+        $('#qtd_disponivel').val(qty || '');
     });
 
-    // Função para adicionar item à tabela
-    function addItemToTable(produtoId, produtoText, secaoId, secaoText, quantidade) {
-        var row = `<tr>
-            <td><input type="hidden" name="produtos[]" value="${produtoId}">${produtoText}</td>
-            <td><input type="hidden" name="secoes[]" value="${secaoId}">${secaoText}</td>
-            <td><input type="hidden" name="quantidades[]" value="${quantidade}">${quantidade}</td>
-            <td>
-                <button type="button" class="btn btn-danger btn-sm remover-item">
-                    <i class="fa fa-trash"></i>
-                </button>
-            </td>
-        </tr>`;
-        $('#tabela-itens tbody').append(row);
+    // Máscara para telefone
+    if ($.fn.mask) {
+        $('#telefone').mask('(00) 00000-0000');
     }
 
-    // Adicionar item
-    $('#addItem').click(function() {
+    // Adicionar item à tabela
+    $(document).on('click', '#addItem', function(e) {
+        e.preventDefault();
+        console.log('=== BOTÃO ADICIONAR CLICADO ===');
+        
         var produtoId = $('#fk_produto_add').val();
-        var produtoText = $('#fk_produto_add').find('option:selected').text();
-        var secaoId = $('#fk_secao_add').val();
-        var secaoText = $('#fk_secao_add').find('option:selected').text();
-        var quantidade = parseInt($('#quantidade_add').val() || 0, 10);
+        var produtoText = $('#fk_produto_add option:selected').text();
+        var estoqueId = $('#fk_secao_add').val();
+        var secaoText = $('#fk_secao_add option:selected').text();
+        var quantidade = parseInt($('#quantidade_add').val() || 0);
+        var disponivel = parseInt($('#qtd_disponivel').val() || 0);
+
+        console.log('Produto ID:', produtoId);
+        console.log('Estoque ID:', estoqueId);
+        console.log('Quantidade:', quantidade);
+        console.log('Disponível:', disponivel);
 
         if (!produtoId) {
             alert('Selecione um produto.');
             return;
         }
-        if (!secaoId) {
+        if (!estoqueId) {
             alert('Selecione a seção de origem.');
             return;
         }
@@ -250,27 +193,26 @@ $(document).ready(function() {
             alert('Informe uma quantidade válida.');
             return;
         }
-
-        // Verifica quantidade disponível
-        var available = 0;
-        if (sectionsMap[produtoId]) {
-            for (var i = 0; i < sectionsMap[produtoId].length; i++) {
-                if (sectionsMap[produtoId][i].estoque_id == secaoId) {
-                    available = sectionsMap[produtoId][i].quantidade;
-                    break;
-                }
-            }
-        }
-        if (quantidade > available) {
-            alert('Quantidade informada excede o disponível (disponível: ' + available + ').');
+        if (quantidade > disponivel) {
+            alert('Quantidade informada (' + quantidade + ') excede o disponível (' + disponivel + ').');
             return;
         }
 
-        addItemToTable(produtoId, produtoText, secaoId, secaoText, quantidade);
+        var row = '<tr>' +
+            '<td><input type="hidden" name="produtos[]" value="' + produtoId + '">' + produtoText + '</td>' +
+            '<td><input type="hidden" name="secoes[]" value="' + estoqueId + '">' + secaoText + '</td>' +
+            '<td><input type="hidden" name="quantidades[]" value="' + quantidade + '">' + quantidade + '</td>' +
+            '<td><button type="button" class="btn btn-danger btn-sm remover-item"><i class="fa fa-trash"></i></button></td>' +
+            '</tr>';
+        
+        $('#tabela-itens tbody').append(row);
+        console.log('Item adicionado à tabela');
         
         // Limpa campos
-        $('#fk_produto_add').val('').trigger('change');
+        $('#fk_produto_add').val('');
+        $('#fk_secao_add').html('<option value="">Selecione a seção</option>');
         $('#quantidade_add').val('');
+        $('#qtd_disponivel').val('');
     });
 
     // Remover item

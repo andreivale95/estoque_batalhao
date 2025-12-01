@@ -12,6 +12,15 @@ use Illuminate\Support\Facades\Auth;
 
 class CautelaController extends Controller
 {
+    public function index()
+    {
+        $cautelas = Cautela::with('produtos.produto')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        return view('cautelas.index', compact('cautelas'));
+    }
+
     public function create()
     {
         // Carrega todos os itens de estoque da unidade do usuário agrupados por produto+seção
@@ -104,5 +113,11 @@ class CautelaController extends Controller
         }
 
         return redirect()->route('cautelas.create')->with('success', 'Cautela cadastrada com sucesso!');
+    }
+
+    public function show($id)
+    {
+        $cautela = Cautela::with('produtos.produto')->findOrFail($id);
+        return view('cautelas.show', compact('cautela'));
     }
 }

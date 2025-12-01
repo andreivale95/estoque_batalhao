@@ -1,61 +1,66 @@
-@extends('layouts.app')
+@extends('layout.app')
 
 @section('content')
-<div class="container">
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">Cautelas</h3>
-                    <div class="card-tools">
-                        <a href="{{ route('cautelas.create') }}" class="btn btn-primary">Nova Cautela</a>
-                    </div>
+<div class="content-wrapper">
+    <section class="content-header">
+        <h1>
+            Cautelas
+        </h1>
+        <ol class="breadcrumb">
+            <li><a href="{{route('dashboard')}}"><i class="fa fa-dashboard"></i> Dashboard</a></li>
+            <li class="active">Cautelas</li>
+        </ol>
+    </section>
+
+    <section class="content container-fluid">
+        <div class="box box-primary">
+            <div class="box-header with-border">
+                <h3 class="box-title">Lista de Cautelas</h3>
+                <div class="box-tools pull-right">
+                    <a href="{{ route('cautelas.create') }}" class="btn btn-success">
+                        <i class="fa fa-plus"></i> Nova Cautela
+                    </a>
                 </div>
-                <div class="card-body">
-                    <table class="table table-bordered">
+            </div>
+            <div class="box-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
                         <thead>
                             <tr>
                                 <th>ID</th>
                                 <th>Responsável</th>
+                                <th>Telefone</th>
                                 <th>Instituição</th>
                                 <th>Data Cautela</th>
                                 <th>Data Prevista Devolução</th>
-                                <th>Status</th>
                                 <th>Ações</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($cautelas as $cautela)
+                            @forelse($cautelas as $cautela)
                             <tr>
                                 <td>{{ $cautela->id }}</td>
                                 <td>{{ $cautela->nome_responsavel }}</td>
+                                <td>{{ $cautela->telefone }}</td>
                                 <td>{{ $cautela->instituicao }}</td>
-                                <td>{{ date('d/m/Y', strtotime($cautela->data_cautela)) }}</td>
-                                <td>{{ date('d/m/Y', strtotime($cautela->data_prevista_devolucao)) }}</td>
+                                <td>{{ $cautela->data_cautela->format('d/m/Y') }}</td>
+                                <td>{{ $cautela->data_prevista_devolucao->format('d/m/Y') }}</td>
                                 <td>
-                                    @if($cautela->data_devolucao)
-                                        <span class="badge badge-success">Devolvido</span>
-                                    @else
-                                        <span class="badge badge-warning">Em Andamento</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <a href="{{ route('cautelas.show', $cautela->id) }}" class="btn btn-sm btn-info">
+                                    <a href="{{ route('cautelas.show', $cautela->id) }}" class="btn btn-sm btn-info" title="Ver Detalhes">
                                         <i class="fa fa-eye"></i>
                                     </a>
-                                    @if(!$cautela->data_devolucao)
-                                        <a href="{{ route('cautelas.devolucao', $cautela->id) }}" class="btn btn-sm btn-success">
-                                            <i class="fa fa-check"></i> Devolver
-                                        </a>
-                                    @endif
                                 </td>
                             </tr>
-                            @endforeach
+                            @empty
+                            <tr>
+                                <td colspan="7" class="text-center">Nenhuma cautela cadastrada.</td>
+                            </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 </div>
 @endsection
