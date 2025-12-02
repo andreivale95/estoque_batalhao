@@ -60,14 +60,31 @@
                                 <thead>
                                     <tr>
                                         <th>Produto</th>
-                                        <th>Quantidade</th>
+                                        <th>Seção</th>
+                                        <th>Qtd Cautelada</th>
+                                        <th>Qtd Devolvida</th>
+                                        <th>Qtd Pendente</th>
+                                        <th>Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($cautela->produtos as $item)
                                     <tr>
                                         <td>{{ $item->produto->nome }}</td>
+                                        <td>{{ $item->estoque->secao->nome ?? 'Sem seção' }}</td>
                                         <td>{{ $item->quantidade }}</td>
+                                        <td>{{ $item->quantidade_devolvida }}</td>
+                                        <td>{{ $item->quantidadePendente() }}</td>
+                                        <td>
+                                            @if($item->isDevolvido())
+                                                <span class="label label-success">Devolvido</span>
+                                                @if($item->data_devolucao)
+                                                <br><small>{{ $item->data_devolucao->format('d/m/Y') }}</small>
+                                                @endif
+                                            @else
+                                                <span class="label label-warning">Pendente</span>
+                                            @endif
+                                        </td>
                                     </tr>
                                     @endforeach
                                 </tbody>
@@ -83,6 +100,15 @@
                 <a href="{{ route('cautelas.index') }}" class="btn btn-default">
                     <i class="fa fa-arrow-left"></i> Voltar
                 </a>
+                @if($cautela->produtos->sum(function($item) { return $item->quantidadePendente(); }) > 0)
+                <a href="{{ route('cautelas.devolucao', $cautela->id) }}" class="btn btn-success">
+                    <i class="fa fa-check"></i> Registrar Devolução
+                </a>
+                @else
+                <span class="label label-success" style="font-size: 14px; padding: 8px 12px;">
+                    <i class="fa fa-check-circle"></i> Todos os itens foram devolvidos
+                </span>
+                @endif
             </div>
         </div>
     </section>

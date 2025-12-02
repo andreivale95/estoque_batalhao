@@ -183,6 +183,7 @@ Route::middleware(['auth', 'verified'])->controller(CautelaController::class)->g
     Route::post('cautelas', 'store')->name('cautelas.store');
     Route::get('cautelas/{cautela}', 'show')->name('cautelas.show');
     Route::get('cautelas/{cautela}/devolucao', 'devolucao')->name('cautelas.devolucao');
+    Route::post('cautelas/{cautela}/devolucao', 'processDevolucao')->name('cautelas.processDevolucao');
     Route::get('cautelas/historico', 'historico')->name('cautelas.historico');
 });
 

@@ -93,6 +93,7 @@ class CautelaController extends Controller
             'data_cautela' => 'required|date',
             'data_prevista_devolucao' => 'required|date',
             'produtos' => 'required|array',
+            'secoes' => 'required|array',
             'quantidades' => 'required|array',
         ]);
 
@@ -105,19 +106,79 @@ class CautelaController extends Controller
         ]);
 
         foreach ($request->produtos as $index => $produtoId) {
+            $estoqueId = $request->secoes[$index];
+            $quantidade = $request->quantidades[$index];
+
+            // Subtrai do estoque
+            $itemEstoque = Itens_estoque::findOrFail($estoqueId);
+            if ($itemEstoque->quantidade < $quantidade) {
+                return redirect()->back()->with('error', 'Quantidade insuficiente em estoque para o produto: ' . $itemEstoque->produto->nome);
+            }
+            
+            $itemEstoque->quantidade -= $quantidade;
+            $itemEstoque->save();
+
+            // Registra na cautela
             CautelaProduto::create([
                 'cautela_id' => $cautela->id,
                 'produto_id' => $produtoId,
-                'quantidade' => $request->quantidades[$index],
+                'estoque_id' => $estoqueId,
+                'quantidade' => $quantidade,
             ]);
         }
 
-        return redirect()->route('cautelas.create')->with('success', 'Cautela cadastrada com sucesso!');
+        return redirect()->route('cautelas.index')->with('success', 'Cautela cadastrada com sucesso!');
     }
 
     public function show($id)
     {
-        $cautela = Cautela::with('produtos.produto')->findOrFail($id);
+        $cautela = Cautela::with(['produtos.produto', 'produtos.estoque.secao'])->findOrFail($id);
         return view('cautelas.show', compact('cautela'));
+    }
+
+    public function devolucao($id)
+    {
+        $cautela = Cautela::with(['produtos.produto', 'produtos.estoque.secao'])->findOrFail($id);
+        return view('cautelas.devolucao', compact('cautela'));
+    }
+
+    public function processDevolucao(Request $request, $id)
+    {
+        $cautela = Cautela::findOrFail($id);
+        
+        $request->validate([
+            'itens' => 'required|array',
+            'quantidades' => 'required|array',
+        ]);
+
+        foreach ($request->itens as $index => $itemId) {
+            $quantidadeDevolver = (int)$request->quantidades[$index];
+            
+            if ($quantidadeDevolver <= 0) {
+                continue;
+            }
+
+            $cautelaItem = CautelaProduto::findOrFail($itemId);
+            
+            // Valida se a quantidade não excede o pendente
+            $pendente = $cautelaItem->quantidadePendente();
+            if ($quantidadeDevolver > $pendente) {
+                return redirect()->back()->with('error', 'Quantidade de devolução excede a quantidade pendente para o produto: ' . $cautelaItem->produto->nome);
+            }
+
+            // Retorna ao estoque
+            $itemEstoque = Itens_estoque::findOrFail($cautelaItem->estoque_id);
+            $itemEstoque->quantidade += $quantidadeDevolver;
+            $itemEstoque->save();
+
+            // Atualiza a cautela
+            $cautelaItem->quantidade_devolvida += $quantidadeDevolver;
+            if ($cautelaItem->isDevolvido() && !$cautelaItem->data_devolucao) {
+                $cautelaItem->data_devolucao = now();
+            }
+            $cautelaItem->save();
+        }
+
+        return redirect()->route('cautelas.show', $cautela->id)->with('success', 'Devolução registrada com sucesso!');
     }
 }

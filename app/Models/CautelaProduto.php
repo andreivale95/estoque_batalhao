@@ -14,8 +14,25 @@ class CautelaProduto extends Model
     protected $fillable = [
         'cautela_id',
         'produto_id',
+        'estoque_id',
         'quantidade',
+        'quantidade_devolvida',
+        'data_devolucao',
     ];
+
+    protected $casts = [
+        'data_devolucao' => 'date',
+    ];
+
+    public function quantidadePendente()
+    {
+        return $this->quantidade - $this->quantidade_devolvida;
+    }
+
+    public function isDevolvido()
+    {
+        return $this->quantidade_devolvida >= $this->quantidade;
+    }
 
     public function cautela()
     {
@@ -25,5 +42,10 @@ class CautelaProduto extends Model
     public function produto()
     {
         return $this->belongsTo(Produto::class);
+    }
+
+    public function estoque()
+    {
+        return $this->belongsTo(Itens_estoque::class, 'estoque_id');
     }
 }
