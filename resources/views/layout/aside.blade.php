@@ -32,137 +32,201 @@
         <!-- /.search form -->
         <!-- Sidebar Menu -->
         <ul class="sidebar-menu" data-widget="tree">
-            <li class="header">HEADER</li>
+            <li class="header">MENU PRINCIPAL</li>
+            
             @can('modulo', '1')
-                <li class="active">
-                    <a href="{{ route('dashboard') }}"><i class="fa fa-dashboard"></i> <span>Dashboard</span></a>
+                <li>
+                    <a href="{{ route('dashboard') }}">
+                        <i class="fa fa-dashboard"></i> <span>Dashboard</span>
+                    </a>
                 </li>
             @endcan
-            @can('modulo', '2')
+
+            <!-- ESTOQUE E INVENTÁRIO -->
+            @can('modulo', '4')
                 <li class="treeview">
-                    <a href="#"><i class="fa fa-cogs"></i> <span>Parâmetros</span>
+                    <a href="#">
+                        <i class="fa fa-cubes"></i> <span>Estoque</span>
                         <span class="pull-right-container">
                             <i class="fa fa-angle-left pull-right"></i>
                         </span>
                     </a>
                     <ul class="treeview-menu">
-                        @can('modulo', '2')
-                            <li><a href="{{ route('produtos.listar', ['from' => 'parametros']) }}">Listar Produtos</a></li>
-                            <li><a href="{{ route('kits.listar') }}">Listar Kits</a></li>
-                            <li><a href="{{ route('categorias.listar') }}">Listar Categorias</a></li>
-                            <li><a href="{{ route('unidades.listar') }}">Listar Unidades</a></li>
+                        @can('autorizacao', 5)
+                            <li>
+                                <a href="{{ route('estoque.listar') }}?nome=&categoria=&unidade={{ Auth::user()->fk_unidade }}">
+                                    <i class="fa fa-list"></i> Inventário Geral
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('movimentacoes.index') }}">
+                                    <i class="fa fa-exchange"></i> Movimentações
+                                </a>
+                            </li>
                         @endcan
                     </ul>
                 </li>
             @endcan
+
+            <!-- CAUTELAS -->
+            @can('modulo', '6')
+                <li class="treeview">
+                    <a href="#">
+                        <i class="fa fa-handshake-o"></i> <span>Cautelas</span>
+                        <span class="pull-right-container">
+                            <i class="fa fa-angle-left pull-right"></i>
+                        </span>
+                    </a>
+                    <ul class="treeview-menu">
+                        <li>
+                            <a href="{{ route('cautelas.create') }}">
+                                <i class="fa fa-plus-circle"></i> Nova Cautela
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('cautelas.index') }}">
+                                <i class="fa fa-list"></i> Listar Cautelas
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('cautelas.historico') }}">
+                                <i class="fa fa-history"></i> Histórico
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            @endcan
+
+            <!-- SEÇÕES (SALAS) -->
+            <li class="treeview">
+                <a href="#">
+                    <i class="fa fa-building"></i> <span>Seções (Salas)</span>
+                    <span class="pull-right-container">
+                        <i class="fa fa-angle-left pull-right"></i>
+                    </span>
+                </a>
+                <ul class="treeview-menu">
+                    <li>
+                        <a href="{{ route('secoes.index', Auth::user()->fk_unidade) }}">
+                            <i class="fa fa-cog"></i> Gerenciar Minhas Seções
+                        </a>
+                    </li>
+                    @can('modulo', '5')
+                        <li class="header" style="padding-left: 15px; font-size: 11px;">VISUALIZAR SEÇÕES</li>
+                        @foreach(App\Models\Secao::all() as $secao)
+                            <li>
+                                <a href="{{ route('secoes.show', $secao->id) }}">
+                                    <i class="fa fa-folder-o"></i> {{ $secao->nome }}
+                                </a>
+                            </li>
+                        @endforeach
+                    @endcan
+                </ul>
+            </li>
+
+            <!-- EFETIVO -->
+            @can('modulo', '4')
+                @can('autorizacao', 5)
+                    <li class="treeview">
+                        <a href="#">
+                            <i class="fa fa-users"></i> <span>Efetivo</span>
+                            <span class="pull-right-container">
+                                <i class="fa fa-angle-left pull-right"></i>
+                            </span>
+                        </a>
+                        <ul class="treeview-menu">
+                            <li>
+                                <a href="{{ route('efetivo_produtos.listar') }}">
+                                    <i class="fa fa-list"></i> Listar Efetivo
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('saida_estoque.index') }}">
+                                    <i class="fa fa-gift"></i> Entregar Kit
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                @endcan
+            @endcan
+
+            <li class="header">CONFIGURAÇÕES</li>
+
+            <!-- CADASTROS -->
+            @can('modulo', '2')
+                <li class="treeview">
+                    <a href="#">
+                        <i class="fa fa-database"></i> <span>Cadastros</span>
+                        <span class="pull-right-container">
+                            <i class="fa fa-angle-left pull-right"></i>
+                        </span>
+                    </a>
+                    <ul class="treeview-menu">
+                        <li>
+                            <a href="{{ route('produtos.listar', ['from' => 'parametros']) }}">
+                                <i class="fa fa-cube"></i> Produtos
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('kits.listar') }}">
+                                <i class="fa fa-briefcase"></i> Kits
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('categorias.listar') }}">
+                                <i class="fa fa-tags"></i> Categorias
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('unidades.listar') }}">
+                                <i class="fa fa-building-o"></i> Unidades
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            @endcan
+
+            <!-- SEGURANÇA -->
             @can('modulo', '3')
                 <li class="treeview">
-                    <a href="#"><i class="fa fa-shield"></i> <span>Segurança</span>
+                    <a href="#">
+                        <i class="fa fa-shield"></i> <span>Segurança</span>
                         <span class="pull-right-container">
                             <i class="fa fa-angle-left pull-right"></i>
                         </span>
                     </a>
                     <ul class="treeview-menu">
                         @can('autorizacao', 3)
-                            <li><a href="{{ route('pf.listar') }}">Perfis de Acesso</a></li>
+                            <li>
+                                <a href="{{ route('pf.listar') }}">
+                                    <i class="fa fa-key"></i> Perfis de Acesso
+                                </a>
+                            </li>
                         @endcan
                         @can('autorizacao', 4)
-                            <li><a href="{{ route('usi.listar') }}">Usuários</a></li>
-                        @endcan
-
-                    </ul>
-                </li>
-            @endcan
-            @can('modulo', '4')
-                <li class="treeview">
-                    <a href="#"><i class="fa fa-clipboard"></i> <span>Registros</span>
-                        <span class="pull-right-container">
-                            <i class="fa fa-angle-left pull-right"></i>
-                        </span>
-                    </a>
-                    <ul class="treeview-menu">
-                        @can('autorizacao', 5)
-                            <li> <a href="{{ route('estoque.listar') }}?nome=&categoria=&unidade={{ Auth::user()->fk_unidade }}"
-                                    class="small-box-footer">
-                                    Inventário
-                                </a></li>
-                        @endcan
-                        @can('autorizacao', 5)
-                            <li><a href="{{ route('efetivo_produtos.listar') }}">Listar Efetivo</a></li>
-                        @endcan
-                        @can('autorizacao', 5)
-                            <li><a href="{{ route('saida_estoque.index') }}">Entregar Kit</a></li>
-                        @endcan
-
-
-                    </ul>
-                </li>
-            @endcan
-            @can('modulo', '4')
-                <li class="treeview">
-                    <a href="#"><i class="fa fa-random"></i> <span>Movimentações</span>
-                        <span class="pull-right-container">
-                            <i class="fa fa-angle-left pull-right"></i>
-                        </span>
-                    </a>
-                    <ul class="treeview-menu">
-                        @can('autorizacao', 5)
-                            <li><a href="{{ route('movimentacoes.index') }}">Movimentações</a></li>
+                            <li>
+                                <a href="{{ route('usi.listar') }}">
+                                    <i class="fa fa-user"></i> Usuários
+                                </a>
+                            </li>
                         @endcan
                     </ul>
                 </li>
-
             @endcan
-            <li class="">
-                <a href="{{ route('profile.ver', Auth::user()->cpf) }}"><i class="fa fa-user-secret"></i> <span>Dados
-                        Pessoais</span></a>
 
-            </li>
+            <li class="header">CONTA</li>
 
-            <li class="">
-                <a href="{{ route('logout') }}"><i class="glyphicon glyphicon-log-out"></i> <span>Sair</span></a>
-            </li>
-            <li class="treeview">
-                <a href="#"><i class="fa fa-building"></i> <span>Seções (Salas)</span>
-                    <span class="pull-right-container">
-                        <i class="fa fa-angle-left pull-right"></i>
-                    </span>
+            <li>
+                <a href="{{ route('profile.ver', Auth::user()->cpf) }}">
+                    <i class="fa fa-user-circle"></i> <span>Meu Perfil</span>
                 </a>
-                <ul class="treeview-menu">
-                    <li><a href="{{ route('secoes.index', Auth::user()->fk_unidade) }}">Gerenciar Seções da Minha Unidade</a>
-                    </li>
-                </ul>
             </li>
-            @can('modulo', '6')
-                <li class="treeview">
-                    <a href="#">
-                        <i class="fa fa-archive"></i> <span>Cautelas</span>
-                        <span class="pull-right-container">
-                            <i class="fa fa-angle-left pull-right"></i>
-                        </span>
-                    </a>
-                    <ul class="treeview-menu">
-                        <li><a href="{{ route('cautelas.index') }}"><i class="fa fa-list"></i> Listar Cautelas</a></li>
-                        <li><a href="{{ route('cautelas.create') }}"><i class="fa fa-plus"></i> Nova Cautela</a></li>
-                        <li><a href="{{ route('cautelas.historico') }}"><i class="fa fa-history"></i> Histórico</a></li>
-                    </ul>
-                </li>
-            @endcan
-            @can('modulo', '5')
-                <li class="treeview">
-                    <a href="#">
-                        <i class="fa fa-building"></i> <span>Seções</span>
-                        <span class="pull-right-container">
-                            <i class="fa fa-angle-left pull-right"></i>
-                        </span>
-                    </a>
-                    <ul class="treeview-menu">
-                        @foreach(App\Models\Secao::all() as $secao)
-                            <li><a href="{{ route('secoes.show', $secao->id) }}">{{ $secao->nome }}</a></li>
-                        @endforeach
-                    </ul>
-                </li>
-            @endcan
+
+            <li>
+                <a href="{{ route('logout') }}">
+                    <i class="fa fa-sign-out"></i> <span>Sair</span>
+                </a>
+            </li>
         </ul>
         <!-- /.sidebar-menu -->
     </section>
