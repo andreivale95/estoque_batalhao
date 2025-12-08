@@ -19,6 +19,83 @@
                 <p><strong>Quantidade total:</strong> {{ $quantidadeTotal }}</p>
 
                 <hr>
+                <h4>Localização dos Itens</h4>
+                <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
+                    @php
+                        $secoesByItem = [];
+                        foreach($todosOsItens as $item) {
+                            $secaoId = $item->fk_secao;
+                            $secaoNome = $item->secao->nome ?? '-';
+                            if (!isset($secoesByItem[$secaoId])) {
+                                $secoesByItem[$secaoId] = [
+                                    'nome' => $secaoNome,
+                                    'itens' => []
+                                ];
+                            }
+                            $secoesByItem[$secaoId]['itens'][] = $item;
+                        }
+                    @endphp
+
+                    @forelse($secoesByItem as $secaoId => $secao)
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="heading-{{ $secaoId }}">
+                                <h4 class="panel-title">
+                                    <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapse-{{ $secaoId }}" aria-expanded="false" aria-controls="collapse-{{ $secaoId }}">
+                                        <i class="fa fa-folder"></i> Seção: {{ $secao['nome'] }}
+                                    </a>
+                                </h4>
+                            </div>
+                            <div id="collapse-{{ $secaoId }}" class="panel-collapse collapse" role="tabpanel" aria-labelledby="heading-{{ $secaoId }}">
+                                <div class="panel-body">
+                                    <div class="list-group">
+                                        @foreach($secao['itens'] as $item)
+                                            @if(is_null($item->fk_item_pai))
+                                                <div class="list-group-item">
+                                                    <h5 style="margin: 0 0 10px 0;">
+                                                        <i class="fa fa-cube"></i> {{ $item->produto->nome ?? 'Sem Nome' }}
+                                                    </h5>
+                                                    <p style="margin: 5px 0;">
+                                                        <strong>Quantidade:</strong> {{ $item->quantidade }}
+                                                    </p>
+                                                    <p style="margin: 5px 0; color: #666;">
+                                                        <strong>Localização:</strong> {{ $item->getLocalizacaoCompleta() }}
+                                                    </p>
+                                                    
+                                                    @if($item->isContainer())
+                                                        <div style="margin-top: 10px; padding-left: 15px; border-left: 2px solid #ddd;">
+                                                            <p style="margin: 0 0 10px 0; font-weight: bold; color: #0066cc;">
+                                                                <i class="fa fa-sitemap"></i> Itens dentro:
+                                                            </p>
+                                                            @foreach($item->itensFilhos as $filho)
+                                                                <div style="margin: 8px 0; padding: 8px; background-color: #f9f9f9; border-radius: 3px;">
+                                                                    <p style="margin: 5px 0;">
+                                                                        <i class="fa fa-arrow-right"></i> {{ $filho->produto->nome ?? 'Sem Nome' }}
+                                                                    </p>
+                                                                    <p style="margin: 5px 0; color: #666; font-size: 12px;">
+                                                                        Quantidade: <strong>{{ $filho->quantidade }}</strong>
+                                                                    </p>
+                                                                    <p style="margin: 5px 0; color: #666; font-size: 12px;">
+                                                                        <strong>Caminho:</strong> {{ $filho->getCaminhoHierarquico() }}
+                                                                    </p>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="alert alert-info">
+                            Nenhum item registrado para este produto.
+                        </div>
+                    @endforelse
+                </div>
+
+                <hr>
                 <h4>Quantidade por Seção</h4>
                 <table class="table table-striped">
                     <thead>

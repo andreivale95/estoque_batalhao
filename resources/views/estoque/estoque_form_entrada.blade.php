@@ -80,13 +80,30 @@
                             <!-- Seção -->
                             <div class="form-group col-md-4">
                                 <label for="fk_secao">Seção:</label>
-                                <select name="fk_secao" class="form-control" required>
+                                <select name="fk_secao" id="fk_secao" class="form-control" required>
                                     <option value="">-- Selecione a Seção --</option>
                                     @foreach($secoes as $secao)
                                         <option value="{{ $secao->id }}">{{ $secao->nome }}</option>
                                     @endforeach
                                 </select>
                             </div>
+
+                            <!-- Container Pai (bolsa/prateleira) -->
+                            @if($containers && count($containers) > 0)
+                            <div class="form-group col-md-4">
+                                <label for="fk_item_pai">Dentro de (Container/Bolsa/Prateleira):</label>
+                                <select name="fk_item_pai" id="fk_item_pai" class="form-control">
+                                    <option value="">-- Não colocar dentro de nenhum container --</option>
+                                    @foreach($containers as $container)
+                                        <option value="{{ $container->id }}">
+                                            {{ $container->produto->nome }} (Qtd: {{ $container->quantidade }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small class="form-text text-muted">Selecione uma bolsa ou prateleira para colocar este item dentro</small>
+                            </div>
+                            @endif
+
                             <!-- Data de Entrada -->
                             <div class="form-group col-md-4">
                                 <label for="data_entrada">Data de Entrada:</label>

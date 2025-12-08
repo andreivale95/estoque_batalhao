@@ -60,6 +60,17 @@
                             </div>
                         </div>
 
+                        <!-- Container (aparece dinamicamente quando a seção tem containers) -->
+                        <div class="row" id="container-row" style="display: none;">
+                            <div class="form-group col-md-12">
+                                <label for="fk_item_pai">Dentro de (Container/Bolsa/Prateleira):</label>
+                                <select name="fk_item_pai" id="fk_item_pai" class="form-control">
+                                    <option value="">-- Nenhum (Item solto na seção) --</option>
+                                </select>
+                                <small class="text-muted">Selecione um container se este item ficará dentro dele</small>
+                            </div>
+                        </div>
+
                         <div class="row">
                             <!-- Unidade -->
                             <div class="form-group col-md-4">
@@ -181,6 +192,35 @@
     </div>
 
     <script>
+        // Dados de containers por seção vindos do backend
+        const containersPorSecao = @json($todosContainers ?? []);
+
+        // Atualiza containers quando a seção mudar
+        document.getElementById('fk_secao').addEventListener('change', function() {
+            const secaoId = this.value;
+            const containerRow = document.getElementById('container-row');
+            const containerSelect = document.getElementById('fk_item_pai');
+            
+            // Limpa opções anteriores
+            containerSelect.innerHTML = '<option value="">-- Nenhum (Item solto na seção) --</option>';
+            
+            if (secaoId && containersPorSecao[secaoId]) {
+                // Adiciona containers dessa seção
+                containersPorSecao[secaoId].forEach(function(container) {
+                    const option = document.createElement('option');
+                    option.value = container.id;
+                    option.textContent = container.produto ? container.produto.nome : 'Container #' + container.id;
+                    containerSelect.appendChild(option);
+                });
+                
+                // Mostra o campo de container
+                containerRow.style.display = 'block';
+            } else {
+                // Esconde se não houver containers
+                containerRow.style.display = 'none';
+            }
+        });
+
         document.getElementById('valor').addEventListener('input', function(e) {
             let raw = e.target.value.replace(/\D/g, ''); // só números
             let valorCentavos = raw ? parseInt(raw, 10) : 0;

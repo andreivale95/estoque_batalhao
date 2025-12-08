@@ -100,6 +100,7 @@
                             <tr>
                                 <!-- Coluna de seleção removida -->
                                 <th>Produto</th>
+                                <th>Localização</th>
                                 <th>Patrimônio</th>
                                 <th>Quantidade</th>
                                 <th>Unidade</th>
@@ -121,6 +122,28 @@
                                     title="Clique para ver detalhes">
                                     <td>
                                         {{ $estoque->nome }}
+                                    </td>
+                                    <td>
+                                        @php
+                                            // Busca todos os itens deste produto
+                                            $itens = App\Models\Itens_estoque::where('fk_produto', $estoque->id)
+                                                ->with(['secao', 'itemPai.produto'])
+                                                ->get();
+                                            
+                                            $localizacoes = $itens->map(function($item) {
+                                                return $item->getLocalizacaoCompleta();
+                                            })->unique()->take(3);
+                                        @endphp
+                                        @if($localizacoes->count() > 0)
+                                            @foreach($localizacoes as $loc)
+                                                <small>{{ $loc }}</small><br>
+                                            @endforeach
+                                            @if($itens->count() > 3)
+                                                <small class="text-muted">+{{ $itens->count() - 3 }} mais...</small>
+                                            @endif
+                                        @else
+                                            <small class="text-muted">-</small>
+                                        @endif
                                     </td>
                                     <td>{{ $estoque->patrimonio ?? '-' }}</td>
                                     <td>

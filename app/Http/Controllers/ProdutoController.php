@@ -57,6 +57,12 @@ class ProdutoController extends Controller {
 
             $quantidadeTotal = Itens_estoque::where('fk_produto', $id)->sum('quantidade');
 
+            // Busca todos os itens deste produto com suas hierarquias
+            $todosOsItens = Itens_estoque::where('fk_produto', $id)
+                ->with(['secao', 'itemPai.produto', 'itensFilhos'])
+                ->orderBy('fk_secao')
+                ->get();
+
             $detalhesSecao = Itens_estoque::select(
                 'itens_estoque.fk_secao',
                 'secaos.nome as secao_nome',
@@ -74,7 +80,7 @@ class ProdutoController extends Controller {
                 ];
             });
 
-            return view('produtos.detalhes', compact('produto', 'quantidadeTotal', 'detalhesSecao'));
+            return view('produtos.detalhes', compact('produto', 'quantidadeTotal', 'detalhesSecao', 'todosOsItens'));
         } catch (Exception $e) {
             Log::error('Erro ao carregar detalhes do produto', [$e]);
             return back()->with('warning', 'Erro ao carregar detalhes do produto.');

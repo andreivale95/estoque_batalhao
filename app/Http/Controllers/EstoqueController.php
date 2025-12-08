@@ -269,6 +269,7 @@ class EstoqueController extends Controller
                 'data_entrada' => 'required|date',
                 'fk_produto' => 'required|exists:produtos,id',
                 'fk_secao' => 'required|exists:secaos,id',
+                'fk_item_pai' => 'nullable|exists:itens_estoque,id',
                 'lote' => 'nullable|string',
                 'fornecedor' => 'nullable|string',
                 'nota_fiscal' => 'nullable|string',
@@ -311,6 +312,7 @@ class EstoqueController extends Controller
                 Itens_estoque::create([
                     'fk_produto' => $request->fk_produto,
                     'fk_secao' => $request->fk_secao,
+                    'fk_item_pai' => $request->fk_item_pai ?? null,
                     'unidade' => $request->unidade,
                     'quantidade' => $request->quantidade,
                     'valor_total' => $valorFinal * $request->quantidade,
@@ -501,8 +503,26 @@ class EstoqueController extends Controller
             $unidades = Unidade::all();
             $unidadeUsuario = Unidade::find(Auth::user()->fk_unidade);
             $isAdmin = Auth::user()->fk_perfil == 1;
+            
+            // Carrega todos os possíveis containers (produtos criados como containers)
+            // Busca por produtos que têm "bolsa", "container", "prateleira", "mochila" no nome
+            // OU que já tenham a categoria específica de containers
+            $todosContainers = Itens_estoque::whereNull('fk_item_pai')
+                ->with('produto', 'secao')
+                ->get()
+                ->filter(function($item) {
+                    // Filtra itens que podem ser containers
+                    $nome = strtolower($item->produto->nome ?? '');
+                    return strpos($nome, 'bolsa') !== false 
+                        || strpos($nome, 'container') !== false 
+                        || strpos($nome, 'prateleira') !== false
+                        || strpos($nome, 'mochila') !== false
+                        || strpos($nome, 'caixa') !== false
+                        || strpos($nome, 'maleta') !== false;
+                })
+                ->groupBy('fk_secao');
 
-            return view('estoque/estoque_form_entrada_existente', compact('produtos', 'secoes', 'unidades', 'unidadeUsuario', 'isAdmin'));
+            return view('estoque/estoque_form_entrada_existente', compact('produtos', 'secoes', 'unidades', 'unidadeUsuario', 'isAdmin', 'todosContainers'));
         } catch (Exception $e) {
             Log::error('Erro ao carregar formulário de entrada', ['exception' => $e->getMessage()]);
             return back()->with('warning', 'Houve um erro ao carregar o formulário de entrada.');
@@ -515,12 +535,20 @@ class EstoqueController extends Controller
         try {
 
 
-            $produto = Itens_estoque::select('fk_produto', 'unidade')->where('id', $id)->first();
+            $produto = Itens_estoque::select('fk_produto', 'unidade', 'fk_secao')->where('id', $id)->first();
             $secoes = Secao::all();
             $unidadeUsuario = Unidade::find(Auth::user()->fk_unidade);
             $isAdmin = Auth::user()->fk_perfil == 1;
+            
+            // Carrega os containers (itens que podem conter outros itens)
+            // Apenas containers da mesma seção
+            $containers = Itens_estoque::where('fk_secao', $produto->fk_secao)
+                ->whereNull('fk_item_pai')
+                ->whereHas('itensFilhos')
+                ->with('produto')
+                ->get();
 
-            return view('estoque/estoque_form_entrada', compact('produto', 'secoes', 'unidadeUsuario', 'isAdmin'));
+            return view('estoque/estoque_form_entrada', compact('produto', 'secoes', 'unidadeUsuario', 'isAdmin', 'containers'));
         } catch (Exception $e) {
             Log::error('Error ao consultar formulario', [$e]);
             return back()->with('warning', 'Houve um erro ao abrir Formulário');
@@ -682,5 +710,75 @@ class EstoqueController extends Controller
         $militares = \App\Models\EfetivoMilitar::all();
         // Passa o mapa de seções como JSON para a view
         return view('estoque.saidaMultiplos', compact('itens_estoque', 'militares'))->with('sectionsMap', $sectionsMap);
+    }
+
+    public function formCadastrarContainer()
+    {
+        try {
+            $secoes = Secao::all();
+            $categorias = Categoria::all();
+            $unidadeUsuario = Unidade::find(Auth::user()->fk_unidade);
+            $isAdmin = Auth::user()->fk_perfil == 1;
+
+            return view('estoque.cadastrar_container', compact('secoes', 'categorias', 'unidadeUsuario', 'isAdmin'));
+        } catch (Exception $e) {
+            Log::error('Erro ao abrir formulário de container', [$e]);
+            return back()->with('warning', 'Houve um erro ao abrir o formulário');
+        }
+    }
+
+    public function salvarContainer(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'fk_categoria' => 'required|exists:categorias,id',
+                'fk_secao' => 'required|exists:secaos,id',
+                'nome_container' => 'required|string|max:255',
+                'quantidade' => 'required|integer|min:1',
+                'unidade' => 'required|exists:unidades,id',
+            ]);
+
+            // Verifica se já existe um produto com esse nome de container
+            $produtoExistente = Produto::where('nome', $validated['nome_container'])->first();
+            
+            if ($produtoExistente) {
+                // Usa o produto existente
+                $fkProdutoContainer = $produtoExistente->id;
+            } else {
+                // Cria um novo produto para o container
+                $novoProduto = Produto::create([
+                    'nome' => $validated['nome_container'],
+                    'fk_categoria' => $validated['fk_categoria'],
+                    'fk_secao' => $validated['fk_secao'],
+                    'ativo' => 1,
+                ]);
+                $fkProdutoContainer = $novoProduto->id;
+            }
+
+            // Cria o item de estoque para o container
+            Itens_estoque::create([
+                'fk_produto' => $fkProdutoContainer,
+                'fk_secao' => $validated['fk_secao'],
+                'quantidade' => $validated['quantidade'],
+                'unidade' => $validated['unidade'],
+                'fk_item_pai' => null, // Container não tem pai
+            ]);
+
+            // Registra a movimentação
+            HistoricoMovimentacao::create([
+                'tipo' => 'entrada',
+                'quantidade' => $validated['quantidade'],
+                'fk_produto' => $fkProdutoContainer,
+                'fk_usuario' => Auth::id(),
+                'fk_unidade' => $validated['unidade'],
+                'responsavel' => Auth::user()->name ?? 'Sistema',
+                'observacao' => 'Container/Bolsa cadastrado: ' . $validated['nome_container'],
+            ]);
+
+            return redirect()->route('estoque.listar')->with('success', 'Container cadastrado com sucesso!');
+        } catch (Exception $e) {
+            Log::error('Erro ao salvar container', [$e]);
+            return back()->with('error', 'Houve um erro ao cadastrar o container')->withInput();
+        }
     }
 }
