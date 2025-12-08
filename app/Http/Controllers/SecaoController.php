@@ -80,9 +80,25 @@ class SecaoController extends Controller
     public function ver($unidadeId, $secaoId)
     {
         $secao = Secao::with(['unidade'])->findOrFail($secaoId);
-        $itens = Itens_estoque::where('fk_secao', $secaoId)->get();
+        
+        // Busca todos os itens da seção com suas relações
+        $itens = Itens_estoque::where('fk_secao', $secaoId)
+            ->with(['produto', 'itemPai.produto', 'itensFilhos.produto'])
+            ->get();
+        
+        // Agrupa itens por produto
+        $itensPorProduto = $itens->groupBy('fk_produto')->map(function($grupo) {
+            return [
+                'produto' => $grupo->first()->produto,
+                'itens' => $grupo,
+                'quantidadeSolta' => $grupo->whereNull('fk_item_pai')->sum('quantidade'),
+                'itensEmContainers' => $grupo->whereNotNull('fk_item_pai')->groupBy('fk_item_pai'),
+            ];
+        });
+        
         $outrasSecoes = Secao::where('fk_unidade', $unidadeId)->where('id', '!=', $secaoId)->get();
-        return view('secoes.ver', compact('secao', 'itens', 'outrasSecoes', 'unidadeId'));
+        
+        return view('secoes.ver', compact('secao', 'itens', 'itensPorProduto', 'outrasSecoes', 'unidadeId'));
     }
 
     public function transferirItens(Request $request, $unidadeId, $secaoId)

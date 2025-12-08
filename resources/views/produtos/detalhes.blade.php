@@ -30,6 +30,7 @@
                                 $secoesByItem[$secaoId] = [
                                     'nome' => $secaoNome,
                                     'itensRaiz' => [],
+                                    'itensEmContainers' => [],
                                     'todosItens' => []
                                 ];
                             }
@@ -37,6 +38,9 @@
                             // Apenas itens raiz (sem container pai)
                             if(is_null($item->fk_item_pai)) {
                                 $secoesByItem[$secaoId]['itensRaiz'][] = $item;
+                            } else {
+                                // Itens dentro de containers
+                                $secoesByItem[$secaoId]['itensEmContainers'][] = $item;
                             }
                         }
                     @endphp
@@ -47,60 +51,84 @@
                                 <h4 class="panel-title">
                                     <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapse-{{ $secaoId }}" aria-expanded="false" aria-controls="collapse-{{ $secaoId }}">
                                         <i class="fa fa-folder"></i> Seção: {{ $secao['nome'] }}
+                                        <span class="badge bg-blue" style="margin-left: 10px;">{{ count($secao['todosItens']) }} {{ count($secao['todosItens']) == 1 ? 'item' : 'itens' }}</span>
                                     </a>
                                 </h4>
                             </div>
                             <div id="collapse-{{ $secaoId }}" class="panel-collapse collapse" role="tabpanel" aria-labelledby="heading-{{ $secaoId }}">
                                 <div class="panel-body">
                                     <div class="list-group">
-                                        @forelse($secao['itensRaiz'] as $item)
-                                            <div class="list-group-item" style="margin-bottom: 15px;">
-                                                <h5 style="margin: 0 0 10px 0;">
-                                                    @if($item->isContainer())
-                                                        <i class="fa fa-briefcase text-primary"></i>
-                                                    @else
-                                                        <i class="fa fa-cube"></i>
-                                                    @endif
-                                                    {{ $item->produto->nome ?? 'Sem Nome' }}
+                                        {{-- Itens soltos na seção --}}
+                                        @if(count($secao['itensRaiz']) > 0)
+                                            <div style="margin-bottom: 20px;">
+                                                <h5 style="color: #333; border-bottom: 2px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">
+                                                    <i class="fa fa-cubes"></i> Itens Soltos na Seção
                                                 </h5>
-                                                <p style="margin: 5px 0;">
-                                                    <strong>Quantidade:</strong> {{ $item->quantidade }}
-                                                </p>
-                                                <p style="margin: 5px 0; color: #666;">
-                                                    <strong>Localização:</strong> Seção: {{ $secao['nome'] }}
-                                                </p>
-                                                
-                                                @if($item->isContainer())
-                                                    <div style="margin-top: 10px; padding: 10px; background-color: #f0f8ff; border-left: 3px solid #0066cc; border-radius: 3px;">
-                                                        <p style="margin: 0 0 10px 0; font-weight: bold; color: #0066cc;">
-                                                            <i class="fa fa-sitemap"></i> Itens dentro deste container ({{ $item->itensFilhos->count() }}):
-                                                        </p>
-                                                        @if($item->itensFilhos->count() > 0)
-                                                            @foreach($item->itensFilhos as $filho)
-                                                                <div style="margin: 8px 0; padding: 8px; background-color: #ffffff; border-left: 2px solid #999; border-radius: 2px;">
-                                                                    <p style="margin: 3px 0;">
-                                                                        <i class="fa fa-arrow-right text-success"></i> 
-                                                                        <strong>{{ $filho->produto->nome ?? 'Sem Nome' }}</strong>
-                                                                    </p>
-                                                                    <p style="margin: 3px 0; color: #666; font-size: 12px;">
-                                                                        Quantidade: <span class="badge bg-green">{{ $filho->quantidade }}</span>
-                                                                    </p>
-                                                                    <p style="margin: 3px 0; color: #666; font-size: 12px;">
-                                                                        <strong>Localização:</strong> {{ $item->produto->nome }} → {{ $filho->getCaminhoHierarquico() }}
-                                                                    </p>
-                                                                </div>
-                                                            @endforeach
+                                                @foreach($secao['itensRaiz'] as $item)
+                                                    @if(!$item->isContainer())
+                                                        <div class="list-group-item" style="margin-bottom: 10px;">
+                                                            <p style="margin: 5px 0;">
+                                                                <i class="fa fa-cube"></i> <strong>{{ $item->produto->nome ?? 'Sem Nome' }}</strong>
+                                                            </p>
+                                                            <p style="margin: 5px 0; color: #666;">
+                                                                Quantidade: <span class="badge bg-green">{{ $item->quantidade }}</span>
+                                                            </p>
+                                                        </div>
+                                                    @endif
+                                                @endforeach
+                                            </div>
+                                        @endif
+
+                                        {{-- Containers com seus itens --}}
+                                        @php
+                                            $containersComItens = [];
+                                            foreach($secao['itensRaiz'] as $item) {
+                                                if($item->isContainer()) {
+                                                    $containersComItens[$item->id] = $item;
+                                                }
+                                            }
+                                        @endphp
+
+                                        @if(count($containersComItens) > 0)
+                                            <div>
+                                                <h5 style="color: #0066cc; border-bottom: 2px solid #0066cc; padding-bottom: 5px; margin-bottom: 10px;">
+                                                    <i class="fa fa-briefcase"></i> Containers/Bolsas
+                                                </h5>
+                                                @foreach($containersComItens as $container)
+                                                    <div style="margin-bottom: 15px; padding: 10px; background-color: #f0f8ff; border-left: 3px solid #0066cc; border-radius: 3px;">
+                                                        <h6 style="margin: 0 0 8px 0; color: #0066cc;">
+                                                            <i class="fa fa-briefcase"></i> {{ $container->produto->nome ?? 'Container' }}
+                                                            <span class="badge bg-primary" style="margin-left: 5px;">{{ $container->itensFilhos->count() }} item(ns)</span>
+                                                        </h6>
+                                                        
+                                                        @if($container->itensFilhos->count() > 0)
+                                                            <div style="margin-left: 15px; border-left: 2px solid #999; padding-left: 10px;">
+                                                                @foreach($container->itensFilhos as $filho)
+                                                                    <div style="margin: 6px 0; padding: 6px; background-color: #ffffff; border-radius: 2px;">
+                                                                        <p style="margin: 3px 0;">
+                                                                            <i class="fa fa-arrow-right text-success"></i> 
+                                                                            <strong>{{ $filho->produto->nome ?? 'Sem Nome' }}</strong>
+                                                                        </p>
+                                                                        <p style="margin: 3px 0; color: #666; font-size: 12px;">
+                                                                            Quantidade: <span class="badge bg-green">{{ $filho->quantidade }}</span>
+                                                                        </p>
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
                                                         @else
-                                                            <p style="color: #999; font-style: italic; margin: 5px 0;">Nenhum item dentro deste container</p>
+                                                            <p style="color: #999; font-style: italic; margin: 5px 0; margin-left: 15px;">Container vazio</p>
                                                         @endif
                                                     </div>
-                                                @endif
+                                                @endforeach
                                             </div>
-                                        @empty
+                                        @endif
+
+                                        {{-- Mensagem se seção vazia --}}
+                                        @if(count($secao['itensRaiz']) == 0 && count($secao['itensEmContainers']) == 0)
                                             <div class="alert alert-info">
                                                 Nenhum item nesta seção
                                             </div>
-                                        @endforelse
+                                        @endif
                                     </div>
                                 </div>
                             </div>
