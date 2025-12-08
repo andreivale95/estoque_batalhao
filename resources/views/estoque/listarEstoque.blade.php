@@ -116,12 +116,39 @@
                                 @php
                                     $valorUnitario = $estoque->valor ?? 0;
                                     $subtotal = $estoque->quantidade_total * $valorUnitario;
+                                    
+                                    // Verifica se é um container (produto com nome contendo palavras-chave)
+                                    $nomeMinusculo = strtolower($estoque->nome);
+                                    $ehContainer = strpos($nomeMinusculo, 'bolsa') !== false 
+                                        || strpos($nomeMinusculo, 'container') !== false 
+                                        || strpos($nomeMinusculo, 'prateleira') !== false
+                                        || strpos($nomeMinusculo, 'mochila') !== false
+                                        || strpos($nomeMinusculo, 'caixa') !== false
+                                        || strpos($nomeMinusculo, 'maleta') !== false;
+                                    
+                                    // Busca o primeiro item deste produto para pegar o ID correto
+                                    $primeiroItem = App\Models\Itens_estoque::where('fk_produto', $estoque->id)->first();
+                                    $itemId = $primeiroItem ? $primeiroItem->id : $estoque->id;
+                                    
+                                    // Define a rota dependendo se é container ou não
+                                    $rota = $ehContainer 
+                                        ? route('estoque.container.conteudo', $itemId)
+                                        : route('estoque.produto.detalhes', $estoque->id);
                                 @endphp
                                 <tr class="item-row" style="cursor: pointer;" 
-                                    onclick="window.location='{{ route('estoque.produto.detalhes', $estoque->id) }}'"
-                                    title="Clique para ver detalhes">
+                                    onclick="window.location='{{ $rota }}'"
+                                    title="{{ $ehContainer ? 'Clique para ver conteúdo do container' : 'Clique para ver detalhes' }}">
                                     <td>
-                                        {{ $estoque->nome }}
+                                        @if($ehContainer)
+                                            <i class="fa fa-briefcase text-primary"></i>
+                                            @php
+                                                // Busca a seção do container
+                                                $secaoContainer = $primeiroItem ? $primeiroItem->secao->nome : '';
+                                            @endphp
+                                            {{ $estoque->nome }}@if($secaoContainer) - <small class="text-muted">{{ $secaoContainer }}</small>@endif
+                                        @else
+                                            {{ $estoque->nome }}
+                                        @endif
                                     </td>
                                     <td>
                                         @php

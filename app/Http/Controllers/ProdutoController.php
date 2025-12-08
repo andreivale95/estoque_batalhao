@@ -59,7 +59,13 @@ class ProdutoController extends Controller {
 
             // Busca todos os itens deste produto com suas hierarquias
             $todosOsItens = Itens_estoque::where('fk_produto', $id)
-                ->with(['secao', 'itemPai.produto', 'itensFilhos'])
+                ->with([
+                    'secao', 
+                    'itemPai.produto', 
+                    'itensFilhos' => function($q) {
+                        $q->with('produto');
+                    }
+                ])
                 ->orderBy('fk_secao')
                 ->get();
 

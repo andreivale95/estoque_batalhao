@@ -282,10 +282,11 @@ class EstoqueController extends Controller
 
             $dataEntrada = Carbon::parse($request->data_entrada);
 
-            // Busca o item no estoque pela seção específica
+            // Busca o item no estoque pela seção específica, considerando se está em um container
             $itemEstoque = Itens_estoque::where('fk_produto', $request->fk_produto)
                 ->where('unidade', $request->unidade)
                 ->where('fk_secao', $request->fk_secao)
+                ->where('fk_item_pai', $request->fk_item_pai ?? null)
                 ->first();
 
             $novoValorMedio = $valorFinal;
@@ -304,6 +305,7 @@ class EstoqueController extends Controller
                 $itemEstoque->quantidade = $novaQuantidade;
                 $itemEstoque->valor_total = $novoValorMedio * $novaQuantidade;
                 $itemEstoque->valor_unitario = $valorFinal;
+                $itemEstoque->fk_item_pai = $request->fk_item_pai ?? null;
                 $itemEstoque->save();
 
                 // Não mais atualiza campo 'produtos.valor' — média é mantida no estoque
@@ -738,6 +740,18 @@ class EstoqueController extends Controller
                 'unidade' => 'required|exists:unidades,id',
             ]);
 
+            // Verifica se já existe um container com esse nome na mesma seção
+            $containerExistente = Itens_estoque::whereHas('produto', function($query) use ($validated) {
+                $query->where('nome', $validated['nome_container']);
+            })
+            ->where('fk_secao', $validated['fk_secao'])
+            ->whereNull('fk_item_pai')
+            ->first();
+
+            if ($containerExistente) {
+                return back()->withErrors(['nome_container' => 'Já existe um container com este nome nesta seção.'])->withInput();
+            }
+
             // Verifica se já existe um produto com esse nome de container
             $produtoExistente = Produto::where('nome', $validated['nome_container'])->first();
             
@@ -779,6 +793,28 @@ class EstoqueController extends Controller
         } catch (Exception $e) {
             Log::error('Erro ao salvar container', [$e]);
             return back()->with('error', 'Houve um erro ao cadastrar o container')->withInput();
+        }
+    }
+
+    public function verConteudoContainer($id)
+    {
+        try {
+            // Busca o item container
+            $container = Itens_estoque::with(['produto', 'secao', 'unidade'])->findOrFail($id);
+            
+            // Busca todos os itens dentro deste container
+            $itensFilhos = Itens_estoque::where('fk_item_pai', $id)
+                ->with(['produto.categoria', 'secao'])
+                ->get();
+            
+            // Calcula totais
+            $quantidadeItens = $itensFilhos->count();
+            $quantidadeTotalItens = $itensFilhos->sum('quantidade');
+            
+            return view('estoque.container_conteudo', compact('container', 'itensFilhos', 'quantidadeItens', 'quantidadeTotalItens'));
+        } catch (Exception $e) {
+            Log::error('Erro ao visualizar conteúdo do container', [$e]);
+            return back()->with('error', 'Houve um erro ao visualizar o container');
         }
     }
 }

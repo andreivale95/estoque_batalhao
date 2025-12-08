@@ -29,10 +29,15 @@
                             if (!isset($secoesByItem[$secaoId])) {
                                 $secoesByItem[$secaoId] = [
                                     'nome' => $secaoNome,
-                                    'itens' => []
+                                    'itensRaiz' => [],
+                                    'todosItens' => []
                                 ];
                             }
-                            $secoesByItem[$secaoId]['itens'][] = $item;
+                            $secoesByItem[$secaoId]['todosItens'][] = $item;
+                            // Apenas itens raiz (sem container pai)
+                            if(is_null($item->fk_item_pai)) {
+                                $secoesByItem[$secaoId]['itensRaiz'][] = $item;
+                            }
                         }
                     @endphp
 
@@ -48,49 +53,61 @@
                             <div id="collapse-{{ $secaoId }}" class="panel-collapse collapse" role="tabpanel" aria-labelledby="heading-{{ $secaoId }}">
                                 <div class="panel-body">
                                     <div class="list-group">
-                                        @foreach($secao['itens'] as $item)
-                                            @if(is_null($item->fk_item_pai))
-                                                <div class="list-group-item">
-                                                    <h5 style="margin: 0 0 10px 0;">
-                                                        <i class="fa fa-cube"></i> {{ $item->produto->nome ?? 'Sem Nome' }}
-                                                    </h5>
-                                                    <p style="margin: 5px 0;">
-                                                        <strong>Quantidade:</strong> {{ $item->quantidade }}
-                                                    </p>
-                                                    <p style="margin: 5px 0; color: #666;">
-                                                        <strong>Localização:</strong> {{ $item->getLocalizacaoCompleta() }}
-                                                    </p>
-                                                    
+                                        @forelse($secao['itensRaiz'] as $item)
+                                            <div class="list-group-item" style="margin-bottom: 15px;">
+                                                <h5 style="margin: 0 0 10px 0;">
                                                     @if($item->isContainer())
-                                                        <div style="margin-top: 10px; padding-left: 15px; border-left: 2px solid #ddd;">
-                                                            <p style="margin: 0 0 10px 0; font-weight: bold; color: #0066cc;">
-                                                                <i class="fa fa-sitemap"></i> Itens dentro:
-                                                            </p>
+                                                        <i class="fa fa-briefcase text-primary"></i>
+                                                    @else
+                                                        <i class="fa fa-cube"></i>
+                                                    @endif
+                                                    {{ $item->produto->nome ?? 'Sem Nome' }}
+                                                </h5>
+                                                <p style="margin: 5px 0;">
+                                                    <strong>Quantidade:</strong> {{ $item->quantidade }}
+                                                </p>
+                                                <p style="margin: 5px 0; color: #666;">
+                                                    <strong>Localização:</strong> Seção: {{ $secao['nome'] }}
+                                                </p>
+                                                
+                                                @if($item->isContainer())
+                                                    <div style="margin-top: 10px; padding: 10px; background-color: #f0f8ff; border-left: 3px solid #0066cc; border-radius: 3px;">
+                                                        <p style="margin: 0 0 10px 0; font-weight: bold; color: #0066cc;">
+                                                            <i class="fa fa-sitemap"></i> Itens dentro deste container ({{ $item->itensFilhos->count() }}):
+                                                        </p>
+                                                        @if($item->itensFilhos->count() > 0)
                                                             @foreach($item->itensFilhos as $filho)
-                                                                <div style="margin: 8px 0; padding: 8px; background-color: #f9f9f9; border-radius: 3px;">
-                                                                    <p style="margin: 5px 0;">
-                                                                        <i class="fa fa-arrow-right"></i> {{ $filho->produto->nome ?? 'Sem Nome' }}
+                                                                <div style="margin: 8px 0; padding: 8px; background-color: #ffffff; border-left: 2px solid #999; border-radius: 2px;">
+                                                                    <p style="margin: 3px 0;">
+                                                                        <i class="fa fa-arrow-right text-success"></i> 
+                                                                        <strong>{{ $filho->produto->nome ?? 'Sem Nome' }}</strong>
                                                                     </p>
-                                                                    <p style="margin: 5px 0; color: #666; font-size: 12px;">
-                                                                        Quantidade: <strong>{{ $filho->quantidade }}</strong>
+                                                                    <p style="margin: 3px 0; color: #666; font-size: 12px;">
+                                                                        Quantidade: <span class="badge bg-green">{{ $filho->quantidade }}</span>
                                                                     </p>
-                                                                    <p style="margin: 5px 0; color: #666; font-size: 12px;">
-                                                                        <strong>Caminho:</strong> {{ $filho->getCaminhoHierarquico() }}
+                                                                    <p style="margin: 3px 0; color: #666; font-size: 12px;">
+                                                                        <strong>Localização:</strong> {{ $item->produto->nome }} → {{ $filho->getCaminhoHierarquico() }}
                                                                     </p>
                                                                 </div>
                                                             @endforeach
-                                                        </div>
-                                                    @endif
-                                                </div>
-                                            @endif
-                                        @endforeach
+                                                        @else
+                                                            <p style="color: #999; font-style: italic; margin: 5px 0;">Nenhum item dentro deste container</p>
+                                                        @endif
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @empty
+                                            <div class="alert alert-info">
+                                                Nenhum item nesta seção
+                                            </div>
+                                        @endforelse
                                     </div>
                                 </div>
                             </div>
                         </div>
                     @empty
                         <div class="alert alert-info">
-                            Nenhum item registrado para este produto.
+                            Nenhuma seção com itens deste produto.
                         </div>
                     @endforelse
                 </div>

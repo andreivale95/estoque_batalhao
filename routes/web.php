@@ -48,6 +48,7 @@ Route::middleware(['auth', 'verified'])->controller(EstoqueController::class)->g
     Route::get('registros/estoque/form_saida/{id}', 'formSaida')->name('saida.form');
     Route::get('registros/estoque/container/cadastrar', 'formCadastrarContainer')->name('estoque.container.form');
     Route::post('registros/estoque/container/salvar', 'salvarContainer')->name('estoque.container.salvar');
+    Route::get('registros/estoque/container/{id}/conteudo', 'verConteudoContainer')->name('estoque.container.conteudo');
     Route::post('/estoque/transferencia', [EstoqueController::class, 'transferir'])->name('estoque.transferir');
     Route::post('/estoque/transferencia-secoes', [EstoqueController::class, 'transferirEntreSeccoes'])->name('estoque.transferir.secoes');
     Route::post('/estoque/saida-multiplos', [EstoqueController::class, 'saidaMultiplos'])->name('estoque.saidaMultiplos');
