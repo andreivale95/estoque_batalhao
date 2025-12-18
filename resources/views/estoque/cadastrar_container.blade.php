@@ -21,13 +21,25 @@
                     <i class="fa fa-briefcase"></i> Novo Container
                 </div>
                 <div class="panel-body" style="background-color: white;">
+                    @if ($errors->any())
+                        <div class="alert alert-danger">
+                            <button type="button" class="close" data-dismiss="alert">&times;</button>
+                            <h4><i class="icon fa fa-ban"></i> Erro!</h4>
+                            <ul class="mb-0">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     <form action="{{ route('estoque.container.salvar') }}" method="POST">
                         @csrf
 
                         <div class="row">
                             <!-- Nome do Container -->
                             <div class="form-group col-md-6">
-                                <label for="nome_container">Nome do Container/Bolsa/Prateleira: <span style="color: red;">*</span></label>
+                                <label for="nome_container">Nome do Container: <span style="color: red;">*</span></label>
                                 <input type="text" 
                                        class="form-control" 
                                        id="nome_container" 
@@ -38,21 +50,36 @@
                                 <small class="text-muted">Digite um nome descritivo para identificar o container</small>
                             </div>
 
-                            <!-- Quantidade -->
+                            <!-- Patrimônio (opcional, único) -->
                             <div class="form-group col-md-3">
-                                <label for="quantidade">Quantidade: <span style="color: red;">*</span></label>
-                                <input type="number" 
+                                <label for="patrimonio">Patrimônio:</label>
+                                <input type="text" 
                                        class="form-control" 
-                                       id="quantidade" 
-                                       name="quantidade" 
-                                       min="1" 
-                                       value="{{ old('quantidade', 1) }}" 
-                                       required>
-                                <small class="text-muted">Número de containers deste tipo</small>
+                                       id="patrimonio" 
+                                       name="patrimonio" 
+                                       placeholder="Ex: PAT-001234"
+                                       value="{{ old('patrimonio') }}">
+                                <small class="text-muted">Número único do patrimônio (opcional)</small>
                             </div>
 
-                            <!-- Categoria -->
+                            <!-- Valor -->
                             <div class="form-group col-md-3">
+                                <label for="valor">Valor (R$):</label>
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="valor" 
+                                       name="valor" 
+                                       step="0.01"
+                                       min="0"
+                                       placeholder="0.00"
+                                       value="{{ old('valor') }}">
+                                <small class="text-muted">Valor do container (opcional)</small>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Categoria -->
+                            <div class="form-group col-md-4">
                                 <label for="fk_categoria">Categoria: <span style="color: red;">*</span></label>
                                 <select class="form-control select2" id="fk_categoria" name="fk_categoria" required>
                                     <option value="">-- Selecione --</option>
@@ -64,11 +91,9 @@
                                 </select>
                                 <small class="text-muted">Categoria do container</small>
                             </div>
-                        </div>
 
-                        <div class="row">
                             <!-- Seção -->
-                            <div class="form-group col-md-6">
+                            <div class="form-group col-md-4">
                                 <label for="fk_secao">Seção: <span style="color: red;">*</span></label>
                                 <select class="form-control select2" id="fk_secao" name="fk_secao" required>
                                     <option value="">-- Selecione uma Seção --</option>
@@ -83,7 +108,7 @@
 
                             @if($isAdmin)
                                 <!-- Unidade editável para admin -->
-                                <div class="form-group col-md-6">
+                                <div class="form-group col-md-4">
                                     <label for="unidade">Unidade: <span style="color: red;">*</span></label>
                                     <select class="form-control select2" id="unidade" name="unidade" required>
                                         <option value="">-- Selecione --</option>
@@ -96,7 +121,7 @@
                                 </div>
                             @else
                                 <!-- Unidade fixa para não-admin -->
-                                <div class="form-group col-md-6">
+                                <div class="form-group col-md-4">
                                     <label for="unidade_display">Unidade:</label>
                                     <input type="text" class="form-control" value="{{ $unidadeUsuario->nome }}" disabled>
                                     <input type="hidden" name="unidade" value="{{ $unidadeUsuario->id }}">

@@ -60,22 +60,47 @@
                                     <div class="list-group">
                                         {{-- Itens soltos na seção --}}
                                         @if(count($secao['itensRaiz']) > 0)
+                                            @php
+                                                // Agrupa itens soltos (não-containers) por quantidade
+                                                $itensAgrupados = [];
+                                                foreach($secao['itensRaiz'] as $item) {
+                                                    if(!$item->isContainer()) {
+                                                        $key = $item->quantidade . '_' . ($item->lote ?? 'SEM_LOTE');
+                                                        if(!isset($itensAgrupados[$key])) {
+                                                            $itensAgrupados[$key] = [
+                                                                'quantidade' => $item->quantidade,
+                                                                'lote' => $item->lote,
+                                                                'quantidade_itens' => 1,
+                                                                'item_exemplo' => $item
+                                                            ];
+                                                        } else {
+                                                            $itensAgrupados[$key]['quantidade_itens']++;
+                                                        }
+                                                    }
+                                                }
+                                            @endphp
                                             <div style="margin-bottom: 20px;">
                                                 <h5 style="color: #333; border-bottom: 2px solid #ddd; padding-bottom: 5px; margin-bottom: 10px;">
                                                     <i class="fa fa-cubes"></i> Itens Soltos na Seção
                                                 </h5>
-                                                @foreach($secao['itensRaiz'] as $item)
-                                                    @if(!$item->isContainer())
-                                                        <div class="list-group-item" style="margin-bottom: 10px;">
-                                                            <p style="margin: 5px 0;">
-                                                                <i class="fa fa-cube"></i> <strong>{{ $item->produto->nome ?? 'Sem Nome' }}</strong>
-                                                            </p>
-                                                            <p style="margin: 5px 0; color: #666;">
-                                                                Quantidade: <span class="badge bg-green">{{ $item->quantidade }}</span>
-                                                            </p>
-                                                        </div>
-                                                    @endif
-                                                @endforeach
+                                                @forelse($itensAgrupados as $grupo)
+                                                    <div class="list-group-item" style="margin-bottom: 10px;">
+                                                        <p style="margin: 5px 0;">
+                                                            <i class="fa fa-cube"></i> <strong>{{ $grupo['item_exemplo']->produto->nome ?? 'Sem Nome' }}</strong>
+                                                        </p>
+                                                        <p style="margin: 5px 0; color: #666;">
+                                                            Quantidade por item: <span class="badge bg-green">{{ $grupo['quantidade'] }}</span>
+                                                            @if($grupo['quantidade_itens'] > 1)
+                                                                | Total de registros: <span class="badge bg-blue">{{ $grupo['quantidade_itens'] }}</span>
+                                                            @endif
+                                                            @if($grupo['lote'])
+                                                                | Lote: <span class="badge">{{ $grupo['lote'] }}</span>
+                                                            @endif
+                                                        </p>
+                                                    </div>
+                                                @empty
+                                                    <p style="color: #999; font-style: italic;">Nenhum item solto nesta seção</p>
+                                                @endforelse
                                             </div>
                                         @endif
 
@@ -118,6 +143,35 @@
                                                         @else
                                                             <p style="color: #999; font-style: italic; margin: 5px 0; margin-left: 15px;">Container vazio</p>
                                                         @endif
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @endif
+
+                                        {{-- Itens dentro de containers (fk_item_pai != null) --}}
+                                        @if(count($secao['itensEmContainers']) > 0)
+                                            <div style="margin-top: 20px;">
+                                                <h5 style="color: #cc7700; border-bottom: 2px solid #cc7700; padding-bottom: 5px; margin-bottom: 10px;">
+                                                    <i class="fa fa-sitemap"></i> Itens Dentro de Containers
+                                                </h5>
+                                                @foreach($secao['itensEmContainers'] as $item)
+                                                    @php
+                                                        $nomePai = $item->itemPai ? $item->itemPai->produto->nome : 'Container desconhecido';
+                                                    @endphp
+                                                    <div style="margin-bottom: 10px; padding: 8px; background-color: #fff8e6; border-left: 3px solid #cc7700; border-radius: 3px;">
+                                                        <p style="margin: 0 0 5px 0;">
+                                                            <i class="fa fa-folder-open text-warning"></i>
+                                                            <strong>Dentro de:</strong> <span style="color: #cc7700; font-weight: bold;">{{ $nomePai }}</span>
+                                                        </p>
+                                                        <p style="margin: 3px 0; color: #666;">
+                                                            <i class="fa fa-cube"></i> <strong>{{ $item->produto->nome ?? 'Sem Nome' }}</strong>
+                                                        </p>
+                                                        <p style="margin: 3px 0; color: #666; font-size: 12px;">
+                                                            Quantidade: <span class="badge bg-green">{{ $item->quantidade }}</span>
+                                                            @if($item->lote)
+                                                                | Lote: <span class="badge">{{ $item->lote }}</span>
+                                                            @endif
+                                                        </p>
                                                     </div>
                                                 @endforeach
                                             </div>

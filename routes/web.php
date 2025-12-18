@@ -18,6 +18,7 @@ use App\Http\Controllers\UnidadeController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\MovimentacaoController;
 use App\Http\Controllers\SecaoController;
+use App\Http\Controllers\ContainerController;
 use App\Http\Controllers\CautelaController;
 
 Route::get('/movimentacoes', [MovimentacaoController::class, 'index'])->name('movimentacoes.index');
@@ -49,6 +50,8 @@ Route::middleware(['auth', 'verified'])->controller(EstoqueController::class)->g
     Route::get('registros/estoque/container/cadastrar', 'formCadastrarContainer')->name('estoque.container.form');
     Route::post('registros/estoque/container/salvar', 'salvarContainer')->name('estoque.container.salvar');
     Route::get('registros/estoque/container/{id}/conteudo', 'verConteudoContainer')->name('estoque.container.conteudo');
+    Route::get('registros/estoque/item/{id}/mover', 'formMoverItem')->name('estoque.item.mover.form');
+    Route::post('registros/estoque/item/{id}/mover', 'moverItem')->name('estoque.item.mover');
     Route::post('/estoque/transferencia', [EstoqueController::class, 'transferir'])->name('estoque.transferir');
     Route::post('/estoque/transferencia-secoes', [EstoqueController::class, 'transferirEntreSeccoes'])->name('estoque.transferir.secoes');
     Route::post('/estoque/saida-multiplos', [EstoqueController::class, 'saidaMultiplos'])->name('estoque.saidaMultiplos');
@@ -91,8 +94,16 @@ Route::middleware(['auth', 'verified'])->controller(ProdutoController::class)->g
     Route::get('/produtos/inserir', [ProdutoController::class, 'formInserirProduto'])->name('produtoinserir.form');
     Route::post('/produtos/cadastrar', [ProdutoController::class, 'cadastrarProduto'])->name('produtos.cadastrar');
     Route::post('registros/produto/criar', 'cadastrarProduto')->name('produto.cadastrar');
+    Route::get('containers/{id}/detalhes', 'detalhesContainer')->name('container.detalhes');
 });
 
+
+Route::middleware(['auth', 'verified'])->controller(ContainerController::class)->group(function () {
+    Route::post('containers/criar', 'criar')->name('container.criar');
+    Route::put('containers/{container}/atualizar', 'atualizar')->name('container.atualizar');
+    Route::get('containers/{container}/obter', 'obter')->name('container.obter');
+    Route::delete('containers/{container}/deletar', 'deletar')->name('container.deletar');
+});
 
 Route::middleware(['auth', 'verified'])->controller(UnidadeController::class)->group(function () {
 

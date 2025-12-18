@@ -22,6 +22,7 @@ class Produto extends Model
         'unidade',
         'ativo',
         'patrimonio',
+        'eh_container',
 
 
     ];
@@ -66,6 +67,11 @@ class Produto extends Model
     {
         return $this->belongsToMany(EfetivoMilitar::class, 'efetivo_militar_produto', 'fk_produto', 'fk_efetivo_militar')
             ->withTimestamps();
+    }
+
+    public function container()
+    {
+        return $this->hasOne(Container::class, 'fk_produto');
     }
 
 

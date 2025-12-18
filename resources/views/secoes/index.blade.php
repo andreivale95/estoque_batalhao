@@ -29,7 +29,6 @@
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Deseja realmente excluir esta seção?')">Excluir</button>
                                 </form>
-                                <a href="{{ url('unidades/' . $unidade->id . '/secoes/' . $secao->id . '/vincular-itens') }}" class="btn btn-info btn-sm">Vincular Itens</a>
                                 <a href="{{ route('secoes.ver', ['unidade' => $unidade->id, 'secao' => $secao->id]) }}" class="btn btn-secondary btn-sm">Ver Seção</a>
                             </td>
                         </tr>

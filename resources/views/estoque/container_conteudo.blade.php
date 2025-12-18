@@ -105,6 +105,11 @@
                                            title="Ver detalhes do produto">
                                             <i class="fa fa-eye"></i>
                                         </a>
+                                        <a href="{{ route('estoque.item.mover.form', $item->id) }}" 
+                                           class="btn btn-xs btn-warning" 
+                                           title="Mover item para outro container ou seção">
+                                            <i class="fa fa-exchange"></i>
+                                        </a>
                                     </td>
                                 </tr>
                             @endforeach

@@ -59,11 +59,6 @@
                                 </a>
                             </li>
                             <li>
-                                <a href="{{ route('estoque.container.form') }}">
-                                    <i class="fa fa-briefcase"></i> Cadastrar Container
-                                </a>
-                            </li>
-                            <li>
                                 <a href="{{ route('movimentacoes.index') }}">
                                     <i class="fa fa-exchange"></i> Movimentações
                                 </a>

@@ -506,23 +506,28 @@ class EstoqueController extends Controller
             $unidadeUsuario = Unidade::find(Auth::user()->fk_unidade);
             $isAdmin = Auth::user()->fk_perfil == 1;
             
-            // Carrega todos os possíveis containers (produtos criados como containers)
-            // Busca por produtos que têm "bolsa", "container", "prateleira", "mochila" no nome
-            // OU que já tenham a categoria específica de containers
-            $todosContainers = Itens_estoque::whereNull('fk_item_pai')
-                ->with('produto', 'secao')
-                ->get()
-                ->filter(function($item) {
-                    // Filtra itens que podem ser containers
-                    $nome = strtolower($item->produto->nome ?? '');
-                    return strpos($nome, 'bolsa') !== false 
-                        || strpos($nome, 'container') !== false 
-                        || strpos($nome, 'prateleira') !== false
-                        || strpos($nome, 'mochila') !== false
-                        || strpos($nome, 'caixa') !== false
-                        || strpos($nome, 'maleta') !== false;
+            // Carrega todos os containers agrupados por seção usando eh_container
+            $todosContainers = [];
+            $containers = Itens_estoque::whereHas('produto', function($q) {
+                    $q->where('eh_container', 1);
                 })
-                ->groupBy('fk_secao');
+                ->whereNull('fk_item_pai')
+                ->with('produto', 'secao')
+                ->get();
+            
+            // Agrupa por seção
+            foreach ($containers as $container) {
+                $secaoId = $container->fk_secao;
+                if (!isset($todosContainers[$secaoId])) {
+                    $todosContainers[$secaoId] = [];
+                }
+                $todosContainers[$secaoId][] = [
+                    'id' => $container->id,
+                    'produto' => [
+                        'nome' => $container->produto->nome
+                    ]
+                ];
+            }
 
             return view('estoque/estoque_form_entrada_existente', compact('produtos', 'secoes', 'unidades', 'unidadeUsuario', 'isAdmin', 'todosContainers'));
         } catch (Exception $e) {
@@ -736,7 +741,8 @@ class EstoqueController extends Controller
                 'fk_categoria' => 'required|exists:categorias,id',
                 'fk_secao' => 'required|exists:secaos,id',
                 'nome_container' => 'required|string|max:255',
-                'quantidade' => 'required|integer|min:1',
+                'patrimonio' => 'nullable|string|max:255|unique:produtos,patrimonio',
+                'valor' => 'nullable|numeric|min:0',
                 'unidade' => 'required|exists:unidades,id',
             ]);
 
@@ -763,30 +769,36 @@ class EstoqueController extends Controller
                 $novoProduto = Produto::create([
                     'nome' => $validated['nome_container'],
                     'fk_categoria' => $validated['fk_categoria'],
-                    'fk_secao' => $validated['fk_secao'],
+                    'patrimonio' => $validated['patrimonio'] ?? null,
                     'ativo' => 1,
                 ]);
                 $fkProdutoContainer = $novoProduto->id;
             }
 
-            // Cria o item de estoque para o container
+            // Cria o item de estoque para o container (quantidade sempre = 1)
+            $valorUnitario = $validated['valor'] ?? 0;
             Itens_estoque::create([
                 'fk_produto' => $fkProdutoContainer,
                 'fk_secao' => $validated['fk_secao'],
-                'quantidade' => $validated['quantidade'],
+                'quantidade' => 1, // Sempre 1 para container
                 'unidade' => $validated['unidade'],
+                'valor_unitario' => $valorUnitario,
+                'valor_total' => $valorUnitario,
                 'fk_item_pai' => null, // Container não tem pai
+                'data_entrada' => now(),
             ]);
 
             // Registra a movimentação
             HistoricoMovimentacao::create([
-                'tipo' => 'entrada',
-                'quantidade' => $validated['quantidade'],
+                'tipo_movimentacao' => 'entrada',
+                'quantidade' => 1,
                 'fk_produto' => $fkProdutoContainer,
-                'fk_usuario' => Auth::id(),
                 'fk_unidade' => $validated['unidade'],
-                'responsavel' => Auth::user()->name ?? 'Sistema',
+                'responsavel' => Auth::user()->nome ?? 'Sistema',
                 'observacao' => 'Container/Bolsa cadastrado: ' . $validated['nome_container'],
+                'data_movimentacao' => now(),
+                'valor_unitario' => $valorUnitario,
+                'valor_total' => $valorUnitario,
             ]);
 
             return redirect()->route('estoque.listar')->with('success', 'Container cadastrado com sucesso!');
@@ -815,6 +827,85 @@ class EstoqueController extends Controller
         } catch (Exception $e) {
             Log::error('Erro ao visualizar conteúdo do container', [$e]);
             return back()->with('error', 'Houve um erro ao visualizar o container');
+        }
+    }
+
+    public function formMoverItem($id)
+    {
+        try {
+            $item = Itens_estoque::with(['produto', 'secao', 'itemPai.produto'])->findOrFail($id);
+            
+            // Busca todos os containers da mesma seção usando eh_container
+            $containers = Itens_estoque::whereHas('produto', function($q) {
+                    $q->where('eh_container', 1);
+                })
+                ->where('fk_secao', $item->fk_secao)
+                ->whereNull('fk_item_pai')
+                ->with('produto')
+                ->get()
+                ->filter(function($cont) use ($id) {
+                    return $cont->id !== $id;
+                })
+                ->map(function($cont) {
+                    return [
+                        'id' => $cont->id,
+                        'nome' => $cont->produto->nome . ' - ' . $cont->secao->nome
+                    ];
+                });
+            
+            return view('estoque.mover_item', compact('item', 'containers'));
+        } catch (Exception $e) {
+            Log::error('Erro ao carregar formulário de mover item', [$e]);
+            return back()->with('error', 'Houve um erro ao carregar o formulário');
+        }
+    }
+
+    public function moverItem(Request $request, $id)
+    {
+        try {
+            $item = Itens_estoque::findOrFail($id);
+            
+            $validated = $request->validate([
+                'destino' => 'required|in:secao,container',
+                'fk_item_pai' => 'nullable|integer|exists:itens_estoque,id'
+            ]);
+            
+            $itemAnterior = $item->itemPai;
+            $localizacaoAnterior = $itemAnterior ? $itemAnterior->produto->nome : "Seção '{$item->secao->nome}'";
+            
+            if ($validated['destino'] === 'secao') {
+                // Move para a seção (remove do container)
+                $item->fk_item_pai = null;
+                $item->save();
+                
+                $descricao = "Movido de '{$localizacaoAnterior}' para Seção '{$item->secao->nome}'";
+            } else {
+                // Move para outro container
+                $novoContainer = Itens_estoque::findOrFail($validated['fk_item_pai']);
+                
+                if ($novoContainer->fk_secao !== $item->fk_secao) {
+                    throw new Exception('O container deve estar na mesma seção do item');
+                }
+                
+                $item->fk_item_pai = $validated['fk_item_pai'];
+                $item->save();
+                
+                $descricao = "Movido de '{$localizacaoAnterior}' para '{$novoContainer->produto->nome}'";
+            }
+            
+            // Registra a movimentação
+            HistoricoMovimentacao::create([
+                'tipo_movimentacao' => 'transferencia',
+                'descricao' => $descricao,
+                'fk_item_estoque' => $id,
+                'responsavel' => Auth::user()->name,
+                'unidade' => $item->unidade,
+            ]);
+            
+            return back()->with('success', 'Item movido com sucesso!');
+        } catch (Exception $e) {
+            Log::error('Erro ao mover item', ['id' => $id, 'error' => $e->getMessage()]);
+            return back()->with('error', 'Houve um erro ao mover o item: ' . $e->getMessage());
         }
     }
 }

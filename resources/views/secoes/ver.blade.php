@@ -60,8 +60,8 @@
                                                 <h5 style="margin: 0 0 10px 0;">Itens Soltos</h5>
                                                 @foreach($dados['itens'] as $item)
                                                     @if(is_null($item->fk_item_pai))
-                                                        <div style="padding: 8px 0; border-bottom: 1px solid #eee;">
-                                                            <p style="margin: 3px 0;">
+                                                        <div style="padding: 8px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                                                            <p style="margin: 3px 0; flex: 1;">
                                                                 <strong>Quantidade:</strong> {{ $item->quantidade }}
                                                                 | <strong>Lote:</strong> {{ $item->lote ?? 'N/A' }}
                                                                 | <strong>Entrada:</strong> 
@@ -75,6 +75,11 @@
                                                                     N/A
                                                                 @endif
                                                             </p>
+                                                            <a href="{{ route('estoque.item.mover.form', $item->id) }}" 
+                                                               class="btn btn-xs btn-warning" 
+                                                               title="Mover item para um container">
+                                                                <i class="fa fa-exchange"></i>
+                                                            </a>
                                                         </div>
                                                     @endif
                                                 @endforeach
@@ -94,9 +99,16 @@
                                                             {{ $container->produto->nome ?? 'Container' }}
                                                         </p>
                                                         @foreach($itensNoContainer as $item)
-                                                            <p style="margin: 4px 0;">
-                                                                <strong>Quantidade:</strong> {{ $item->quantidade }}
-                                                                | <strong>Lote:</strong> {{ $item->lote ?? 'N/A' }}
+                                                            <p style="margin: 4px 0; display: flex; justify-content: space-between; align-items: center;">
+                                                                <span>
+                                                                    <strong>Quantidade:</strong> {{ $item->quantidade }}
+                                                                    | <strong>Lote:</strong> {{ $item->lote ?? 'N/A' }}
+                                                                </span>
+                                                                <a href="{{ route('estoque.item.mover.form', $item->id) }}" 
+                                                                   class="btn btn-xs btn-warning" 
+                                                                   title="Mover item para outro container ou seção">
+                                                                    <i class="fa fa-exchange"></i>
+                                                                </a>
                                                             </p>
                                                         @endforeach
                                                     </div>

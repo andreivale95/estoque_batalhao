@@ -117,14 +117,8 @@
                                     $valorUnitario = $estoque->valor ?? 0;
                                     $subtotal = $estoque->quantidade_total * $valorUnitario;
                                     
-                                    // Verifica se é um container (produto com nome contendo palavras-chave)
-                                    $nomeMinusculo = strtolower($estoque->nome);
-                                    $ehContainer = strpos($nomeMinusculo, 'bolsa') !== false 
-                                        || strpos($nomeMinusculo, 'container') !== false 
-                                        || strpos($nomeMinusculo, 'prateleira') !== false
-                                        || strpos($nomeMinusculo, 'mochila') !== false
-                                        || strpos($nomeMinusculo, 'caixa') !== false
-                                        || strpos($nomeMinusculo, 'maleta') !== false;
+                                    // Verifica se é um container usando coluna eh_container
+                                    $ehContainer = $estoque->eh_container ?? false;
                                     
                                     // Busca o primeiro item deste produto para pegar o ID correto
                                     $primeiroItem = App\Models\Itens_estoque::where('fk_produto', $estoque->id)->first();
@@ -132,7 +126,7 @@
                                     
                                     // Define a rota dependendo se é container ou não
                                     $rota = $ehContainer 
-                                        ? route('estoque.container.conteudo', $itemId)
+                                        ? route('container.detalhes', $estoque->id)
                                         : route('estoque.produto.detalhes', $estoque->id);
                                 @endphp
                                 <tr class="item-row" style="cursor: pointer;" 
@@ -154,19 +148,20 @@
                                         @php
                                             // Busca todos os itens deste produto
                                             $itens = App\Models\Itens_estoque::where('fk_produto', $estoque->id)
-                                                ->with(['secao', 'itemPai.produto'])
+                                                ->with(['secao'])
                                                 ->get();
                                             
+                                            // Agrupa apenas seções únicas
                                             $localizacoes = $itens->map(function($item) {
-                                                return $item->getLocalizacaoCompleta();
+                                                return $item->secao ? $item->secao->nome : 'Sem seção';
                                             })->unique()->take(3);
                                         @endphp
                                         @if($localizacoes->count() > 0)
                                             @foreach($localizacoes as $loc)
                                                 <small>{{ $loc }}</small><br>
                                             @endforeach
-                                            @if($itens->count() > 3)
-                                                <small class="text-muted">+{{ $itens->count() - 3 }} mais...</small>
+                                            @if($localizacoes->count() >= 3 && $itens->pluck('fk_secao')->unique()->count() > 3)
+                                                <small class="text-muted">+{{ $itens->pluck('fk_secao')->unique()->count() - 3 }} mais...</small>
                                             @endif
                                         @else
                                             <small class="text-muted">-</small>
@@ -192,10 +187,13 @@
                                     <td>R$ {{ number_format($subtotal, 2, ',', '.') }}</td>
                                     <td>
                                         @if (Auth::user()->fk_unidade == $estoque->unidade()->first()->id)
-                                            <button type="button" class="btn btn-warning" data-toggle="modal"
-                                                data-target="#modalTransferencia{{ $estoque->id }}">
-                                                <i class="fa fa-exchange-alt"></i>
-                                            </button>
+                                            @if(!$ehContainer)
+                                                <button type="button" class="btn btn-warning btn-sm" data-toggle="modal"
+                                                    data-target="#modalTransferencia{{ $estoque->id }}"
+                                                    onclick="event.stopPropagation();">
+                                                    <i class="fa fa-exchange-alt"></i>
+                                                </button>
+                                            @endif
                                         @else
                                             <span class="text-muted">Acesso restrito</span>
                                         @endif

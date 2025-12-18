@@ -55,15 +55,24 @@ class ProdutoController extends Controller {
         try {
             $produto = Produto::findOrFail($id);
 
+            // Consolida itens soltos com mesma quantidade e lote na mesma seção
+            $this->consolidarItensRaiz($id);
+
             $quantidadeTotal = Itens_estoque::where('fk_produto', $id)->sum('quantidade');
 
             // Busca todos os itens deste produto com suas hierarquias
+            // Inclui eager loading de itensFilhos com seus produtos e segundos níveis
             $todosOsItens = Itens_estoque::where('fk_produto', $id)
                 ->with([
                     'secao', 
-                    'itemPai.produto', 
+                    'itemPai.produto',
                     'itensFilhos' => function($q) {
-                        $q->with('produto');
+                        $q->with([
+                            'produto',
+                            'itensFilhos' => function($q2) {
+                                $q2->with('produto');
+                            }
+                        ]);
                     }
                 ])
                 ->orderBy('fk_secao')
@@ -90,6 +99,82 @@ class ProdutoController extends Controller {
         } catch (Exception $e) {
             Log::error('Erro ao carregar detalhes do produto', [$e]);
             return back()->with('warning', 'Erro ao carregar detalhes do produto.');
+        }
+    }
+
+    /**
+     * Detalhes de um container
+     */
+    public function detalhesContainer($id)
+    {
+        try {
+            $produto = Produto::findOrFail($id);
+            
+            // Verifica se é um container
+            if (!$produto->eh_container) {
+                return back()->with('warning', 'Este produto não é um container.');
+            }
+
+            // Busca dados do container
+            $container = $produto->container;
+
+            // Busca itens no container (itens com fk_item_pai apontando para items deste produto)
+            $itensNoContainer = Itens_estoque::whereHas('itemPai', function($query) use ($id) {
+                $query->where('fk_produto', $id);
+            })->with('produto')->get();
+
+            return view('containers.detalhes', compact('produto', 'container', 'itensNoContainer'));
+        } catch (Exception $e) {
+            Log::error('Erro ao carregar detalhes do container', [$e]);
+            return back()->with('warning', 'Erro ao carregar detalhes do container.');
+        }
+    }
+
+    /**
+     * Consolida itens soltos (raiz) com mesma quantidade e lote na mesma seção
+     */
+    private function consolidarItensRaiz($fkProduto)
+    {
+        try {
+            // Busca itens soltos (sem container pai)
+            $itensRaiz = Itens_estoque::where('fk_produto', $fkProduto)
+                ->whereNull('fk_item_pai')
+                ->get();
+
+            // Agrupa por seção, lote e quantidade
+            $grupos = [];
+            foreach ($itensRaiz as $item) {
+                $key = $item->fk_secao . '_' . ($item->lote ?? 'SEM_LOTE') . '_' . $item->quantidade;
+                if (!isset($grupos[$key])) {
+                    $grupos[$key] = [
+                        'primeiro_item' => $item,
+                        'quantidade_registros' => 1,
+                        'ids' => [$item->id]
+                    ];
+                } else {
+                    $grupos[$key]['quantidade_registros']++;
+                    $grupos[$key]['ids'][] = $item->id;
+                }
+            }
+
+            // Se houver duplicatas, consolida
+            foreach ($grupos as $grupo) {
+                if ($grupo['quantidade_registros'] > 1) {
+                    $primeiroItem = $grupo['primeiro_item'];
+                    $idsADeletear = array_slice($grupo['ids'], 1); // Pega todos menos o primeiro
+                    
+                    // Soma as quantidades dos duplicados ao primeiro
+                    $quantidadeTotal = Itens_estoque::whereIn('id', $grupo['ids'])->sum('quantidade');
+                    $primeiroItem->quantidade = $quantidadeTotal;
+                    $primeiroItem->valor_total = ($primeiroItem->valor_unitario ?? 0) * $quantidadeTotal;
+                    $primeiroItem->save();
+                    
+                    // Deleta os duplicados
+                    Itens_estoque::whereIn('id', $idsADeletear)->delete();
+                }
+            }
+        } catch (Exception $e) {
+            Log::error('Erro ao consolidar itens raiz', [$e]);
         }
     }
     public function ativarProduto(Request $request, $id)
@@ -288,7 +373,7 @@ class ProdutoController extends Controller {
         try {
             $request->validate([
                 'nome' => 'required|string|max:255',
-                'categoria_id' => 'required|exists:categorias,id',
+                'categoria' => 'required|exists:categorias,id',
                 'fk_secao' => 'nullable|exists:secaos,id',
             ]);
 
@@ -311,11 +396,28 @@ class ProdutoController extends Controller {
                 'marca' => $request->marca,
                 'tamanho' => $request->tamanho,
                 'unidade' => Auth::user()->fk_unidade,
-                'fk_categoria' => $request->categoria_id,
+                'fk_categoria' => $request->categoria,
                 'fk_secao' => $request->get('fk_secao'),
                 'patrimonio' => $request->patrimonio,
+                'eh_container' => $request->has('eh_container') ? 1 : 0,
                 'ativo' => 'Y',
             ]);
+
+            // Se é um container, criar registro na tabela containers
+            if ($request->has('eh_container') && $request->eh_container == 1) {
+                \App\Models\Container::create([
+                    'fk_produto' => $produto->id,
+                    'tipo' => $request->get('container_tipo'),
+                    'material' => $request->get('container_material'),
+                    'capacidade_maxima' => $request->get('container_capacidade'),
+                    'unidade_capacidade' => $request->get('container_unidade', 'kg'),
+                    'compartimentos' => $request->get('container_compartimentos', 0),
+                    'cor' => $request->get('container_cor'),
+                    'numero_serie' => $request->get('container_numero_serie'),
+                    'descricao_adicional' => $request->get('container_descricao'),
+                    'status' => 'ativo',
+                ]);
+            }
 
             DB::commit();
             Log::info('Produto registrado com sucesso', ['produto_id' => $produto->id, 'usuario' => Auth::user()->cpf]);
