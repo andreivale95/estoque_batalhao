@@ -88,12 +88,12 @@ Route::middleware(['auth', 'verified'])->controller(ProdutoController::class)->g
     Route::delete('registros/produto/excluir/{id}', 'excluirProduto')->name('produto.excluir');
     Route::get('registros/produto/listar', 'listarProdutos')->name('produtos.listar');
     Route::get('registros/produto/ver/{id}', 'verProduto')->name('produto.ver');
-    Route::get('registros/produto/form', 'formProduto')->name('produto.form');
-    Route::get('registros/produto/editar/{id}', 'editarProdutoForm')->name('produto.editar');
-    Route::post('registros/produto/editar/{id}', 'editarProduto')->name('produto.editarPost');
-    Route::get('/produtos/inserir', [ProdutoController::class, 'formInserirProduto'])->name('produtoinserir.form');
+    Route::get('/produtos/inserir', [ProdutoController::class, 'formInserirProduto'])->name('produto.form');
     Route::post('/produtos/cadastrar', [ProdutoController::class, 'cadastrarProduto'])->name('produtos.cadastrar');
     Route::post('registros/produto/criar', 'cadastrarProduto')->name('produto.cadastrar');
+    Route::get('registros/produto/editar/{id}', 'editarProdutoForm')->name('produto.editar');
+    Route::post('registros/produto/editar/{id}', 'editarProduto')->name('produto.editarPost');
+    Route::post('registros/produto/atualizar/{id}', 'atualizarProduto')->name('produto.atualizar');
     Route::get('containers/{id}/detalhes', 'detalhesContainer')->name('container.detalhes');
 });
 

@@ -110,7 +110,14 @@ class EstoqueController extends Controller
     }
     public function transferir(Request $request)
     {
-        //   dd($request->all());
+        $tipoTransferencia = $request->input('tipo_transferencia');
+
+        // Rota para novo tipo: transferências entre seções e containers
+        if ($tipoTransferencia) {
+            return $this->transferirInterno($request);
+        }
+
+        // Rota antiga: transferências entre unidades (mantém compatibilidade)
         $request->validate([
             'estoque_id' => 'required|exists:itens_estoque,id',
             'nova_unidade' => 'required|exists:unidades,id',
@@ -122,7 +129,6 @@ class EstoqueController extends Controller
         $itemAtual = Itens_estoque::findOrFail($request->estoque_id);
         $unidadeAtual = $request->input('unidade_atual');
         $novaUnidade = $request->input('nova_unidade');
-
 
         if ($request->quantidade > $itemAtual->quantidade) {
             return back()->with('warning', 'A quantidade informada excede o estoque atual.');
@@ -161,12 +167,201 @@ class EstoqueController extends Controller
             'fk_unidade' => $novaUnidade,
         ]);
 
-
         return redirect()->route('estoque.listar', [
             'nome' => '',
             'categoria' => '',
             'unidade' => Auth::user()->fk_unidade
         ])->with('success', 'Produto transferido com sucesso!');
+    }
+
+    /**
+     * Transferência interna: seção para seção, seção para container, container para seção
+     */
+    private function transferirInterno(Request $request)
+    {
+        try {
+            $tipoTransferencia = $request->input('tipo_transferencia');
+
+            $request->validate([
+                'fk_produto' => 'required|exists:produtos,id',
+                'tipo_transferencia' => 'required|in:secao_para_secao,secao_para_container,container_para_secao',
+                'quantidade' => 'required|integer|min:1',
+                'observacao' => 'nullable|string',
+            ]);
+
+            $fkProduto = $request->input('fk_produto');
+            $quantidade = $request->input('quantidade');
+
+            switch ($tipoTransferencia) {
+                case 'secao_para_secao':
+                    return $this->transferirSecaoParaSecao($request, $fkProduto, $quantidade);
+                    break;
+                case 'secao_para_container':
+                    return $this->transferirSecaoParaContainer($request, $fkProduto, $quantidade);
+                    break;
+                case 'container_para_secao':
+                    return $this->transferirContainerParaSecao($request, $fkProduto, $quantidade);
+                    break;
+            }
+        } catch (Exception $e) {
+            Log::error('Erro ao transferir item', ['exception' => $e->getMessage()]);
+            return back()->with('error', 'Erro ao transferir: ' . $e->getMessage());
+        }
+    }
+
+    private function transferirSecaoParaSecao(Request $request, $fkProduto, $quantidade)
+    {
+        $secaoOrigem = $request->input('secao_origem');
+        $secaoDestino = $request->input('secao_destino');
+
+        if ($secaoOrigem == $secaoDestino) {
+            return back()->with('warning', 'A seção de origem deve ser diferente da destino.');
+        }
+
+        // Busca item na seção origem (solto, sem container pai)
+        $itemOrigem = Itens_estoque::where('fk_produto', $fkProduto)
+            ->where('fk_secao', $secaoOrigem)
+            ->whereNull('fk_item_pai')
+            ->first();
+
+        if (!$itemOrigem || $itemOrigem->quantidade < $quantidade) {
+            return back()->with('warning', 'Quantidade insuficiente na seção de origem.');
+        }
+
+        DB::beginTransaction();
+        try {
+            // Deduz da origem
+            $itemOrigem->quantidade -= $quantidade;
+            if ($itemOrigem->quantidade == 0) {
+                $itemOrigem->delete();
+            } else {
+                $itemOrigem->save();
+            }
+
+            // Busca ou cria item na seção destino
+            $itemDestino = Itens_estoque::where('fk_produto', $fkProduto)
+                ->where('fk_secao', $secaoDestino)
+                ->whereNull('fk_item_pai')
+                ->first();
+
+            if ($itemDestino) {
+                $itemDestino->quantidade += $quantidade;
+                $itemDestino->save();
+            } else {
+                Itens_estoque::create([
+                    'fk_produto' => $fkProduto,
+                    'fk_secao' => $secaoDestino,
+                    'unidade' => Auth::user()->fk_unidade,
+                    'quantidade' => $quantidade,
+                ]);
+            }
+
+            DB::commit();
+            return redirect()->route('estoque.listar')->with('success', 'Transferência realizada com sucesso!');
+        } catch (Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    private function transferirSecaoParaContainer(Request $request, $fkProduto, $quantidade)
+    {
+        $secaoOrigem = $request->input('secao_origem');
+        $containerDestino = $request->input('container_destino');
+
+        // Busca item na seção origem
+        $itemOrigem = Itens_estoque::where('fk_produto', $fkProduto)
+            ->where('fk_secao', $secaoOrigem)
+            ->whereNull('fk_item_pai')
+            ->first();
+
+        if (!$itemOrigem || $itemOrigem->quantidade < $quantidade) {
+            return back()->with('warning', 'Quantidade insuficiente na seção de origem.');
+        }
+
+        DB::beginTransaction();
+        try {
+            // Deduz da origem
+            $itemOrigem->quantidade -= $quantidade;
+            if ($itemOrigem->quantidade == 0) {
+                $itemOrigem->delete();
+            } else {
+                $itemOrigem->save();
+            }
+
+            // Cria ou atualiza item dentro do container
+            $itemNoContainer = Itens_estoque::where('fk_produto', $fkProduto)
+                ->where('fk_item_pai', $containerDestino)
+                ->first();
+
+            if ($itemNoContainer) {
+                $itemNoContainer->quantidade += $quantidade;
+                $itemNoContainer->save();
+            } else {
+                Itens_estoque::create([
+                    'fk_produto' => $fkProduto,
+                    'fk_item_pai' => $containerDestino,
+                    'unidade' => Auth::user()->fk_unidade,
+                    'quantidade' => $quantidade,
+                ]);
+            }
+
+            DB::commit();
+            return redirect()->route('estoque.listar')->with('success', 'Item transferido para o container com sucesso!');
+        } catch (Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    private function transferirContainerParaSecao(Request $request, $fkProduto, $quantidade)
+    {
+        $containerOrigem = $request->input('container_origem');
+        $secaoDestino = $request->input('secao_destino');
+
+        // Busca item dentro do container
+        $itemOrigem = Itens_estoque::where('fk_produto', $fkProduto)
+            ->where('fk_item_pai', $containerOrigem)
+            ->first();
+
+        if (!$itemOrigem || $itemOrigem->quantidade < $quantidade) {
+            return back()->with('warning', 'Quantidade insuficiente no container de origem.');
+        }
+
+        DB::beginTransaction();
+        try {
+            // Deduz do container
+            $itemOrigem->quantidade -= $quantidade;
+            if ($itemOrigem->quantidade == 0) {
+                $itemOrigem->delete();
+            } else {
+                $itemOrigem->save();
+            }
+
+            // Cria ou atualiza item na seção destino
+            $itemDestino = Itens_estoque::where('fk_produto', $fkProduto)
+                ->where('fk_secao', $secaoDestino)
+                ->whereNull('fk_item_pai')
+                ->first();
+
+            if ($itemDestino) {
+                $itemDestino->quantidade += $quantidade;
+                $itemDestino->save();
+            } else {
+                Itens_estoque::create([
+                    'fk_produto' => $fkProduto,
+                    'fk_secao' => $secaoDestino,
+                    'unidade' => Auth::user()->fk_unidade,
+                    'quantidade' => $quantidade,
+                ]);
+            }
+
+            DB::commit();
+            return redirect()->route('estoque.listar')->with('success', 'Item transferido para a seção com sucesso!');
+        } catch (Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 
     public function transferirEntreSeccoes(Request $request)

@@ -74,7 +74,7 @@
                                 style="display: flex; flex-direction: column; justify-content: flex-end;">
                                 <label class="control-label">&nbsp;</label>
                                 <div style="display: flex; gap: 8px;">
-                                    <a href="{{ route('produtoinserir.form') }}" class="btn btn-success"
+                                    <a href="{{ route('produto.form') }}" class="btn btn-success"
                                         style="height: 38px;" title="Cadastrar um novo produto no sistema">
                                         <i class="fa fa-plus"></i> Cadastrar Produto
                                     </a>
@@ -204,56 +204,167 @@
                                 <div class="modal fade" id="modalTransferencia{{ $estoque->id }}" tabindex="-1"
                                     role="dialog" aria-labelledby="modalTransferenciaLabel{{ $estoque->id }}"
                                     aria-hidden="true">
-                                    <div class="modal-dialog" role="document">
+                                    <div class="modal-dialog modal-lg" role="document">
                                         <form action="{{ route('estoque.transferir') }}" method="POST">
                                             @csrf
-                                            <input type="hidden" name="estoque_id" value="{{ $estoque->id }}">
-                                            <input type="hidden" name="unidade_atual" value="{{ $estoque->unidade }}">
+                                            <input type="hidden" name="fk_produto" value="{{ $estoque->id }}">
                                             <div class="modal-content">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Transferir Produto</h5>
-                                                    <button type="button" class="close" data-dismiss="modal"
-                                                        aria-label="Fechar">
+                                                <div class="modal-header bg-warning">
+                                                    <h5 class="modal-title"><i class="fa fa-exchange-alt"></i> Transferir Item</h5>
+                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
                                                         <span aria-hidden="true">&times;</span>
                                                     </button>
                                                 </div>
 
                                                 <div class="modal-body">
-                                                    <p><strong>Produto:</strong> {{ $estoque->nome }}</p>
-                                                    <p><strong>Unidade atual:</strong>
-                                                        {{ $estoque->unidade }}</p>
+                                                    <div class="alert alert-info">
+                                                        <strong>{{ $estoque->nome }}</strong>
+                                                    </div>
+
+                                                    @php
+                                                        $totalDisponivel = $estoque->quantidade_total;
+                                                    @endphp
+                                                    <div class="form-group">
+                                                        <label><strong>Quantidade Disponível:</strong></label>
+                                                        <div class="alert alert-success">
+                                                            {{ $totalDisponivel }} {{ $estoque->unidade_nome }}
+                                                        </div>
+                                                    </div>
 
                                                     <div class="form-group">
-                                                        <label for="nova_unidade">Nova Unidade:</label>
-                                                        <select class="form-control" name="nova_unidade" required>
-                                                            <option value="">Selecione</option>
-                                                            @foreach ($unidades as $unidade)
-                                                                @if ($unidade->id != $estoque->unidade)
-                                                                    <option value="{{ $unidade->id }}">
-                                                                        {{ $unidade->nome }}</option>
-                                                                @endif
+                                                        <label for="tipoTransferencia"><strong>Tipo de Transferência:</strong></label>
+                                                        <select class="form-control" id="tipoTransferencia{{ $estoque->id }}" 
+                                                            name="tipo_transferencia" onchange="atualizarCamposTransferencia(this, {{ $estoque->id }})" required>
+                                                            <option value="">-- Selecione --</option>
+                                                            <option value="secao_para_secao">De Seção para Seção</option>
+                                                            <option value="secao_para_container">De Seção para Container</option>
+                                                            <option value="container_para_secao">De Container para Seção</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <!-- Opção: Item Solto ou em Container (para transferências de seção) -->
+                                                    <div class="form-group" id="localizacao_item{{ $estoque->id }}" style="display: none;">
+                                                        <label for="localizacao_item_tipo"><strong>Localização do Item:</strong></label>
+                                                        <select class="form-control" id="localizacao_item_tipo{{ $estoque->id }}" 
+                                                            name="localizacao_item" onchange="atualizarOrigemItem(this, {{ $estoque->id }})" required>
+                                                            <option value="">-- Selecione --</option>
+                                                            <option value="solto">Item Solto na Seção</option>
+                                                            <option value="em_container">Item Dentro de Container</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <!-- Origem: Seção -->
+                                                    <div class="form-group" id="setor_origem{{ $estoque->id }}" style="display: none;">
+                                                        <label for="secao_origem"><strong>Seção de Origem:</strong></label>
+                                                        <select class="form-control" id="secao_origem{{ $estoque->id }}" 
+                                                            name="secao_origem" onchange="atualizarQuantidadeDisponivel(this, {{ $estoque->id }})">
+                                                            <option value="">-- Selecione --</option>
+                                                            @php
+                                                                $secoes = DB::table('itens_estoque')
+                                                                    ->where('fk_produto', $estoque->id)
+                                                                    ->whereNull('fk_item_pai')
+                                                                    ->pluck('fk_secao')
+                                                                    ->unique();
+                                                            @endphp
+                                                            @foreach($secoes as $secaoId)
+                                                                @php
+                                                                    $secao = DB::table('secaos')->find($secaoId);
+                                                                    $qtd = DB::table('itens_estoque')
+                                                                        ->where('fk_produto', $estoque->id)
+                                                                        ->where('fk_secao', $secaoId)
+                                                                        ->whereNull('fk_item_pai')
+                                                                        ->sum('quantidade');
+                                                                @endphp
+                                                                <option value="{{ $secaoId }}" data-quantidade="{{ $qtd }}">
+                                                                    {{ $secao->nome ?? 'Sem seção' }} ({{ $qtd }})
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                        <small class="text-muted" id="qtd_secao_origem{{ $estoque->id }}">Quantidade disponível: -</small>
+                                                    </div>
+
+                                                    <!-- Origem: Container -->
+                                                    <div class="form-group" id="setor_container_origem{{ $estoque->id }}" style="display: none;">
+                                                        <label for="container_origem"><strong>Container de Origem:</strong></label>
+                                                        <select class="form-control" id="container_origem{{ $estoque->id }}" 
+                                                            name="container_origem" onchange="atualizarQuantidadeDisponivel(this, {{ $estoque->id }})">
+                                                            <option value="">-- Selecione --</option>
+                                                            @php
+                                                                // Busca containers (itens_estoque com fk_item_pai = null) que têm items do estoque atual como filhos
+                                                                $containersComItem = App\Models\Itens_estoque::whereHas('itensFilhos', function($q) use ($estoque) {
+                                                                    $q->where('fk_produto', $estoque->id);
+                                                                })
+                                                                ->with('produto')
+                                                                ->get();
+                                                            @endphp
+                                                            @foreach($containersComItem as $itemContainer)
+                                                                @php
+                                                                    $qtdNoContainer = App\Models\Itens_estoque::where('fk_produto', $estoque->id)
+                                                                        ->where('fk_item_pai', $itemContainer->id)
+                                                                        ->sum('quantidade');
+                                                                @endphp
+                                                                <option value="{{ $itemContainer->id }}" data-quantidade="{{ $qtdNoContainer }}">
+                                                                    {{ $itemContainer->produto->nome ?? 'Container' }} ({{ $qtdNoContainer }})
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
+                                                        <small class="text-muted" id="qtd_container_origem{{ $estoque->id }}">Quantidade disponível: -</small>
+                                                    </div>
+
+                                                    <!-- Destino: Seção -->
+                                                    <div class="form-group" id="setor_destino{{ $estoque->id }}" style="display: none;">
+                                                        <label for="secao_destino"><strong>Seção de Destino:</strong></label>
+                                                        <select class="form-control" id="secao_destino{{ $estoque->id }}" name="secao_destino" required>
+                                                            <option value="">-- Selecione --</option>
+                                                            @foreach($categorias as $cat)
+                                                                <option value="{{ $cat->id }}">{{ $cat->nome }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+
+                                                    <!-- Destino: Container -->
+                                                    <div class="form-group" id="setor_container_destino{{ $estoque->id }}" style="display: none;">
+                                                        <label for="container_destino"><strong>Container de Destino:</strong></label>
+                                                        <select class="form-control" id="container_destino{{ $estoque->id }}" name="container_destino" required>
+                                                            <option value="">-- Selecione --</option>
+                                                            @php
+                                                                // Busca produtos marcados como containers que não são o produto atual
+                                                                $containers = App\Models\Produto::where('eh_container', 1)
+                                                                    ->where('id', '!=', $estoque->id)
+                                                                    ->with(['itensEstoque' => function($q) {
+                                                                        $q->whereNull('fk_item_pai');
+                                                                    }])
+                                                                    ->get();
+                                                            @endphp
+                                                            @foreach($containers as $container)
+                                                                <option value="{{ $container->id }}">
+                                                                    {{ $container->nome }}
+                                                                </option>
                                                             @endforeach
                                                         </select>
                                                     </div>
 
                                                     <div class="form-group">
-                                                        <label for="quantidade">Quantidade:</label>
-                                                        <input type="number" name="quantidade" class="form-control"
-                                                            min="1" max="{{ $estoque->quantidade }}" required>
+                                                        <label for="quantidade{{ $estoque->id }}"><strong>Quantidade a Transferir:</strong></label>
+                                                        <input type="number" id="quantidade{{ $estoque->id }}" name="quantidade" 
+                                                            class="form-control" min="1" max="{{ $totalDisponivel }}" required>
+                                                        <small class="text-muted">Máximo: {{ $totalDisponivel }}</small>
                                                     </div>
 
                                                     <div class="form-group">
-                                                        <label for="observacao">Observação:</label>
-                                                        <textarea name="observacao" class="form-control" rows="3"
+                                                        <label for="observacao"><strong>Observação:</strong></label>
+                                                        <textarea name="observacao" class="form-control" rows="2"
                                                             placeholder="Observações sobre a transferência (opcional)"></textarea>
                                                     </div>
                                                 </div>
 
                                                 <div class="modal-footer">
-                                                    <button type="submit" class="btn btn-success">Confirmar
-                                                        Transferência</button>
-                                                    <button type="button" class="btn btn-secondary"
-                                                        data-dismiss="modal">Cancelar</button>
+                                                    <button type="submit" class="btn btn-success">
+                                                        <i class="fa fa-check"></i> Confirmar Transferência
+                                                    </button>
+                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                                                        <i class="fa fa-times"></i> Cancelar
+                                                    </button>
                                                 </div>
                                             </div>
                                         </form>
@@ -465,6 +576,79 @@ $(document).ready(function() {
         const produtoId = $(this).data('produto-id');
         verDetalhesSecao(produtoId);
     });
+
+    // Função para atualizar campos de transferência
+    window.atualizarCamposTransferencia = function(select, estoqueId) {
+        const tipo = select.value;
+        const setorOrigem = document.getElementById(`setor_origem${estoqueId}`);
+        const setorContainerOrigem = document.getElementById(`setor_container_origem${estoqueId}`);
+        const setorDestino = document.getElementById(`setor_destino${estoqueId}`);
+        const setorContainerDestino = document.getElementById(`setor_container_destino${estoqueId}`);
+        const localizacaoItem = document.getElementById(`localizacao_item${estoqueId}`);
+        
+        // Esconder todos
+        setorOrigem.style.display = 'none';
+        setorContainerOrigem.style.display = 'none';
+        setorDestino.style.display = 'none';
+        setorContainerDestino.style.display = 'none';
+        localizacaoItem.style.display = 'none';
+        
+        // Mostrar conforme tipo
+        switch(tipo) {
+            case 'secao_para_secao':
+                localizacaoItem.style.display = 'block';
+                setorDestino.style.display = 'block';
+                document.getElementById(`secao_destino${estoqueId}`).setAttribute('name', 'secao_destino');
+                break;
+            case 'secao_para_container':
+                localizacaoItem.style.display = 'block';
+                setorContainerDestino.style.display = 'block';
+                break;
+            case 'container_para_secao':
+                setorContainerOrigem.style.display = 'block';
+                setorDestino.style.display = 'block';
+                document.getElementById(`secao_destino${estoqueId}`).setAttribute('name', 'secao_destino');
+                break;
+        }
+    };
+
+    // Função para atualizar origem do item (solto ou em container)
+    window.atualizarOrigemItem = function(select, estoqueId) {
+        const localizacao = select.value;
+        const setorOrigem = document.getElementById(`setor_origem${estoqueId}`);
+        const setorContainerOrigem = document.getElementById(`setor_container_origem${estoqueId}`);
+        
+        if (localizacao === 'solto') {
+            setorOrigem.style.display = 'block';
+            setorContainerOrigem.style.display = 'none';
+        } else if (localizacao === 'em_container') {
+            setorOrigem.style.display = 'none';
+            setorContainerOrigem.style.display = 'block';
+        } else {
+            setorOrigem.style.display = 'none';
+            setorContainerOrigem.style.display = 'none';
+        }
+    };
+
+    // Função para atualizar quantidade disponível
+    window.atualizarQuantidadeDisponivel = function(select, estoqueId) {
+        const quantidade = select.options[select.selectedIndex].getAttribute('data-quantidade');
+        const tipo = document.getElementById(`tipoTransferencia${estoqueId}`).value;
+        
+        let label;
+        if (tipo.includes('secao')) {
+            label = document.getElementById(`qtd_secao_origem${estoqueId}`);
+        } else {
+            label = document.getElementById(`qtd_container_origem${estoqueId}`);
+        }
+        
+        if (label && quantidade) {
+            label.textContent = `Quantidade disponível: ${quantidade}`;
+            document.getElementById(`quantidade${estoqueId}`).setAttribute('max', quantidade);
+        }
+    };
 });
 </script>
 @endpush
+
+```

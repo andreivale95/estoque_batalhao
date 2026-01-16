@@ -466,6 +466,11 @@ class ProdutoController extends Controller {
         }
     }
 
+    public function editarProdutoForm(Request $request, $id)
+    {
+        return $this->editarProduto($request, $id);
+    }
+
     public function atualizarProduto(Request $request, $id)
     {
       // dd($request->all());
@@ -480,8 +485,6 @@ class ProdutoController extends Controller {
                 'fk_secao' => 'nullable|exists:secaos,id',
             ]);
 
-
-
             // Verifica se o número já existe no banco de dados
             $existeMesmoProduto = Produto::where('nome', $request->get('nome'))
                 ->where('tamanho', $request->get('tamanho'))
@@ -493,10 +496,9 @@ class ProdutoController extends Controller {
                 return redirect()->back()->with('error', 'Esse produto já existe nesse tamanho!');
             }
 
-
-
-
-            Produto::where('id', $id)->update([
+            $produto = Produto::findOrFail($id);
+            
+            $produto->update([
                 'nome' => $request->get('nome'),
                 'descricao' => $request->get('descricao'),
                 'marca' => $request->get('marca'),
@@ -505,17 +507,18 @@ class ProdutoController extends Controller {
                 'fk_kit' => $request->get('fk_kit'),
                 'fk_categoria' => $request->get('categoria'),
                 'fk_secao' => $request->get('fk_secao'),
+                'patrimonio' => $request->get('patrimonio'),
             ]);
 
             DB::commit();
 
-            Log::info('Produto atualizado com sucesso', [Produto::find($id), Auth::user()]);
+            Log::info('Produto atualizado com sucesso', ['id' => $id, 'user' => Auth::user()->id]);
 
             return redirect()->route('produto.ver', $id)->with('success', 'Produto atualizado com sucesso');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Erro ao atualizar o Produto', [$e]);
-            return back()->with('warning', 'Erro ao atualizar o Produto');
+            Log::error('Erro ao atualizar o Produto', [$e->getMessage()]);
+            return back()->with('warning', 'Erro ao atualizar o Produto: ' . $e->getMessage());
         }
     }
 
