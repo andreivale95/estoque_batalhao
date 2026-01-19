@@ -36,6 +36,11 @@
         </div>
 
         <div class="form-group">
+            <label for="responsavel_unidade">Responsável da Unidade</label>
+            <input type="text" name="responsavel_unidade" id="responsavel_unidade" class="form-control">
+        </div>
+
+        <div class="form-group">
             <label for="data_cautela">Data da Cautela</label>
             <input type="date" name="data_cautela" id="data_cautela" class="form-control" required>
         </div>
