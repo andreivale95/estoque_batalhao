@@ -183,7 +183,7 @@
                                             $totalCautelado = App\Models\Itens_estoque::where('fk_produto', $estoque->id)
                                                 ->sum('quantidade_cautelada');
                                         @endphp
-                                        <span class="badge badge-warning">{{ $totalCautelado }}</span>
+                                        <span class="text-warning" style="font-weight: bold;">{{ $totalCautelado }}</span>
                                     </td>
                                     <td>
                                         @php
