@@ -103,6 +103,8 @@
                                 <th>Localização</th>
                                 <th>Patrimônio</th>
                                 <th>Quantidade</th>
+                                <th>Cautelado</th>
+                                <th>Disponível</th>
                                 <th>Unidade</th>
                                 <th>Categoria</th>
                                 <th>Estoque</th>
@@ -173,6 +175,25 @@
                                             <span class="text-danger">Produto esgotado</span>
                                         @else
                                             {{ $estoque->quantidade_total }}
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @php
+                                            // Calcula total de itens cautelados para este produto
+                                            $totalCautelado = App\Models\Itens_estoque::where('fk_produto', $estoque->id)
+                                                ->sum('quantidade_cautelada');
+                                        @endphp
+                                        <span class="badge badge-warning">{{ $totalCautelado }}</span>
+                                    </td>
+                                    <td>
+                                        @php
+                                            // Calcula quantidade disponível (total - cautelado)
+                                            $disponivel = $estoque->quantidade_total - $totalCautelado;
+                                        @endphp
+                                        @if ($disponivel <= 0)
+                                            <span class="text-danger">Indisponível</span>
+                                        @else
+                                            <span class="text-success">{{ $disponivel }}</span>
                                         @endif
                                     </td>
                                     <td>{{ $estoque->unidade_nome }}</td>
