@@ -108,6 +108,10 @@
                                     <a href="{{ route('cautelas.show', $cautela->id) }}" class="btn btn-sm btn-info" title="Ver Detalhes">
                                         <i class="fa fa-eye"></i>
                                     </a>
+                                    <button type="button" class="btn btn-sm btn-warning preview-comprovante-btn" 
+                                        data-cautela-id="{{ $cautela->id }}" title="Visualizar Comprovante">
+                                        <i class="fa fa-search"></i>
+                                    </button>
                                     @if($totalPendente > 0)
                                     <a href="{{ route('cautelas.devolucao', $cautela->id) }}" class="btn btn-sm btn-success" title="Registrar Devolução">
                                         <i class="fa fa-check"></i>
@@ -218,5 +222,174 @@ document.addEventListener('DOMContentLoaded', function() {
             max-height: 500px;
         }
     }
+
+    /* Modal Styles */
+    .modal-preview {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        overflow: auto;
+    }
+
+    .modal-preview-content {
+        background-color: #fff;
+        margin: 30px auto;
+        padding: 0;
+        width: 95%;
+        max-width: 1000px;
+        height: 85vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .modal-preview-header {
+        background: linear-gradient(135deg, #3c8dbc 0%, #2c6a8f 100%);
+        color: white;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .modal-preview-header h3 {
+        margin: 0;
+        font-size: 18px;
+    }
+
+    .modal-preview-close {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 28px;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+        transition: opacity 0.2s;
+    }
+
+    .modal-preview-close:hover {
+        opacity: 0.7;
+    }
+
+    .modal-preview-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0;
+        background: white;
+    }
+
+    .modal-preview-footer {
+        border-top: 1px solid #ddd;
+        padding: 15px 20px;
+        text-align: right;
+        background-color: #f8f9fa;
+        flex-shrink: 0;
+    }
+
+    .modal-preview-footer .btn {
+        margin-left: 10px;
+    }
+
+    /* Scrollbar customization */
+    .modal-preview-body::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .modal-preview-body::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    .modal-preview-body::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+
+    .modal-preview-body::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
 </style>
+
+<!-- Modal para Preview do Comprovante -->
+<div id="modal-preview-comprovante" class="modal-preview">
+    <div class="modal-preview-content">
+        <div class="modal-preview-header">
+            <h3><i class="fa fa-file-pdf-o"></i> Visualizar Comprovante</h3>
+            <button id="btn-close-modal" class="modal-preview-close" title="Fechar">&times;</button>
+        </div>
+        <div class="modal-preview-body" id="comprovante-content">
+            <!-- Conteúdo carregado via AJAX -->
+        </div>
+        <div class="modal-preview-footer">
+            <button id="btn-download-pdf" class="btn btn-danger" onclick="downloadPDF()">
+                <i class="fa fa-download"></i> Baixar PDF
+            </button>
+            <button class="btn btn-default" onclick="document.getElementById('modal-preview-comprovante').style.display='none'">
+                Fechar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function downloadPDF() {
+        const modal = document.getElementById('modal-preview-comprovante');
+        const cautelaId = modal.getAttribute('data-cautela-id');
+        const downloadUrl = '{{ route("cautelas.pdf", ":id") }}'.replace(':id', cautelaId);
+        window.open(downloadUrl, '_blank');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handler para botão de preview do comprovante
+        document.querySelectorAll('.preview-comprovante-btn').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const cautelaId = this.getAttribute('data-cautela-id');
+                const modal = document.getElementById('modal-preview-comprovante');
+                const previewUrl = '{{ route("cautelas.preview", ":id") }}'.replace(':id', cautelaId);
+                
+                // Carregar o conteúdo via fetch
+                fetch(previewUrl)
+                    .then(response => response.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const comprovante = doc.querySelector('.comprovante-preview') || doc.body;
+                        
+                        if (comprovante) {
+                            document.getElementById('comprovante-content').innerHTML = comprovante.innerHTML;
+                            // Store the cautela ID for download
+                            modal.setAttribute('data-cautela-id', cautelaId);
+                            modal.style.display = 'block';
+                        }
+                    })
+                    .catch(error => {
+                        alert('Erro ao carregar comprovante: ' + error);
+                        console.error('Error:', error);
+                    });
+            });
+        });
+
+        // Handler para fechar o modal
+        document.getElementById('btn-close-modal').addEventListener('click', function() {
+            document.getElementById('modal-preview-comprovante').style.display = 'none';
+        });
+
+        // Fechar modal ao clicar fora
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('modal-preview-comprovante');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        });
+    });
+</script>
 @endsection
