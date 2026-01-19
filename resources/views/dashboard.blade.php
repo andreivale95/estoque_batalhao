@@ -37,10 +37,23 @@
 
                     </div>
                 </div>
+                
+                <div class="col-lg-3 col-xs-6">
+                    <!-- small box -->
+                    <div class="small-box bg-warning">
+                        <div class="inner">
+                            <h3>{{ $cautelasPendentes }}</h3>
+                            <p>Cautelas Pendentes</p>
+                        </div>
+                        <div class="icon">
+                            <i class="ion ion-clipboard"></i>
+                        </div>
+                        <a href="{{ route('cautelas.index') }}" class="small-box-footer">
+                            Mais Informações <i class="fa fa-arrow-circle-right"></i>
+                        </a>
 
-
-
-
+                    </div>
+                </div>
 
         </section>
     </div>

@@ -36,6 +36,10 @@ class SiteController extends Controller
              //   $aguardando = Itens_estoque::where('status', 'r')->where('unidade', Auth::user()->fk_unidade)->count();
 
              $tudo = Itens_estoque::all()->count();
+             
+             // Busca cautelas pendentes (com produtos não totalmente devolvidos)
+             $cautelasPendentes = \App\Models\CautelaProduto::where('quantidade_devolvida', '<', \DB::raw('quantidade'))
+                ->count();
 
 
             //  $baixados = Itens_estoque::where('status', 'b')->count();
@@ -43,7 +47,7 @@ class SiteController extends Controller
 
              return view('dashboard', compact(
 
-                 'tudo',
+                 'tudo', 'cautelasPendentes'
 
              ));
             } catch (Exception $e) {
@@ -57,6 +61,10 @@ class SiteController extends Controller
 
 
                 $tudo = Itens_estoque::all()->count();
+                
+                // Busca cautelas pendentes (com produtos não totalmente devolvidos)
+                $cautelasPendentes = \App\Models\CautelaProduto::where('quantidade_devolvida', '<', \DB::raw('quantidade'))
+                   ->count();
 
 
                //   $baixados = Itens_estoque::where('status', 'b')->count();
@@ -64,7 +72,7 @@ class SiteController extends Controller
 
                 return view('dashboard', compact(
 
-                    'tudo',
+                    'tudo', 'cautelasPendentes'
 
                 ));
             } catch (Exception $e) {

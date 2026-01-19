@@ -12,13 +12,48 @@ use Illuminate\Support\Facades\Auth;
 
 class CautelaController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $cautelas = Cautela::with('produtos.produto')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $query = Cautela::with('produtos.produto')->orderBy('created_at', 'desc');
         
-        return view('cautelas.index', compact('cautelas'));
+        // Filtro por responsável
+        if ($request->filled('responsavel')) {
+            $query->where('nome_responsavel', 'like', '%' . $request->get('responsavel') . '%');
+        }
+        
+        // Filtro por data
+        if ($request->filled('data_inicio')) {
+            $query->whereDate('data_cautela', '>=', $request->get('data_inicio'));
+        }
+        if ($request->filled('data_fim')) {
+            $query->whereDate('data_cautela', '<=', $request->get('data_fim'));
+        }
+        
+        // Filtro por status (pendente ou concluído)
+        if ($request->filled('status')) {
+            $status = $request->get('status');
+            if ($status === 'pendente') {
+                // Cautelas com produtos não totalmente devolvidos
+                $query->whereHas('produtos', function ($q) {
+                    $q->whereRaw('quantidade_devolvida < quantidade');
+                }, '>', 0);
+            } elseif ($status === 'concluido') {
+                // Cautelas com todos os produtos devolvidos
+                $query->whereDoesntHave('produtos', function ($q) {
+                    $q->whereRaw('quantidade_devolvida < quantidade');
+                });
+            }
+        }
+        
+        $cautelas = $query->get();
+        $filtros = [
+            'responsavel' => $request->get('responsavel', ''),
+            'data_inicio' => $request->get('data_inicio', ''),
+            'data_fim' => $request->get('data_fim', ''),
+            'status' => $request->get('status', ''),
+        ];
+        
+        return view('cautelas.index', compact('cautelas', 'filtros'));
     }
 
     public function create()
