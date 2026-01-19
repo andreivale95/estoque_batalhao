@@ -13,6 +13,7 @@ class Itens_estoque extends Model
 
     protected $fillable = [
         'quantidade',
+        'quantidade_cautelada',
         'preco_unitario',
         'unidade',
         'fk_secao',

@@ -152,6 +152,7 @@ class CautelaController extends Controller
             }
             
             $itemEstoque->quantidade -= $quantidade;
+            $itemEstoque->quantidade_cautelada += $quantidade;
             $itemEstoque->save();
 
             // Registra na cautela
@@ -205,6 +206,7 @@ class CautelaController extends Controller
             // Retorna ao estoque
             $itemEstoque = Itens_estoque::findOrFail($cautelaItem->estoque_id);
             $itemEstoque->quantidade += $quantidadeDevolver;
+            $itemEstoque->quantidade_cautelada -= $quantidadeDevolver;
             $itemEstoque->save();
 
             // Atualiza a cautela
