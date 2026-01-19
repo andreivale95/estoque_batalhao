@@ -136,7 +136,7 @@ class CautelaController extends Controller
             'nome_responsavel' => $request->nome_responsavel,
             'telefone' => $request->telefone,
             'instituicao' => $request->instituicao,
-            'responsavel_unidade' => Auth::user()->name,
+            'responsavel_unidade' => Auth::user()->nome,
             'data_cautela' => $request->data_cautela,
             'data_prevista_devolucao' => $request->data_prevista_devolucao,
         ]);
