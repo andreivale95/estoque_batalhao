@@ -12,10 +12,11 @@ Modelos principais (resumo de campos e relações)
                tamanho() -> Tamanho
 
 2) Itens_estoque (table: itens_estoque)
-   - Campos: id, quantidade, preco_unitario, unidade (id), fk_secao, data_entrada, data_saida, fk_produto, lote, fornecedor, nota_fiscal, observacao, fonte
+   - Campos: id, quantidade, quantidade_cautelada, preco_unitario, unidade (id), fk_secao, data_entrada, data_saida, fk_produto, lote, fornecedor, nota_fiscal, observacao, fonte
    - Relações: secao() -> Secao via fk_secao
                produto() -> Produto via fk_produto
                unidade() -> Unidade
+   - Negócio: quantidade_cautelada rastreia itens atualmente emprestados (cautelas ativas)
 
 3) Secao (table: secaos)
    - Campos: id, nome, fk_unidade
@@ -53,6 +54,13 @@ Controladores e endpoints (principais)
 - CautelaController
   - create() -> GET form de cautela (view: cautelas.create)
   - store(Request) -> POST salvar cautela e itens (cautela_produto)
+    * Incrementa quantidade_cautelada em itens_estoque para cada item cautelado
+    * Decrementa quantidade (disponível) em itens_estoque
+  - processDevolucao(Request) -> POST processar devolução de cautela
+    * Decrementa quantidade_cautelada quando itens são devolvidos
+    * Incrementa quantidade (disponível) em itens_estoque
+  - previewPDF($cautela) -> GET /cautelas/{cautela}/preview (preview HTML)
+  - gerarPDF($cautela) -> GET /cautelas/{cautela}/pdf (gera PDF via DOMPDF)
 
 - InventarioController
   - form() -> GET /inventario/cadastrar (view inventario.form)
@@ -64,6 +72,14 @@ Rotas API (AJAX)
 - GET /api/produtos/{id}/detalhes-secao -> retorna agregação por seção
   - Response: [{ secao_id, secao_nome, quantidade }, ...]
 
+Rotas de Cautela
+- GET /cautelas/create -> formulário para criar cautela
+- POST /cautelas -> salvar cautela com produtos
+- GET /cautelas/{cautela}/show -> detalhes da cautela
+- POST /cautelas/{cautela}/devolucao -> processar devolução
+- GET /cautelas/{cautela}/preview -> preview HTML do comprovante
+- GET /cautelas/{cautela}/pdf -> gerar/download PDF do comprovante
+
 Fluxos importantes
 1) Cadastro com vínculo de seção
    - Criar Produto via formulário
@@ -73,15 +89,33 @@ Fluxos importantes
    - Deduz do registro origem (itens_estoque.quantidade -= qtd)
    - Se item igual (mesmo fk_produto e lote) existir na seção destino: incrementa quantidade; caso contrário réplicate() para criar novo registro com fk_secao destino e quantidade transferida
 
-3) Cautela (empréstimo)
+3) Cautela (empréstimo) com rastreamento automático
    - Form permite selecionar seção -> carregar itens via AJAX -> selecionar item e quantidade
-   - Ao salvar, cria Cautela e registros em cautela_produto
+   - Ao salvar:
+     * Cria Cautela com responsavel_unidade = nome do usuário logado (Auth::user()->nome)
+     * Registra itens em cautela_produto
+     * Incrementa quantidade_cautelada em itens_estoque (marca como emprestado)
+     * Decrementa quantidade em itens_estoque (reduz quantidade disponível)
+   - Ao processar devolução (partial ou total):
+     * Decrementa quantidade_cautelada
+     * Incrementa quantidade (resgata para disponível)
+     * Registra quantidade_devolvida em cautela_produto
+     * Atualiza data_devolucao quando 100% devolvido
 
 Views principais
-- estoque/listarEstoque.blade.php: inventário agregado por produto; linha clicável abre página de detalhes por seção
+- estoque/listarEstoque.blade.php: inventário agregado por produto com colunas:
+  * Produto, Localização, Patrimônio
+  * Quantidade (total em estoque)
+  * Cautelado (itens emprestados via cautelas)
+  * Disponível (quantidade - cautelado; itens realmente disponíveis para novas cautelas)
+  * Unidade, Categoria, Estoque, Valor Médio, Subtotal, Transferência
+  * Linha clicável abre página de detalhes por seção
 - produtos/inserirProduto.blade.php: formulário de inserção
 - produtos/detalhes.blade.php: detalhe do produto com tabela quantidade por seção
 - cautelas/create.blade.php: formulário dinâmico para emprestar múltiplos itens
+- cautelas/comprovante-content.blade.php: conteúdo HTML reusável para PDF e preview
+- cautelas/preview-comprovante.blade.php: visualização HTML do comprovante antes de gerar PDF
+- cautelas/show.blade.php: detalhes da cautela com botões para preview e download do comprovante
 - inventario/form.blade.php: formulário para cadastrar produto com opção de seção e quantidade inicial
 - layout/aside.blade.php: menu lateral (contém listagem dinâmica de seções)
 
@@ -90,8 +124,16 @@ Seeds / dados iniciais
 
 Observações técnicas e mapeamentos
 - Campos FK: atenção a nomes não-padrão: produtos.fk_categoria (não categoria_id)
-- Transações: operações que envolvem múltiplas alterações (cadastrar produto + criar estoque; transferir quantidades) utilizam DB transactions
+- Campo customizado: users.nome (não users.name) - importante para Auth::user()->nome
+- Transações: operações que envolvem múltiplas alterações (cadastrar produto + criar estoque; transferir quantidades; criar cautela) utilizam DB transactions
 - Validação server-side: presente em controllers (ex.: validar arrays em cautela, validar quantidade<=disponível)
+- Rastreamento de quantidade cautelada:
+  * Migração criada: 2026_01_19_172422_add_quantidade_cautelada_to_itens_estoque_table.php
+  * Campo adicionado a $fillable do modelo Itens_estoque
+  * CautelaController.store() incrementa quantidade_cautelada ao criar cautela
+  * CautelaController.processDevolucao() decrementa quantidade_cautelada ao devolver
+  * View listarEstoque exibe: Quantidade | Cautelado | Disponível (cálculo automático)
+- PDF gerado via barryvdh/laravel-dompdf
 - JS: jQuery usado para AJAX, clonagem de linhas e máscaras (telefone / possível máscara monetária)
 
 Sugestões para portar para outra plataforma/IA
