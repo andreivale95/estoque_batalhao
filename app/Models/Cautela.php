@@ -13,7 +13,6 @@ class Cautela extends Model
         'nome_responsavel',
         'telefone',
         'instituicao',
-        'responsavel_unidade',
         'data_cautela',
         'data_prevista_devolucao',
     ];

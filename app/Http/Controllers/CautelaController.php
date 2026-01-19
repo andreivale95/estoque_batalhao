@@ -216,32 +216,4 @@ class CautelaController extends Controller
 
         return redirect()->route('cautelas.show', $cautela->id)->with('success', 'Devolução registrada com sucesso!');
     }
-
-    public function gerarPDF($id)
-    {
-        try {
-            $cautela = Cautela::with('produtos.produto')->findOrFail($id);
-            
-            $pdf = \PDF::loadView('cautelas.comprovante', compact('cautela'));
-            
-            return $pdf->download('Comprovante-Cautela-' . $cautela->id . '.pdf');
-        } catch (\Exception $e) {
-            \Log::error('Erro ao gerar PDF da cautela', [$e]);
-            return back()->with('error', 'Erro ao gerar comprovante');
-        }
-    }
-
-    /**
-     * Exibe visualização do comprovante em HTML para preview
-     */
-    public function previewPDF($id)
-    {
-        try {
-            $cautela = Cautela::with('produtos.produto')->findOrFail($id);
-            return view('cautelas.preview-comprovante', compact('cautela'));
-        } catch (\Exception $e) {
-            \Log::error('Erro ao visualizar comprovante', [$e]);
-            return back()->with('error', 'Erro ao visualizar comprovante');
-        }
-    }
 }

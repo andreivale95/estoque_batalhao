@@ -198,8 +198,6 @@ Route::middleware(['auth', 'verified'])->controller(CautelaController::class)->g
     Route::get('cautelas/{cautela}', 'show')->name('cautelas.show');
     Route::get('cautelas/{cautela}/devolucao', 'devolucao')->name('cautelas.devolucao');
     Route::post('cautelas/{cautela}/devolucao', 'processDevolucao')->name('cautelas.processDevolucao');
-    Route::get('cautelas/{cautela}/preview', 'previewPDF')->name('cautelas.preview');
-    Route::get('cautelas/{cautela}/pdf', 'gerarPDF')->name('cautelas.pdf');
     Route::get('cautelas/historico', 'historico')->name('cautelas.historico');
 });
 

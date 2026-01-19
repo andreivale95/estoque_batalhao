@@ -19,11 +19,6 @@
                 <div class="box box-primary">
                     <div class="box-header with-border">
                         <h3 class="box-title">Informações da Cautela</h3>
-                        <div class="box-tools pull-right">
-                            <a href="{{ route('cautelas.pdf', $cautela->id) }}" class="btn btn-danger btn-sm" target="_blank">
-                                <i class="fa fa-file-pdf-o"></i> Baixar Comprovante (PDF)
-                            </a>
-                        </div>
                     </div>
                     <div class="box-body">
                         <table class="table table-borderless">
