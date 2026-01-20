@@ -8,6 +8,7 @@ Modelos principais (resumo de campos e relações)
 1) Produto (table: produtos)
    - Campos relevantes: id, nome, descricao, marca, valor, fk_categoria, tamanho, unidade, ativo, patrimonio, tipo_controle
    - tipo_controle: enum('consumo', 'permanente') - define se é bem de consumo ou patrimonial
+   - REMOVIDOS: fk_secao (seção definida no item/patrimônio), eh_container (não mais suportado)
    - Relações: categoria() -> Categoria via fk_categoria
                kit() -> Kit via fk_kit
                tamanho() -> Tamanho
@@ -43,11 +44,13 @@ Controladores e endpoints (principais)
     * Mostra radio buttons: Consumo vs Permanente
     * Se Permanente: mostra formulário dinâmico para N patrimônios (add/remove bens)
     * Cada bem requer: patrimônio (obrigatório, único), série (opcional), condição
+    * REMOVIDOS: fk_secao (agora definido por unidade), eh_container
   - cadastrarProduto(Request) -> POST /produtos/cadastrar
-    * Valida tipo_controle
+    * Valida tipo_controle (REMOVIDO: validação de fk_secao e eh_container)
     * Se tipo='consumo': cria Produto normal
     * Se tipo='permanente': cria Produto + N registros em itens_patrimoniais (um por patrimônio informado)
     * Valida unicidade de patrimônios (não pode repetir)
+  - editarProduto() -> atualizado para remover campos fk_secao e eh_container
   - ... outros métodos existentes
   - getDetalhesPorSecao($id) -> GET /api/produtos/{id}/detalhes-secao (JSON)
   - detalhes($id) -> GET /estoque/produto/{id}/detalhes (view com quebra por seção)
