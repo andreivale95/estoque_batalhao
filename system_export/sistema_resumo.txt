@@ -6,17 +6,26 @@ Visão geral
 
 Modelos principais (resumo de campos e relações)
 1) Produto (table: produtos)
-   - Campos relevantes: id, nome, descricao, marca, valor, fk_categoria, tamanho, unidade, ativo, patrimonio
+   - Campos relevantes: id, nome, descricao, marca, valor, fk_categoria, tamanho, unidade, ativo, patrimonio, tipo_controle
+   - tipo_controle: enum('consumo', 'permanente') - define se é bem de consumo ou patrimonial
    - Relações: categoria() -> Categoria via fk_categoria
                kit() -> Kit via fk_kit
                tamanho() -> Tamanho
+               itensEstoque() -> Itens_estoque (para consumíveis)
+               itensPatrimoniais() -> ItenPatrimonial (para bens permanentes)
 
-2) Itens_estoque (table: itens_estoque)
+2) Itens_estoque (table: itens_estoque) - BENS DE CONSUMO
    - Campos: id, quantidade, quantidade_cautelada, preco_unitario, unidade (id), fk_secao, data_entrada, data_saida, fk_produto, lote, fornecedor, nota_fiscal, observacao, fonte
    - Relações: secao() -> Secao via fk_secao
-               produto() -> Produto via fk_produto
+               produto() -> Produto via fk_produto (tipo_controle = 'consumo')
                unidade() -> Unidade
-   - Negócio: quantidade_cautelada rastreia itens atualmente emprestados (cautelas ativas)
+   - Negócio: quantidade_cautelada rastreia itens emprestados; quantidade é agregada (ex: 100 luvas)
+
+3) ItenPatrimonial (table: itens_patrimoniais) - BENS PERMANENTES
+   - Campos: id, fk_produto, patrimonio (unique), serie, fk_secao, condicao, data_entrada, data_saida, quantidade_cautelada, observacao, timestamps
+   - Relações: produto() -> Produto via fk_produto (tipo_controle = 'permanente')
+               secao() -> Secao via fk_secao
+   - Negócio: cada registro = um bem único e numerado; patrimonio é obrigatório e único; quantidade sempre 1
 
 3) Secao (table: secaos)
    - Campos: id, nome, fk_unidade
@@ -30,9 +39,16 @@ Modelos principais (resumo de campos e relações)
 
 Controladores e endpoints (principais)
 - ProdutoController
-  - formInserirProduto() -> GET /produtos/inserir (view 'produtos.inserirProduto')
-  - cadastrarProduto(Request) -> POST /produtos/cadastrar (cadastra produto)
-  - verProduto($id) -> GET /registros/produto/ver/{id}
+  - formInserirProduto() -> GET /produtos/inserir (view com tipo_controle e campos dinâmicos)
+    * Mostra radio buttons: Consumo vs Permanente
+    * Se Permanente: mostra formulário dinâmico para N patrimônios (add/remove bens)
+    * Cada bem requer: patrimônio (obrigatório, único), série (opcional), condição
+  - cadastrarProduto(Request) -> POST /produtos/cadastrar
+    * Valida tipo_controle
+    * Se tipo='consumo': cria Produto normal
+    * Se tipo='permanente': cria Produto + N registros em itens_patrimoniais (um por patrimônio informado)
+    * Valida unicidade de patrimônios (não pode repetir)
+  - ... outros métodos existentes
   - getDetalhesPorSecao($id) -> GET /api/produtos/{id}/detalhes-secao (JSON)
   - detalhes($id) -> GET /estoque/produto/{id}/detalhes (view com quebra por seção)
   - createEstoque(), storeEstoque() -> criar produto + entrada em estoque
@@ -81,9 +97,22 @@ Rotas de Cautela
 - GET /cautelas/{cautela}/pdf -> gerar/download PDF do comprovante
 
 Fluxos importantes
-1) Cadastro com vínculo de seção
-   - Criar Produto via formulário
-   - Se informado secao_id + quantidade_inicial > 0: cria-se um registro em itens_estoque com fk_produto, fk_secao e quantidade
+1) Cadastro com tipo de controle
+   - Usuario seleciona tipo: Consumo ou Permanente
+   
+   A) Tipo CONSUMO:
+      - Cadastra produto com tipo_controle='consumo'
+      - Itens controlados em itens_estoque com quantidade agregada
+      - Exemplo: 100 luvas, 500 pilhas
+      - Para adicionar quantidade, usa "Registrar Entrada" (incrementa quantidade em itens_estoque)
+   
+   B) Tipo PERMANENTE (Patrimonial):
+      - Cadastra produto com tipo_controle='permanente'
+      - Sistema obriga preenchimento de patrimônios individuais (num único por bem)
+      - Cria N registros em itens_patrimoniais (um por bem numerado)
+      - Exemplo: Rádio HT com patrimônios 0001, 0002, 0003 (cria 3 registros)
+      - Cada bem tem série (opcional), condição, seção, datas
+      - Número de itens = quantidade de patrimônios informados
 
 2) Transferência entre seções/unidades
    - Deduz do registro origem (itens_estoque.quantidade -= qtd)
@@ -101,16 +130,32 @@ Fluxos importantes
      * Incrementa quantidade (resgata para disponível)
      * Registra quantidade_devolvida em cautela_produto
      * Atualiza data_devolucao quando 100% devolvido
+   - NOTA: Cautelas para bens permanentes não foram implementadas no escopo atual
 
 Views principais
-- estoque/listarEstoque.blade.php: inventário agregado por produto com colunas:
-  * Produto, Localização, Patrimônio
-  * Quantidade (total em estoque)
-  * Cautelado (itens emprestados via cautelas)
-  * Disponível (quantidade - cautelado; itens realmente disponíveis para novas cautelas)
-  * Unidade, Categoria, Estoque, Valor Médio, Subtotal, Transferência
-  * Linha clicável abre página de detalhes por seção
-- produtos/inserirProduto.blade.php: formulário de inserção
+- estoque/listarEstoque.blade.php: 
+  * Seção 1: Bens de CONSUMO (itens_estoque)
+    - Tabela agregada por produto com colunas:
+      * Produto, Localização, Patrimônio
+      * Quantidade (total em estoque)
+      * Cautelado (itens emprestados via cautelas)
+      * Disponível (quantidade - cautelado)
+      * Unidade, Categoria, Estoque, Valor Médio, Subtotal, Transferência
+    - Linha clicável abre página de detalhes por seção
+  
+  * Seção 2: Bens PATRIMONIAIS (itens_patrimoniais)
+    - Tabela com colunas:
+      * Patrimônio (número único, em destaque), Produto, Série
+      * Localização (seção), Condição (badge: novo/bom/regular/ruim)
+      * Cautelado (sim/não), Entrada (data), Ações (detalhes/editar)
+    - Cada linha = um bem individual
+    - Indicadores visuais de condição e disponibilidade
+    
+- produtos/inserirProduto.blade.php: 
+  * Adiciona tipos de controle com radio buttons
+  * Seção dinâmica para bens patrimoniais (add/remove patrimônios)
+  * JavaScript para mostrar/esconder campos baseado em tipo selecionado
+  
 - produtos/detalhes.blade.php: detalhe do produto com tabela quantidade por seção
 - cautelas/create.blade.php: formulário dinâmico para emprestar múltiplos itens
 - cautelas/comprovante-content.blade.php: conteúdo HTML reusável para PDF e preview
@@ -125,37 +170,47 @@ Seeds / dados iniciais
 Observações técnicas e mapeamentos
 - Campos FK: atenção a nomes não-padrão: produtos.fk_categoria (não categoria_id)
 - Campo customizado: users.nome (não users.name) - importante para Auth::user()->nome
-- Transações: operações que envolvem múltiplas alterações (cadastrar produto + criar estoque; transferir quantidades; criar cautela) utilizam DB transactions
-- Validação server-side: presente em controllers (ex.: validar arrays em cautela, validar quantidade<=disponível)
+- Novo campo: produtos.tipo_controle (enum: 'consumo', 'permanente') - define fluxo de entrada
+- Divisão de tabelas:
+  * itens_estoque: APENAS para produtos tipo 'consumo' (quantidade agregada)
+  * itens_patrimoniais: APENAS para produtos tipo 'permanente' (unidades individuais)
+- Patrimônio:
+  * Para consumo: opcional, armazenado em produtos.patrimonio (descrição geral)
+  * Para permanente: OBRIGATÓRIO, ÚNICO, armazenado em itens_patrimoniais.patrimonio (número por bem)
+- Transações: operações que envolvem múltiplas alterações (cadastrar produto permanente + criar N patrimoniais) utilizam DB transactions
+- Validação server-side: presente em controllers
+  * Consumo: valida quantidade >= disponível
+  * Permanente: valida unicidade de patrimônios, valida que cada bem tem patrimônio
 - Rastreamento de quantidade cautelada:
-  * Migração criada: 2026_01_19_172422_add_quantidade_cautelada_to_itens_estoque_table.php
-  * Campo adicionado a $fillable do modelo Itens_estoque
-  * CautelaController.store() incrementa quantidade_cautelada ao criar cautela
-  * CautelaController.processDevolucao() decrementa quantidade_cautelada ao devolver
+  * Campo em itens_patrimoniais.quantidade_cautelada (para futura integração com cautelas de bens)
+  * CautelaController.store() incrementa quantidade_cautelada em itens_estoque (consumo)
+  * CautelaController.processDevolucao() decrementa quantidade_cautelada em itens_estoque (consumo)
   * View listarEstoque exibe: Quantidade | Cautelado | Disponível (cálculo automático)
 - PDF gerado via barryvdh/laravel-dompdf
-- JS: jQuery usado para AJAX, clonagem de linhas e máscaras (telefone / possível máscara monetária)
-
-Sugestões para portar para outra plataforma/IA
-- Padronizar nomes de FK durante a migração (usar category_id etc.) para facilitar mapeamento
-- Implementar endpoints JSON conforme especificado e testes automatizados para:
-  - Transferência de estoque
-  - Vinculação de itens a seção
-  - Cadastro com estoque inicial
-  - Cautela create/store
+- JS: jQuery usado para AJAX, clonagem de linhas (especialmente em formulário de patrimoniais), máscaras
 
 Trechos de exemplo (payloads)
-- GET /api/secoes/5/items -> 200
-  [ { "id":123, "nome":"Lanterna", "quantidade":10 }, ... ]
-
-- GET /api/produtos/12/detalhes-secao -> 200
-  [ { "secao_id":3, "secao_nome":"Armamento", "quantidade":5 }, { "secao_id":7, "secao_nome":"Almoxarifado", "quantidade":12 } ]
-
+Cadastro de CONSUMO:
 - POST /produtos/cadastrar (form)
-  nome=Fuzil&descricao=...&marca=X&tamanho=N&unidade=1&valor=250000&categoria=2
+  nome=Luva&tipo_controle=consumo&categoria=5&unidade=1
 
-- POST /inventario/salvar
-  nome=Lanterna&categoria_id=3&unidade_id=1&secao_id=4&quantidade_inicial=10
+Cadastro de PERMANENTE:
+- POST /produtos/cadastrar (form)
+  nome=Rádio HT&tipo_controle=permanente&categoria=3
+  patrimonios[0][patrimonio]=0001&patrimonios[0][condicao]=novo
+  patrimonios[1][patrimonio]=0002&patrimonios[1][condicao]=novo
+  patrimonios[2][patrimonio]=0003&patrimonios[2][condicao]=novo
+
+Resultado:
+- Cria 1 Produto com tipo_controle='permanente'
+- Cria 3 registros em itens_patrimoniais (um por patrimônio)
+
+Próximos passos sugeridos
+- Implementar cautelas para bens patrimoniais (atualmente apenas consumo)
+- Adicionar detalhes/edição de bens patrimoniais individuais
+- Implementar histórico de movimentação de bens patrimoniais
+- Gerar relatórios por tipo de bem (consumo vs permanente)
+- Integração com cautelas de bens permanentes para rastreamento de localização em tempo real
 
 Local do arquivo gerado neste workspace:
 c:\laragon\www\sisalmox\system_export\sistema_resumo.txt
