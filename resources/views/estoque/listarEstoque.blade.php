@@ -119,32 +119,18 @@
                                     $valorUnitario = $estoque->valor ?? 0;
                                     $subtotal = $estoque->quantidade_total * $valorUnitario;
                                     
-                                    // Verifica se é um container usando coluna eh_container
-                                    $ehContainer = $estoque->eh_container ?? false;
-                                    
                                     // Busca o primeiro item deste produto para pegar o ID correto
                                     $primeiroItem = App\Models\Itens_estoque::where('fk_produto', $estoque->id)->first();
                                     $itemId = $primeiroItem ? $primeiroItem->id : $estoque->id;
                                     
-                                    // Define a rota dependendo se é container ou não
-                                    $rota = $ehContainer 
-                                        ? route('container.detalhes', $estoque->id)
-                                        : route('estoque.produto.detalhes', $estoque->id);
+                                    // Define a rota para detalhes do produto
+                                    $rota = route('estoque.produto.detalhes', $estoque->id);
                                 @endphp
                                 <tr class="item-row" style="cursor: pointer;" 
                                     onclick="window.location='{{ $rota }}'"
-                                    title="{{ $ehContainer ? 'Clique para ver conteúdo do container' : 'Clique para ver detalhes' }}">
+                                    title="Clique para ver detalhes do produto">
                                     <td>
-                                        @if($ehContainer)
-                                            <i class="fa fa-briefcase text-primary"></i>
-                                            @php
-                                                // Busca a seção do container
-                                                $secaoContainer = $primeiroItem ? $primeiroItem->secao->nome : '';
-                                            @endphp
-                                            {{ $estoque->nome }}@if($secaoContainer) - <small class="text-muted">{{ $secaoContainer }}</small>@endif
-                                        @else
-                                            {{ $estoque->nome }}
-                                        @endif
+                                        {{ $estoque->nome }}
                                     </td>
                                     <td>
                                         @php
@@ -208,13 +194,11 @@
                                     <td>R$ {{ number_format($subtotal, 2, ',', '.') }}</td>
                                     <td>
                                         @if (Auth::user()->fk_unidade == $estoque->unidade()->first()->id)
-                                            @if(!$ehContainer)
-                                                <button type="button" class="btn btn-warning btn-sm" data-toggle="modal"
-                                                    data-target="#modalTransferencia{{ $estoque->id }}"
-                                                    onclick="event.stopPropagation();">
-                                                    <i class="fa fa-exchange-alt"></i>
-                                                </button>
-                                            @endif
+                                            <button type="button" class="btn btn-warning btn-sm" data-toggle="modal"
+                                                data-target="#modalTransferencia{{ $estoque->id }}"
+                                                onclick="event.stopPropagation();">
+                                                <i class="fa fa-exchange-alt"></i>
+                                            </button>
                                         @else
                                             <span class="text-muted">Acesso restrito</span>
                                         @endif

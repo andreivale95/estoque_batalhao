@@ -107,14 +107,6 @@
                                 <input type="text" name="patrimonio" class="form-control" 
                                     placeholder="Número do patrimônio" value="{{ old('patrimonio') }}">
                             </div>
-
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" name="eh_container" value="1" {{ old('eh_container') ? 'checked' : '' }}>
-                                    <span style="margin-left: 5px;">Este é um Container/Bolsa/Prateleira?</span>
-                                </label>
-                                <small class="text-muted d-block">Marque se este produto serve como container para outros itens</small>
-                            </div>
                         </div>
                     </div>
 
@@ -297,18 +289,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        // Toggle container fields
-        const checkboxContainer = document.querySelector('input[name="eh_container"]');
-        const containerFields = document.getElementById('container-fields');
-        
-        checkboxContainer.addEventListener('change', function() {
-            containerFields.style.display = this.checked ? 'block' : 'none';
-        });
-        
-        if (checkboxContainer.checked) {
-            containerFields.style.display = 'block';
-        }
-
         // Toggle patrimonial fields
         const radioButtons = document.querySelectorAll('input[name="tipo_controle"]');
         radioButtons.forEach(radio => {

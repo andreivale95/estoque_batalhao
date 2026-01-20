@@ -376,7 +376,6 @@ class ProdutoController extends Controller {
             $request->validate([
                 'nome' => 'required|string|max:255',
                 'categoria' => 'required|exists:categorias,id',
-                'fk_secao' => 'nullable|exists:secaos,id',
                 'tipo_controle' => 'required|in:consumo,permanente',
             ]);
 
@@ -410,9 +409,7 @@ class ProdutoController extends Controller {
                 'tamanho' => $request->tamanho,
                 'unidade' => Auth::user()->fk_unidade,
                 'fk_categoria' => $request->categoria,
-                'fk_secao' => $request->get('fk_secao'),
                 'patrimonio' => $request->patrimonio,
-                'eh_container' => $request->has('eh_container') ? 1 : 0,
                 'ativo' => 'Y',
                 'tipo_controle' => $request->tipo_controle,
             ]);
@@ -430,22 +427,6 @@ class ProdutoController extends Controller {
                         'quantidade_cautelada' => 0,
                     ]);
                 }
-            }
-
-            // Se é um container, criar registro na tabela containers
-            if ($request->has('eh_container') && $request->eh_container == 1) {
-                \App\Models\Container::create([
-                    'fk_produto' => $produto->id,
-                    'tipo' => $request->get('container_tipo'),
-                    'material' => $request->get('container_material'),
-                    'capacidade_maxima' => $request->get('container_capacidade'),
-                    'unidade_capacidade' => $request->get('container_unidade', 'kg'),
-                    'compartimentos' => $request->get('container_compartimentos', 0),
-                    'cor' => $request->get('container_cor'),
-                    'numero_serie' => $request->get('container_numero_serie'),
-                    'descricao_adicional' => $request->get('container_descricao'),
-                    'status' => 'ativo',
-                ]);
             }
 
             DB::commit();
@@ -535,7 +516,6 @@ class ProdutoController extends Controller {
                 'unidade' => Auth::user()->fk_unidade,
                 'fk_kit' => $request->get('fk_kit'),
                 'fk_categoria' => $request->get('categoria'),
-                'fk_secao' => $request->get('fk_secao'),
                 'patrimonio' => $request->get('patrimonio'),
             ]);
 
