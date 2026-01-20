@@ -23,6 +23,7 @@ class Produto extends Model
         'ativo',
         'patrimonio',
         'eh_container',
+        'tipo_controle',
     ];
 
 
@@ -77,6 +78,11 @@ class Produto extends Model
         return $this->hasMany(Itens_estoque::class, 'fk_produto');
     }
 
+    public function itensPatrimoniais()
+    {
+        return $this->hasMany(ItenPatrimonial::class, 'fk_produto');
+    }
+}
 
 
 

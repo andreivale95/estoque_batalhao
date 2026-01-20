@@ -79,6 +79,30 @@
                             </div>
 
                             <div class="form-group">
+                                <label>Tipo de Controle <span style="color: red;">*</span></label>
+                                <div class="radio">
+                                    <label>
+                                        <input type="radio" name="tipo_controle" value="consumo" 
+                                            {{ old('tipo_controle', 'consumo') == 'consumo' ? 'checked' : '' }}
+                                            onchange="togglePatrimonioFields()">
+                                        <span>Consumo (quantidade agregada)</span>
+                                    </label>
+                                </div>
+                                <div class="radio">
+                                    <label>
+                                        <input type="radio" name="tipo_controle" value="permanente" 
+                                            {{ old('tipo_controle') == 'permanente' ? 'checked' : '' }}
+                                            onchange="togglePatrimonioFields()">
+                                        <span>Permanente/Patrimonial (itens individuais)</span>
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block" style="margin-top: 5px;">
+                                    <strong>Consumo:</strong> Produtos compráveis em quantidade (pilhas, papel, luvas)<br>
+                                    <strong>Permanente:</strong> Bens numerados individualmente (rádios, armas, EPIs)
+                                </small>
+                            </div>
+
+                            <div class="form-group">
                                 <label>Patrimônio</label>
                                 <input type="text" name="patrimonio" class="form-control" 
                                     placeholder="Número do patrimônio" value="{{ old('patrimonio') }}">
@@ -90,6 +114,26 @@
                                     <span style="margin-left: 5px;">Este é um Container/Bolsa/Prateleira?</span>
                                 </label>
                                 <small class="text-muted d-block">Marque se este produto serve como container para outros itens</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seção de dados patrimoniais para itens permanentes -->
+                    <div id="patrimonial-fields" style="display: none; margin-top: 20px;">
+                        <div class="box box-info">
+                            <div class="box-header with-border">
+                                <h3 class="box-title">Registro de Bens Patrimoniais</h3>
+                            </div>
+                            <div class="box-body">
+                                <p class="text-muted">Cadastre cada bem patrimonial individualmente com seu número de patrimônio único.</p>
+                                
+                                <div id="patrimonios-container">
+                                    <!-- Será preenchido dinamicamente -->
+                                </div>
+                                
+                                <button type="button" id="btn-add-patrimonial" class="btn btn-sm btn-success" style="margin-top: 10px;">
+                                    <i class="fa fa-plus"></i> Adicionar Bem
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -189,18 +233,95 @@
 {{-- script de formatação de valor removido (campo valor eliminado) --}}
 
 <script>
+    let patrimonialCount = 0;
+
+    function togglePatrimonioFields() {
+        const tipoControle = document.querySelector('input[name="tipo_controle"]:checked').value;
+        const patrimonialFields = document.getElementById('patrimonial-fields');
+        
+        if (tipoControle === 'permanente') {
+            patrimonialFields.style.display = 'block';
+            // Adicionar primeiro bem se não houver nenhum
+            if (patrimonialCount === 0) {
+                addPatrimonialField();
+            }
+        } else {
+            patrimonialFields.style.display = 'none';
+        }
+    }
+
+    function addPatrimonialField() {
+        const container = document.getElementById('patrimonios-container');
+        const fieldIndex = patrimonialCount++;
+        
+        const fieldHtml = `
+            <div class="patrimonial-item" id="patrimonial-${fieldIndex}" style="margin-bottom: 15px; padding: 10px; background: #f9f9f9; border-radius: 4px;">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Patrimônio <span style="color: red;">*</span></label>
+                            <input type="text" name="patrimonios[${fieldIndex}][patrimonio]" class="form-control" 
+                                placeholder="Número do patrimônio" required value="{{ old('patrimonios.${fieldIndex}.patrimonio', '') }}">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Nº de Série</label>
+                            <input type="text" name="patrimonios[${fieldIndex}][serie]" class="form-control" 
+                                placeholder="Opcional" value="{{ old('patrimonios.${fieldIndex}.serie', '') }}">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Condição</label>
+                            <select name="patrimonios[${fieldIndex}][condicao]" class="form-control">
+                                <option value="novo" selected>Novo</option>
+                                <option value="bom">Bom</option>
+                                <option value="regular">Regular</option>
+                                <option value="ruim">Ruim</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                ${fieldIndex > 0 ? `<button type="button" class="btn btn-sm btn-danger" onclick="removePatrimonialField('patrimonial-${fieldIndex}')">
+                    <i class="fa fa-trash"></i> Remover
+                </button>` : ''}
+            </div>
+        `;
+        
+        container.insertAdjacentHTML('beforeend', fieldHtml);
+    }
+
+    function removePatrimonialField(fieldId) {
+        document.getElementById(fieldId).remove();
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
+        // Toggle container fields
         const checkboxContainer = document.querySelector('input[name="eh_container"]');
         const containerFields = document.getElementById('container-fields');
         
-        // Mostrar/esconder campos ao mudar checkbox
         checkboxContainer.addEventListener('change', function() {
             containerFields.style.display = this.checked ? 'block' : 'none';
         });
         
-        // Se o checkbox estava marcado (old data), mostrar campos
         if (checkboxContainer.checked) {
             containerFields.style.display = 'block';
+        }
+
+        // Toggle patrimonial fields
+        const radioButtons = document.querySelectorAll('input[name="tipo_controle"]');
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', togglePatrimonioFields);
+        });
+
+        // Mostrar/esconder campos patrimoniais na carga da página
+        togglePatrimonioFields();
+
+        // Adicionar novo bem
+        const btnAddPatrimonial = document.getElementById('btn-add-patrimonial');
+        if (btnAddPatrimonial) {
+            btnAddPatrimonial.addEventListener('click', addPatrimonialField);
         }
     });
 </script>
