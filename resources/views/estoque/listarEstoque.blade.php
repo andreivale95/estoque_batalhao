@@ -396,8 +396,79 @@
                     </table>
                       {{ $itens_estoque->links() }}
                 </div>
+            </div>
 
-                <!-- Removido botão duplicado de saída múltipla -->
+            <!-- Seção de Bens Patrimoniais -->
+            <div class="box box-info" style="margin-top: 30px;">
+                <div class="box-header with-border">
+                    <h3 class="box-title"><i class="fa fa-lock"></i> Bens Patrimoniais (Itens Individuais)</h3>
+                </div>
+                <div class="box-body table-responsive">
+                    @php
+                        // Buscar todos os itens patrimoniais
+                        $itensPatrimoniais = App\Models\ItenPatrimonial::with(['produto', 'secao'])->paginate(15);
+                    @endphp
+                    
+                    @if($itensPatrimoniais->count() > 0)
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Patrimônio</th>
+                                    <th>Produto</th>
+                                    <th>Série</th>
+                                    <th>Localização</th>
+                                    <th>Condição</th>
+                                    <th>Cautelado</th>
+                                    <th>Entrada</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($itensPatrimoniais as $item)
+                                    <tr style="cursor: pointer;" title="Clique para ver detalhes">
+                                        <td><strong>{{ $item->patrimonio }}</strong></td>
+                                        <td>{{ $item->produto->nome }}</td>
+                                        <td>{{ $item->serie ?? '-' }}</td>
+                                        <td>{{ $item->secao->nome ?? '-' }}</td>
+                                        <td>
+                                            @php
+                                                $condicaoClass = match($item->condicao) {
+                                                    'novo' => 'success',
+                                                    'bom' => 'info',
+                                                    'regular' => 'warning',
+                                                    'ruim' => 'danger',
+                                                    default => 'default'
+                                                };
+                                            @endphp
+                                            <span class="label label-{{ $condicaoClass }}">{{ ucfirst($item->condicao) }}</span>
+                                        </td>
+                                        <td>
+                                            @if($item->quantidade_cautelada > 0)
+                                                <span class="badge badge-danger">Cautelado</span>
+                                            @else
+                                                <span class="text-success">Disponível</span>
+                                            @endif
+                                        </td>
+                                        <td>{{ $item->created_at->format('d/m/Y') }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-info" title="Ver detalhes">
+                                                <i class="fa fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-warning" title="Editar">
+                                                <i class="fa fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                        {{ $itensPatrimoniais->links() }}
+                    @else
+                        <div class="alert alert-info">
+                            <i class="fa fa-info-circle"></i> Nenhum bem patrimonial cadastrado ainda.
+                        </div>
+                    @endif
+                </div>
             </div>
 
             {{--
