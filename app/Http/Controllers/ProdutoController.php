@@ -7,6 +7,7 @@ use App\Models\Categoria;
 use App\Models\Condicao;
 use App\Models\HistoricoRevisoes;
 use App\Models\Itens_estoque;
+use App\Models\ItenPatrimonial;
 use App\Models\Kit;
 use App\Models\MinMaxKm;
 use App\Models\Tamanho;
@@ -371,11 +372,23 @@ class ProdutoController extends Controller {
     public function cadastrarProduto(Request $request)
     {
         try {
+            // Validação base
             $request->validate([
                 'nome' => 'required|string|max:255',
                 'categoria' => 'required|exists:categorias,id',
                 'fk_secao' => 'nullable|exists:secaos,id',
+                'tipo_controle' => 'required|in:consumo,permanente',
             ]);
+
+            // Validação adicional para itens permanentes
+            if ($request->tipo_controle === 'permanente') {
+                $request->validate([
+                    'patrimonios' => 'required|array|min:1',
+                    'patrimonios.*.patrimonio' => 'required|string|unique:itens_patrimoniais,patrimonio',
+                    'patrimonios.*.serie' => 'nullable|string',
+                    'patrimonios.*.condicao' => 'required|in:novo,bom,regular,ruim',
+                ]);
+            }
 
             DB::beginTransaction();
 
@@ -401,7 +414,23 @@ class ProdutoController extends Controller {
                 'patrimonio' => $request->patrimonio,
                 'eh_container' => $request->has('eh_container') ? 1 : 0,
                 'ativo' => 'Y',
+                'tipo_controle' => $request->tipo_controle,
             ]);
+
+            // Se é um item permanente, criar registros em itens_patrimoniais
+            if ($request->tipo_controle === 'permanente') {
+                foreach ($request->patrimonios as $patrimonialData) {
+                    ItenPatrimonial::create([
+                        'fk_produto' => $produto->id,
+                        'patrimonio' => $patrimonialData['patrimonio'],
+                        'serie' => $patrimonialData['serie'] ?? null,
+                        'fk_secao' => Auth::user()->fk_unidade, // Seção padrão da unidade do usuário (simplificado)
+                        'condicao' => $patrimonialData['condicao'],
+                        'data_entrada' => now(),
+                        'quantidade_cautelada' => 0,
+                    ]);
+                }
+            }
 
             // Se é um container, criar registro na tabela containers
             if ($request->has('eh_container') && $request->eh_container == 1) {
