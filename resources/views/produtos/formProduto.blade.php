@@ -126,14 +126,6 @@
                                             <label class="control-label" for="patrimonio">Patrimônio (se houver)</label>
                                             <input type="text" class="form-control" name="patrimonio" value="{{ old('patrimonio', $produto->patrimonio ?? '') }}">
                                         </div>
-
-                                        <div class="form-group has-feedback col-md-6">
-                                            <label class="control-label" for="eh_container">
-                                                <input type="checkbox" name="eh_container" id="eh_container" value="1" {{ old('eh_container') ? 'checked' : '' }}>
-                                                <span style="margin-left: 5px;">Este é um Container/Bolsa/Prateleira?</span>
-                                            </label>
-                                            <small class="text-muted d-block">Marque se este produto serve como container para outros itens</small>
-                                        </div>
                                 </div>
                                 <div class="box-foote pull-right">
                                     <a href="{{ route('produtos.listar') }}" class="btn btn-danger"><i

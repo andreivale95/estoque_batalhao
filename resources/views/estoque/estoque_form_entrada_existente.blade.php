@@ -60,17 +60,6 @@
                             </div>
                         </div>
 
-                        <!-- Container (aparece dinamicamente quando a seção tem containers) -->
-                        <div class="row" id="container-row" style="display: none;">
-                            <div class="form-group col-md-12">
-                                <label for="fk_item_pai">Dentro de (Container/Bolsa/Prateleira):</label>
-                                <select name="fk_item_pai" id="fk_item_pai" class="form-control">
-                                    <option value="">-- Nenhum (Item solto na seção) --</option>
-                                </select>
-                                <small class="text-muted">Selecione um container se este item ficará dentro dele</small>
-                            </div>
-                        </div>
-
                         <div class="row">
                             <!-- Unidade -->
                             <div class="form-group col-md-4">

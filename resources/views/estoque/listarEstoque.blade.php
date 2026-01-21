@@ -331,21 +331,7 @@
                                                     <div class="form-group" id="setor_container_destino{{ $estoque->id }}" style="display: none;">
                                                         <label for="container_destino"><strong>Container de Destino:</strong></label>
                                                         <select class="form-control" id="container_destino{{ $estoque->id }}" name="container_destino" required>
-                                                            <option value="">-- Selecione --</option>
-                                                            @php
-                                                                // Busca produtos marcados como containers que não são o produto atual
-                                                                $containers = App\Models\Produto::where('eh_container', 1)
-                                                                    ->where('id', '!=', $estoque->id)
-                                                                    ->with(['itensEstoque' => function($q) {
-                                                                        $q->whereNull('fk_item_pai');
-                                                                    }])
-                                                                    ->get();
-                                                            @endphp
-                                                            @foreach($containers as $container)
-                                                                <option value="{{ $container->id }}">
-                                                                    {{ $container->nome }}
-                                                                </option>
-                                                            @endforeach
+                                                            <option value="">-- Nenhum container disponível --</option>
                                                         </select>
                                                     </div>
 

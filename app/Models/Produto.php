@@ -16,13 +16,10 @@ class Produto extends Model
         'descricao',
         'marca',
         'fk_categoria',
-        'fk_secao',
         'fk_kit',
         'tamanho',
         'unidade',
         'ativo',
-        'patrimonio',
-        'eh_container',
         'tipo_controle',
     ];
 
@@ -53,16 +50,7 @@ class Produto extends Model
         return $this->belongsTo(Unidade::class, 'unidade');
     }
 
-    public function secao()
-    {
-        return $this->belongsTo(Secao::class, 'fk_secao');
-    }
-
-
-
-
-
-    public function militares()
+public function militares()
     {
         return $this->belongsToMany(EfetivoMilitar::class, 'efetivo_militar_produto', 'fk_produto', 'fk_efetivo_militar')
             ->withTimestamps();
@@ -85,11 +73,3 @@ class Produto extends Model
 }
 
 
-
-
-
-
-
-
-
-}

@@ -101,12 +101,6 @@
                                     <strong>Permanente:</strong> Bens numerados individualmente (rádios, armas, EPIs)
                                 </small>
                             </div>
-
-                            <div class="form-group">
-                                <label>Patrimônio</label>
-                                <input type="text" name="patrimonio" class="form-control" 
-                                    placeholder="Número do patrimônio" value="{{ old('patrimonio') }}">
-                            </div>
                         </div>
                     </div>
 
@@ -117,7 +111,10 @@
                                 <h3 class="box-title">Registro de Bens Patrimoniais</h3>
                             </div>
                             <div class="box-body">
-                                <p class="text-muted">Cadastre cada bem patrimonial individualmente com seu número de patrimônio único.</p>
+                                <p class="text-muted">
+                                    <strong>⚠️ Para tipo PERMANENTE:</strong> Cadastre cada bem patrimonial individualmente com seu número de patrimônio único.
+                                    Cada bem será identificado por um número único e rastreável no sistema.
+                                </p>
                                 
                                 <div id="patrimonios-container">
                                     <!-- Será preenchido dinamicamente -->
@@ -132,72 +129,7 @@
 
                     <!-- Seção de dados adicionais do container -->
                     <div id="container-fields" style="display: none;">
-                        <div class="box box-warning" style="margin-top: 20px;">
-                            <div class="box-header with-border">
-                                <h3 class="box-title">Dados do Container</h3>
-                            </div>
-                            <div class="box-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>Tipo de Container</label>
-                                            <input type="text" name="container_tipo" class="form-control" 
-                                                placeholder="Ex: Bolsa, Prateleira, Caixa, Armário" value="{{ old('container_tipo') }}">
-                                            <small class="text-muted">Bolsa, Prateleira, Caixa, Armário, etc.</small>
-                                        </div>
-
-                                        <div class="form-group">
-                                            <label>Material</label>
-                                            <input type="text" name="container_material" class="form-control" 
-                                                placeholder="Ex: Plástico, Metal, Madeira, Tecido" value="{{ old('container_material') }}">
-                                            <small class="text-muted">Plástico, Metal, Madeira, Tecido, etc.</small>
-                                        </div>
-
-                                        <div class="form-group">
-                                            <label>Cor</label>
-                                            <input type="text" name="container_cor" class="form-control" 
-                                                placeholder="Cor do container" value="{{ old('container_cor') }}">
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>Capacidade Máxima</label>
-                                            <div class="input-group">
-                                                <input type="number" step="0.01" name="container_capacidade" class="form-control" 
-                                                    placeholder="Ex: 50" value="{{ old('container_capacidade') }}">
-                                                <span class="input-group-addon">
-                                                    <select name="container_unidade" class="form-control" style="border: none;">
-                                                        <option value="kg">kg</option>
-                                                        <option value="un">unidades</option>
-                                                        <option value="l">litros</option>
-                                                        <option value="m3">m³</option>
-                                                    </select>
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div class="form-group">
-                                            <label>Compartimentos</label>
-                                            <input type="number" name="container_compartimentos" class="form-control" 
-                                                placeholder="0" min="0" value="{{ old('container_compartimentos', 0) }}">
-                                        </div>
-
-                                        <div class="form-group">
-                                            <label>Número de Série</label>
-                                            <input type="text" name="container_numero_serie" class="form-control" 
-                                                placeholder="Opcional" value="{{ old('container_numero_serie') }}">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Descrição Adicional</label>
-                                    <textarea name="container_descricao" class="form-control" rows="3" 
-                                        placeholder="Informações adicionais sobre o container...">{{ old('container_descricao') }}</textarea>
-                                </div>
-                            </div>
-                        </div>
+                        <!-- Container removido - use a seção de Containers no menu Estoque -->
                     </div>
 
                     <div class="form-group">
@@ -213,11 +145,11 @@
         </div>
 
         <div class="alert alert-info">
-            <strong><i class="fa fa-info-circle"></i> Próximas etapas:</strong>
-            <ol>
-                <li>Clique em "Cadastrar Produto" para salvar este novo item no catálogo</li>
-                <li>Após cadastrar, use "Registrar Entrada" para adicionar quantidade ao estoque</li>
-            </ol>
+            <strong><i class="fa fa-info-circle"></i> Como usar:</strong>
+            <ul>
+                <li><strong>Consumo:</strong> Após cadastrar, use "Registrar Entrada" para adicionar quantidade ao estoque</li>
+                <li><strong>Permanente:</strong> Os bens cadastrados acima serão criados individualmente no sistema</li>
+            </ul>
         </div>
     </section>
 </div>

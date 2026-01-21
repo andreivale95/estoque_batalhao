@@ -58,7 +58,6 @@ class EstoqueController extends Controller
                 ->select(
                     'produtos.id',
                     'produtos.nome',
-                    'produtos.patrimonio',
                     DB::raw('MAX(itens_estoque.valor_unitario) as valor'),
                     'itens_estoque.unidade',
                     'unidades.nome as unidade_nome',
@@ -74,16 +73,12 @@ class EstoqueController extends Controller
                 ->when(filled($request->get('nome')), function (Builder $query) use ($request) {
                     return $query->where('produtos.nome', 'like', '%' . $request->get('nome') . '%');
                 })
-                ->when(filled($request->get('patrimonio')), function (Builder $query) use ($request) {
-                    return $query->where('produtos.patrimonio', 'like', '%' . $request->get('patrimonio') . '%');
-                })
                 ->when(filled($request->get('categoria')), function (Builder $query) use ($request) {
                     return $query->where('produtos.fk_categoria', $request->get('categoria'));
                 })
                 ->groupBy(
                     'produtos.id',
                     'produtos.nome',
-                    'produtos.patrimonio',
                     'itens_estoque.unidade',
                     'unidades.nome',
                     'produtos.fk_categoria'
@@ -701,28 +696,8 @@ class EstoqueController extends Controller
             $unidadeUsuario = Unidade::find(Auth::user()->fk_unidade);
             $isAdmin = Auth::user()->fk_perfil == 1;
             
-            // Carrega todos os containers agrupados por seção usando eh_container
+            // Containers não mais usados - eh_container foi removido
             $todosContainers = [];
-            $containers = Itens_estoque::whereHas('produto', function($q) {
-                    $q->where('eh_container', 1);
-                })
-                ->whereNull('fk_item_pai')
-                ->with('produto', 'secao')
-                ->get();
-            
-            // Agrupa por seção
-            foreach ($containers as $container) {
-                $secaoId = $container->fk_secao;
-                if (!isset($todosContainers[$secaoId])) {
-                    $todosContainers[$secaoId] = [];
-                }
-                $todosContainers[$secaoId][] = [
-                    'id' => $container->id,
-                    'produto' => [
-                        'nome' => $container->produto->nome
-                    ]
-                ];
-            }
 
             return view('estoque/estoque_form_entrada_existente', compact('produtos', 'secoes', 'unidades', 'unidadeUsuario', 'isAdmin', 'todosContainers'));
         } catch (Exception $e) {
@@ -1030,23 +1005,8 @@ class EstoqueController extends Controller
         try {
             $item = Itens_estoque::with(['produto', 'secao', 'itemPai.produto'])->findOrFail($id);
             
-            // Busca todos os containers da mesma seção usando eh_container
-            $containers = Itens_estoque::whereHas('produto', function($q) {
-                    $q->where('eh_container', 1);
-                })
-                ->where('fk_secao', $item->fk_secao)
-                ->whereNull('fk_item_pai')
-                ->with('produto')
-                ->get()
-                ->filter(function($cont) use ($id) {
-                    return $cont->id !== $id;
-                })
-                ->map(function($cont) {
-                    return [
-                        'id' => $cont->id,
-                        'nome' => $cont->produto->nome . ' - ' . $cont->secao->nome
-                    ];
-                });
+            // Containers não mais suportados - eh_container foi removido
+            $containers = [];
             
             return view('estoque.mover_item', compact('item', 'containers'));
         } catch (Exception $e) {

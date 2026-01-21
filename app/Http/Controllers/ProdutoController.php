@@ -111,18 +111,8 @@ class ProdutoController extends Controller {
         try {
             $produto = Produto::findOrFail($id);
             
-            // Verifica se é um container
-            if (!$produto->eh_container) {
-                return back()->with('warning', 'Este produto não é um container.');
-            }
-
-            // Busca dados do container
-            $container = $produto->container;
-
-            // Busca itens no container (itens com fk_item_pai apontando para items deste produto)
-            $itensNoContainer = Itens_estoque::whereHas('itemPai', function($query) use ($id) {
-                $query->where('fk_produto', $id);
-            })->with('produto')->get();
+            // Containers não mais suportados - eh_container foi removido
+            return back()->with('warning', 'Recurso de containers descontinuado. Use seções para organizar itens.');
 
             return view('containers.detalhes', compact('produto', 'container', 'itensNoContainer'));
         } catch (Exception $e) {
@@ -409,19 +399,26 @@ class ProdutoController extends Controller {
                 'tamanho' => $request->tamanho,
                 'unidade' => Auth::user()->fk_unidade,
                 'fk_categoria' => $request->categoria,
-                'patrimonio' => $request->patrimonio,
                 'ativo' => 'Y',
                 'tipo_controle' => $request->tipo_controle,
             ]);
 
             // Se é um item permanente, criar registros em itens_patrimoniais
             if ($request->tipo_controle === 'permanente') {
+                // Buscar uma seção padrão da unidade do usuário
+                $secaoParadrão = Secao::where('fk_unidade', Auth::user()->fk_unidade)->first();
+                
+                if (!$secaoParadrão) {
+                    DB::rollBack();
+                    return back()->with('error', 'Nenhuma seção de armazenamento disponível para sua unidade. Contate o administrador.');
+                }
+
                 foreach ($request->patrimonios as $patrimonialData) {
                     ItenPatrimonial::create([
                         'fk_produto' => $produto->id,
                         'patrimonio' => $patrimonialData['patrimonio'],
                         'serie' => $patrimonialData['serie'] ?? null,
-                        'fk_secao' => Auth::user()->fk_unidade, // Seção padrão da unidade do usuário (simplificado)
+                        'fk_secao' => $secaoParadrão->id,
                         'condicao' => $patrimonialData['condicao'],
                         'data_entrada' => now(),
                         'quantidade_cautelada' => 0,
