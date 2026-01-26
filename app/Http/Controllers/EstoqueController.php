@@ -17,92 +17,39 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Services\EstoqueUnificadoService;
 
 
 class EstoqueController extends Controller
 {
     public function listarEstoque(Request $request)
     {
-        // Lógica de redirecionamento:
-        // 1. Se vem de 'from=parametros' (menu Parâmetros), mostra sem filtro de unidade específica
-        // 2. Se acessa sem parâmetros de filtro (direto na URL), redireciona com a unidade do usuário
-        $fromParametros = $request->query('from') === 'parametros';
-        $hasNome = $request->query('nome') !== null;
-        $hasCategoria = $request->query('categoria') !== null;
-        $hasUnidade = $request->query('unidade') !== null;
+        $service = new EstoqueUnificadoService();
+        
+        $filtros = [
+            'tipo' => $request->query('tipo', ''),
+            'fk_categoria' => $request->query('categoria', ''),
+            'fk_secao' => $request->query('secao', ''),
+            'search' => $request->query('search', ''),
+            'per_page' => $request->query('per_page', 15)
+        ];
 
-        // Se não vem de parâmetros e não tem filtros, redireciona com a unidade do usuário
-        if (!$fromParametros && !$hasNome && !$hasCategoria && !$hasUnidade) {
-            return redirect()->route('estoque.listar', [
-                'nome' => '',
-                'categoria' => '',
-                'unidade' => Auth::user()->fk_unidade
-            ]);
-        }
-
-        $request['unidade'] = empty($request['unidade']) ? '' : $request->get('unidade');
-        $request['categoria'] = empty($request['categoria']) ? '' : $request->get('categoria');
-        $request['nome'] = empty($request['nome']) ? '' : $request->get('nome');
-
+        $itens = $service->obterEstoqueUnificado($filtros);
         $categorias = Categoria::all();
+        $secoes = Secao::all();
         $unidades = Unidade::all();
-        $militares = EfetivoMilitar::all();
 
-        try {
-            Log::info('Iniciando consulta de estoque', [
-                'filtros' => $request->all()
-            ]);
-
-            // Query base com filtros aplicados
-            $query = Itens_estoque::query()
-                ->select(
-                    'produtos.id',
-                    'produtos.nome',
-                    DB::raw('MAX(itens_estoque.valor_unitario) as valor'),
-                    'itens_estoque.unidade',
-                    'unidades.nome as unidade_nome',
-                    'produtos.fk_categoria as categoria_id',
-                    DB::raw('SUM(itens_estoque.quantidade) as quantidade_total')
-                )
-                ->join('produtos', 'produtos.id', '=', 'itens_estoque.fk_produto')
-                ->join('unidades', 'unidades.id', '=', 'itens_estoque.unidade')
-                ->leftJoin('categorias', 'categorias.id', '=', 'produtos.fk_categoria')
-                ->when(filled(request()->get('unidade')), function (Builder $query) use ($request) {
-                    return $query->where('itens_estoque.unidade', $request->get('unidade'));
-                })
-                ->when(filled($request->get('nome')), function (Builder $query) use ($request) {
-                    return $query->where('produtos.nome', 'like', '%' . $request->get('nome') . '%');
-                })
-                ->when(filled($request->get('categoria')), function (Builder $query) use ($request) {
-                    return $query->where('produtos.fk_categoria', $request->get('categoria'));
-                })
-                ->groupBy(
-                    'produtos.id',
-                    'produtos.nome',
-                    'itens_estoque.unidade',
-                    'unidades.nome',
-                    'produtos.fk_categoria'
-                );
-
-            // Executar a query principal
-            $itens_estoque = $query->paginate(10);
-
-            // Calcular o total geral
-            $totalGeral = $itens_estoque->sum(function ($item) {
-                return $item->quantidade_total * ($item->valor ?? 0);
-            });
-
-            return view('estoque/listarEstoque', compact('itens_estoque', 'unidades', 'categorias', 'totalGeral', 'militares',));
-        } catch (\Exception $e) {
-            Log::error('Erro ao consultar estoque', [
-                'erro' => $e->getMessage(),
-                'linha' => $e->getLine(),
-                'arquivo' => $e->getFile(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return back()->with('warning', 'Houve um erro ao consultar estoque. Erro: ' . $e->getMessage());
-        }
+        return view('estoque.listarEstoque', [
+            'itens' => $itens,
+            'itens_estoque' => $itens,
+            'categorias' => $categorias,
+            'secoes' => $secoes,
+            'unidades' => $unidades,
+            'filtros' => $filtros,
+            'service' => $service
+        ]);
     }
+
     public function transferir(Request $request)
     {
         $tipoTransferencia = $request->input('tipo_transferencia');
@@ -1063,4 +1010,33 @@ class EstoqueController extends Controller
             return back()->with('error', 'Houve um erro ao mover o item: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Listar estoque unificado (consumo + permanente)
+     */
+    public function listarUnificado(Request $request)
+    {
+        $service = new EstoqueUnificadoService();
+        
+        $filtros = [
+            'tipo' => $request->query('tipo', ''),
+            'fk_categoria' => $request->query('categoria', ''),
+            'fk_secao' => $request->query('secao', ''),
+            'search' => $request->query('search', ''),
+            'per_page' => $request->query('per_page', 15)
+        ];
+
+        $itens = $service->obterEstoqueUnificado($filtros);
+        $categorias = Categoria::all();
+        $secoes = Secao::all();
+
+        return view('estoque.listarUnificado', [
+            'itens' => $itens,
+            'categorias' => $categorias,
+            'secoes' => $secoes,
+            'filtros' => $filtros,
+            'service' => $service
+        ]);
+    }
 }
+

@@ -1,21 +1,7 @@
 @extends('layout/app')
-@section('styles')
-<style>
-    .item-row:hover {
-        background-color: #f5f5f5;
-    }
-    .item-row td {
-        transition: background-color 0.2s;
-    }
-    .btn-warning {
-        z-index: 2;
-        position: relative;
-    }
-</style>
-@endsection
 
 @section('content')
-    <div class="content-wrapper">
+<div class="content-wrapper">
         <!-- Content Header (Page header) -->
         <section class="content-header">
             <h1>Estoque</h1>
@@ -27,7 +13,7 @@
 
         <!-- Main content -->
         <section class="content container-fluid">
-            <form action="{{ route('estoque.listar') }}" method="get">
+            <form method="GET" action="{{ route('estoque.listar') }}" class="form-horizontal">
                 <div class="box box-primary">
                     <div class="box-header">
                         <div class="row" style="align-items: flex-end;">
@@ -120,11 +106,11 @@
                                     $subtotal = $estoque->quantidade_total * $valorUnitario;
                                     
                                     // Busca o primeiro item deste produto para pegar o ID correto
-                                    $primeiroItem = App\Models\Itens_estoque::where('fk_produto', $estoque->id)->first();
+                                    $primeiroItem = App\Models\Itens_estoque::where('fk_produto', $estoque->fk_produto)->first();
                                     $itemId = $primeiroItem ? $primeiroItem->id : $estoque->id;
                                     
-                                    // Define a rota para detalhes do produto
-                                    $rota = route('estoque.produto.detalhes', $estoque->id);
+                                    // Define a rota para detalhes do produto usando fk_produto
+                                    $rota = route('estoque.produto.detalhes', $estoque->fk_produto);
                                 @endphp
                                 <tr class="item-row" style="cursor: pointer;" 
                                     onclick="window.location='{{ $rota }}'"
@@ -135,7 +121,7 @@
                                     <td>
                                         @php
                                             // Busca todos os itens deste produto
-                                            $itens = App\Models\Itens_estoque::where('fk_produto', $estoque->id)
+                                            $itens = App\Models\Itens_estoque::where('fk_produto', $estoque->fk_produto)
                                                 ->with(['secao'])
                                                 ->get();
                                             
@@ -166,7 +152,7 @@
                                     <td>
                                         @php
                                             // Calcula total de itens cautelados para este produto
-                                            $totalCautelado = App\Models\Itens_estoque::where('fk_produto', $estoque->id)
+                                            $totalCautelado = App\Models\Itens_estoque::where('fk_produto', $estoque->fk_produto)
                                                 ->sum('quantidade_cautelada');
                                         @endphp
                                         <span class="text-warning" style="font-weight: bold;">{{ $totalCautelado }}</span>
@@ -193,7 +179,7 @@
                                     <td>R$ {{ number_format($valorUnitario, 2, ',', '.') }}</td>
                                     <td>R$ {{ number_format($subtotal, 2, ',', '.') }}</td>
                                     <td>
-                                        @if (Auth::user()->fk_unidade == $estoque->unidade()->first()->id)
+                                        @if (Auth::user()->fk_unidade == $estoque->unidade)
                                             <button type="button" class="btn btn-warning btn-sm" data-toggle="modal"
                                                 data-target="#modalTransferencia{{ $estoque->id }}"
                                                 onclick="event.stopPropagation();">
@@ -365,79 +351,6 @@
                         </tbody>
                     </table>
                       {{ $itens_estoque->links() }}
-                </div>
-            </div>
-
-            <!-- Seção de Bens Patrimoniais -->
-            <div class="box box-info" style="margin-top: 30px;">
-                <div class="box-header with-border">
-                    <h3 class="box-title"><i class="fa fa-lock"></i> Bens Patrimoniais (Itens Individuais)</h3>
-                </div>
-                <div class="box-body table-responsive">
-                    @php
-                        // Buscar todos os itens patrimoniais
-                        $itensPatrimoniais = App\Models\ItenPatrimonial::with(['produto', 'secao'])->paginate(15);
-                    @endphp
-                    
-                    @if($itensPatrimoniais->count() > 0)
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Patrimônio</th>
-                                    <th>Produto</th>
-                                    <th>Série</th>
-                                    <th>Localização</th>
-                                    <th>Condição</th>
-                                    <th>Cautelado</th>
-                                    <th>Entrada</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($itensPatrimoniais as $item)
-                                    <tr style="cursor: pointer;" title="Clique para ver detalhes">
-                                        <td><strong>{{ $item->patrimonio }}</strong></td>
-                                        <td>{{ $item->produto->nome }}</td>
-                                        <td>{{ $item->serie ?? '-' }}</td>
-                                        <td>{{ $item->secao->nome ?? '-' }}</td>
-                                        <td>
-                                            @php
-                                                $condicaoClass = match($item->condicao) {
-                                                    'novo' => 'success',
-                                                    'bom' => 'info',
-                                                    'regular' => 'warning',
-                                                    'ruim' => 'danger',
-                                                    default => 'default'
-                                                };
-                                            @endphp
-                                            <span class="label label-{{ $condicaoClass }}">{{ ucfirst($item->condicao) }}</span>
-                                        </td>
-                                        <td>
-                                            @if($item->quantidade_cautelada > 0)
-                                                <span class="badge badge-danger">Cautelado</span>
-                                            @else
-                                                <span class="text-success">Disponível</span>
-                                            @endif
-                                        </td>
-                                        <td>{{ $item->created_at->format('d/m/Y') }}</td>
-                                        <td>
-                                            <button class="btn btn-sm btn-info" title="Ver detalhes">
-                                                <i class="fa fa-eye"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-warning" title="Editar">
-                                                <i class="fa fa-edit"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                        {{ $itensPatrimoniais->links() }}
-                    @else
-                        <div class="alert alert-info">
-                            <i class="fa fa-info-circle"></i> Nenhum bem patrimonial cadastrado ainda.
-                        </div>
-                    @endif
                 </div>
             </div>
 

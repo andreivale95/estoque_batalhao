@@ -59,10 +59,10 @@ class ProdutoController extends Controller {
             // Consolida itens soltos com mesma quantidade e lote na mesma seção
             $this->consolidarItensRaiz($id);
 
+            // Busca itens de consumo
             $quantidadeTotal = Itens_estoque::where('fk_produto', $id)->sum('quantidade');
 
-            // Busca todos os itens deste produto com suas hierarquias
-            // Inclui eager loading de itensFilhos com seus produtos e segundos níveis
+            // Busca todos os itens de consumo deste produto com suas hierarquias
             $todosOsItens = Itens_estoque::where('fk_produto', $id)
                 ->with([
                     'secao', 
@@ -96,10 +96,15 @@ class ProdutoController extends Controller {
                 ];
             });
 
-            return view('produtos.detalhes', compact('produto', 'quantidadeTotal', 'detalhesSecao', 'todosOsItens'));
+            // Busca itens patrimoniais também
+            $itensPatrimoniais = ItenPatrimonial::where('fk_produto', $id)
+                ->with(['secao'])
+                ->get();
+
+            return view('produtos.detalhes', compact('produto', 'quantidadeTotal', 'detalhesSecao', 'todosOsItens', 'itensPatrimoniais'));
         } catch (Exception $e) {
-            Log::error('Erro ao carregar detalhes do produto', [$e]);
-            return back()->with('warning', 'Erro ao carregar detalhes do produto.');
+            Log::error('Erro ao carregar detalhes do produto', ['error' => $e->getMessage()]);
+            return back()->with('warning', 'Erro ao carregar detalhes do produto: ' . $e->getMessage());
         }
     }
 
