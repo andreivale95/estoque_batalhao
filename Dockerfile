@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     libxml2-dev \
     libzip-dev \
+    libpq-dev \
     git \
     && docker-php-ext-install \
     pdo \
