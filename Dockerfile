@@ -10,7 +10,11 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     libzip-dev \
     libpq-dev \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev \
     git \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
     pdo \
     pdo_pgsql \
@@ -18,6 +22,7 @@ RUN apt-get update && apt-get install -y \
     xml \
     zip \
     bcmath \
+    gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
