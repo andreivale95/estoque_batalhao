@@ -88,9 +88,9 @@
                                 <th>Produto</th>
                                 <th>Localização</th>
                                 <th>Patrimônio</th>
-                                <th>Quantidade</th>
-                                <th>Cautelado</th>
                                 <th>Disponível</th>
+                                <th>Cautelado</th>
+                                <th>Quantidade</th>
                                 <th>Unidade</th>
                                 <th>Categoria</th>
                                 <th>Estoque</th>
@@ -128,14 +128,14 @@
                                             // Agrupa apenas seções únicas
                                             $localizacoes = $itens->map(function($item) {
                                                 return $item->secao ? $item->secao->nome : 'Sem seção';
-                                            })->unique()->take(3);
+                                            })->unique()->take(2);
                                         @endphp
                                         @if($localizacoes->count() > 0)
                                             @foreach($localizacoes as $loc)
                                                 <small>{{ $loc }}</small><br>
                                             @endforeach
-                                            @if($localizacoes->count() >= 3 && $itens->pluck('fk_secao')->unique()->count() > 3)
-                                                <small class="text-muted">+{{ $itens->pluck('fk_secao')->unique()->count() - 3 }} mais...</small>
+                                            @if($localizacoes->count() >= 2 && $itens->pluck('fk_secao')->unique()->count() > 2)
+                                                <small class="text-muted">+{{ $itens->pluck('fk_secao')->unique()->count() - 2 }} mais...</small>
                                             @endif
                                         @else
                                             <small class="text-muted">-</small>
@@ -143,10 +143,14 @@
                                     </td>
                                     <td>{{ $estoque->patrimonio ?? '-' }}</td>
                                     <td>
-                                        @if ($estoque->quantidade_total <= 0)
-                                            <span class="text-danger">Produto esgotado</span>
+                                        @php
+                                            // Usar o disponível já calculado e agregado pelo serviço
+                                            $disponivel = $estoque->disponivel;
+                                        @endphp
+                                        @if ($disponivel <= 0)
+                                            <span class="text-danger">Indisponível</span>
                                         @else
-                                            {{ $estoque->quantidade_total }}
+                                            <span class="text-success">{{ $disponivel }}</span>
                                         @endif
                                     </td>
                                     <td>
@@ -158,14 +162,10 @@
                                         <span class="text-warning" style="font-weight: bold;">{{ $totalCautelado }}</span>
                                     </td>
                                     <td>
-                                        @php
-                                            // Calcula quantidade disponível (total - cautelado)
-                                            $disponivel = $estoque->quantidade_total - $totalCautelado;
-                                        @endphp
-                                        @if ($disponivel <= 0)
-                                            <span class="text-danger">Indisponível</span>
+                                        @if ($estoque->quantidade_total <= 0)
+                                            <span class="text-danger">Produto esgotado</span>
                                         @else
-                                            <span class="text-success">{{ $disponivel }}</span>
+                                            {{ $estoque->quantidade_total }}
                                         @endif
                                     </td>
                                     <td>{{ $estoque->unidade_nome }}</td>
@@ -196,9 +196,9 @@
                                     role="dialog" aria-labelledby="modalTransferenciaLabel{{ $estoque->id }}"
                                     aria-hidden="true">
                                     <div class="modal-dialog modal-lg" role="document">
-                                        <form action="{{ route('estoque.transferir') }}" method="POST">
+                                        <form action="{{ route('estoque.transferir.secoes') }}" method="POST">
                                             @csrf
-                                            <input type="hidden" name="fk_produto" value="{{ $estoque->id }}">
+                                            <input type="hidden" name="fk_produto" value="{{ $estoque->fk_produto }}">
                                             <div class="modal-content">
                                                 <div class="modal-header bg-warning">
                                                     <h5 class="modal-title"><i class="fa fa-exchange-alt"></i> Transferir Item</h5>
@@ -252,7 +252,7 @@
                                                             <option value="">-- Selecione --</option>
                                                             @php
                                                                 $secoes = DB::table('itens_estoque')
-                                                                    ->where('fk_produto', $estoque->id)
+                                                                    ->where('fk_produto', $estoque->fk_produto)
                                                                     ->whereNull('fk_item_pai')
                                                                     ->pluck('fk_secao')
                                                                     ->unique();
@@ -261,7 +261,7 @@
                                                                 @php
                                                                     $secao = DB::table('secaos')->find($secaoId);
                                                                     $qtd = DB::table('itens_estoque')
-                                                                        ->where('fk_produto', $estoque->id)
+                                                                        ->where('fk_produto', $estoque->fk_produto)
                                                                         ->where('fk_secao', $secaoId)
                                                                         ->whereNull('fk_item_pai')
                                                                         ->sum('quantidade');
@@ -283,14 +283,14 @@
                                                             @php
                                                                 // Busca containers (itens_estoque com fk_item_pai = null) que têm items do estoque atual como filhos
                                                                 $containersComItem = App\Models\Itens_estoque::whereHas('itensFilhos', function($q) use ($estoque) {
-                                                                    $q->where('fk_produto', $estoque->id);
+                                                                    $q->where('fk_produto', $estoque->fk_produto);
                                                                 })
                                                                 ->with('produto')
                                                                 ->get();
                                                             @endphp
                                                             @foreach($containersComItem as $itemContainer)
                                                                 @php
-                                                                    $qtdNoContainer = App\Models\Itens_estoque::where('fk_produto', $estoque->id)
+                                                                    $qtdNoContainer = App\Models\Itens_estoque::where('fk_produto', $estoque->fk_produto)
                                                                         ->where('fk_item_pai', $itemContainer->id)
                                                                         ->sum('quantidade');
                                                                 @endphp
