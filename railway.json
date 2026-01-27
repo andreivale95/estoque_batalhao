@@ -4,7 +4,6 @@
   },
   "deploy": {
     "restartPolicyType": "on_failure",
-    "restartPolicyMaxRetries": 5,
-    "startCommand": "vendor/bin/heroku-php-apache2 public/"
+    "restartPolicyMaxRetries": 5
   }
 }

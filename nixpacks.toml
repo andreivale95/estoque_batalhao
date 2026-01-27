@@ -1,19 +1,37 @@
-# Railway Build Configuration
-# Used by Nixpacks to build the application
-
-# PHP version to use
-[build]
-requires = ["8.3", "php83Extensions.pdo_pgsql", "php83Extensions.pdo_mysql"]
+[phases.setup]
+nixPkgs = [
+    "php83",
+    "php83Packages.composer",
+    "nodejs_20",
+    "php83Extensions.pdo_pgsql", 
+    "php83Extensions.pdo_mysql", 
+    "php83Extensions.bcmath", 
+    "php83Extensions.gd", 
+    "php83Extensions.zip",
+    "php83Extensions.intl",
+    "php83Extensions.mbstring",
+    "php83Extensions.dom",
+    "php83Extensions.xml"
+]
 
 # Build command - install dependencies
 [phases.install]
-dependsOn = ["detect"]
-cmds = ["composer install --no-dev --optimize-autoloader"]
+dependsOn = ["setup"]
+cmds = [
+    "composer install --no-dev --optimize-autoloader",
+    "npm install"
+]
 
-# Web process - start Apache with PHP
-[phases.web]
-cmd = "vendor/bin/heroku-php-apache2 public/"
+# Build assets
+[phases.build]
+dependsOn = ["install"]
+cmds = ["npm run build"]
 
-# Post-build commands
+# Post-build commands (Prepare for production)
 [phases.post-build]
-cmds = ["php artisan config:cache", "php artisan route:cache"]
+dependsOn = ["build"]
+cmds = [
+    "php artisan config:cache", 
+    "php artisan route:cache",
+    "php artisan view:cache"
+]

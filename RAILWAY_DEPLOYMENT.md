@@ -16,12 +16,10 @@ git init
 # Adicionar todos os arquivos
 git add .
 
-# Primeiro commit
-git commit -m "Initial commit for Railway deployment"
+# Commit das configurações do Railway
+git commit -m "Configurar deploy no Railway via Nixpacks"
 
-# Criar repositório no GitHub e fazer push
-git remote add origin https://github.com/seu-usuario/sisalmox.git
-git branch -M main
+# Subir para o GitHub
 git push -u origin main
 ```
 
@@ -87,15 +85,16 @@ No arquivo `.env.example`, Railway substitui automaticamente:
 - `${{Postgres.PGUSER}}` - Usuário
 - `${{Postgres.PGPASSWORD}}` - Senha
 
-### 6. Deploy
+### 6. Deploy no Railway
 
-O Railway fará o deploy automaticamente quando você fizer push para `main`.
+O deploy é automático quando você faz push para `main` no GitHub.
 
-Ou manualmente:
-```bash
-# Via Railway CLI
-railway up
-```
+O Railway irá:
+1. Detectar o arquivo `nixpacks.toml`.
+2. Instalar PHP 8.3 e Node.js 20.
+3. Configurar **Nginx + PHP-FPM** automaticamente.
+4. Executar os scripts de build (`npm run build`).
+5. Iniciar a aplicação.
 
 ### 7. Rodar Migrações
 
