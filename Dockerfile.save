@@ -1,4 +1,4 @@
-FROM php:8.1-rc-apache
+FROM php:8.3-apache
 
 RUN groupadd -g 1000 siapi
 RUN useradd -u 1000 -ms /bin/bash -g siapi siapi
