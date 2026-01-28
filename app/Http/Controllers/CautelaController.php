@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Models\Cautela;
 use App\Models\CautelaProduto;
 use App\Models\Produto;
@@ -246,5 +247,96 @@ class CautelaController extends Controller
             \Log::error('Erro ao visualizar comprovante', [$e]);
             return back()->with('error', 'Erro ao visualizar comprovante');
         }
+    }
+
+    /**
+     * Lista itens que estão em cautela (por item)
+     */
+    public function listarPorItem(Request $request)
+    {
+        // Obtém todos os CautelaProduto com relacionamentos
+        $cautelas = CautelaProduto::with(['produto', 'cautela'])
+            ->get();
+
+        // Agrupa por produto e calcula
+        $produtosAgrupados = [];
+        
+        foreach ($cautelas as $cautelaItem) {
+            $prodId = $cautelaItem->produto_id;
+            $quantidade_cautelada = $cautelaItem->quantidade - (int)($cautelaItem->quantidade_devolvida ?? 0);
+            
+            // Ignora itens totalmente devolvidos
+            if ($quantidade_cautelada <= 0) {
+                continue;
+            }
+            
+            if (!isset($produtosAgrupados[$prodId])) {
+                $produtosAgrupados[$prodId] = [
+                    'id' => $prodId,
+                    'produto' => $cautelaItem->produto,
+                    'nome' => $cautelaItem->produto->nome ?? 'Produto desconhecido',
+                    'quantidade_cautelada' => 0,
+                    'quantidade_devolvida' => 0,
+                    'quantidade_pessoas' => 0,
+                ];
+            }
+            
+            $produtosAgrupados[$prodId]['quantidade_cautelada'] += $quantidade_cautelada;
+            $produtosAgrupados[$prodId]['quantidade_devolvida'] += (int)($cautelaItem->quantidade_devolvida ?? 0);
+        }
+
+        // Calcula quantidade de pessoas por produto
+        foreach ($produtosAgrupados as $prodId => &$dados) {
+            $pessoasUnicas = CautelaProduto::where('produto_id', $prodId)
+                ->where('quantidade', '>', DB::raw('COALESCE(quantidade_devolvida, 0)'))
+                ->distinct('cautela_id')
+                ->count('cautela_id');
+            $dados['quantidade_pessoas'] = $pessoasUnicas;
+        }
+
+        // Ordena por nome
+        uasort($produtosAgrupados, function ($a, $b) {
+            return strcasecmp($a['nome'], $b['nome']);
+        });
+
+        // Converte para Collection
+        $produtos = collect($produtosAgrupados);
+
+        return view('cautelas.por-item', compact('produtos'));
+    }
+
+    /**
+     * Mostra detalhes de um item em cautela (para quem está cautelado)
+     */
+    public function detalhesPorItem($prodId)
+    {
+        // Obtém o produto
+        $produto = Produto::findOrFail($prodId);
+
+        // Obtém todas as cautelas ativas para este produto
+        $cautelasProduto = CautelaProduto::with(['cautela', 'produto'])
+            ->where('produto_id', $prodId)
+            ->get();
+
+        // Filtra apenas aquelas com saldo
+        $cautelas = [];
+        $quantidadeTotalCautelada = 0;
+
+        foreach ($cautelasProduto as $cp) {
+            $saldo = $cp->quantidade - (int)($cp->quantidade_devolvida ?? 0);
+            if ($saldo > 0) {
+                $cautelas[] = $cp;
+                $quantidadeTotalCautelada += $saldo;
+            }
+        }
+
+        if (empty($cautelas)) {
+            return back()->with('info', 'Nenhuma cautela ativa para este produto');
+        }
+
+        // Converte para Collection
+        $cautelas = collect($cautelas);
+
+        return view('cautelas.detalhes-item', compact('produto', 'cautelas', 'quantidadeTotalCautelada', 'prodId'));
     }
 }

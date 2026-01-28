@@ -22,6 +22,26 @@
                     </a>
                 </div>
             </div>
+
+            <!-- Abas de Visualização -->
+            <div class="box-header" style="border-bottom: 2px solid #ddd; padding: 10px 15px;">
+                <ul class="nav nav-tabs" role="tablist" style="margin: 0; border-bottom: 0;">
+                    <li role="presentation" class="active" style="margin-right: 10px;">
+                        <a href="{{ route('cautelas.index') }}" 
+                           class="btn btn-sm" 
+                           style="background-color: #0073cc; color: white; border: 1px solid #0056b3;">
+                            <i class="fa fa-file-text"></i> Por Cautela
+                        </a>
+                    </li>
+                    <li role="presentation" style="margin-right: 10px;">
+                        <a href="{{ route('cautelas.por-item') }}" 
+                           class="btn btn-sm" 
+                           style="background-color: #6c757d; color: white; border: 1px solid #5a6268;">
+                            <i class="fa fa-box"></i> Por Item
+                        </a>
+                    </li>
+                </ul>
+            </div>
             
             <!-- Filtros -->
             <div class="box-body" style="border-bottom: 1px solid #ddd; padding-bottom: 15px;">

@@ -194,6 +194,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::middleware(['auth', 'verified'])->controller(CautelaController::class)->group(function () {
     Route::get('cautelas', 'index')->name('cautelas.index');
+    Route::get('cautelas/por-item', 'listarPorItem')->name('cautelas.por-item');
+    Route::get('cautelas/item/{prodId}', 'detalhesPorItem')->name('cautelas.detalhes-item');
     Route::get('cautelas/create', 'create')->name('cautelas.create');
     Route::post('cautelas', 'store')->name('cautelas.store');
     Route::get('cautelas/{cautela}', 'show')->name('cautelas.show');
