@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
     libpng-dev \
+    libbz2-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
     pdo \
@@ -29,6 +30,9 @@ RUN apt-get update && apt-get install -y \
     zip \
     bcmath \
     gd \
+    bz2 \
+    openssl \
+    soap \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
