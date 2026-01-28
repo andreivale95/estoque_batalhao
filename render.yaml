@@ -1,0 +1,63 @@
+services:
+  - type: web
+    name: sisalmox
+    runtime: docker
+    region: ohio
+    plan: free
+    healthCheckPath: /
+    
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: error
+      - key: CACHE_DRIVER
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: SESSION_DRIVER
+        value: file
+      - key: FILESYSTEM_DISK
+        value: local
+      
+      # Database connection - uses Render PostgreSQL
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: sisalmox-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: sisalmox-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: sisalmox-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: sisalmox-db
+          property: username
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: sisalmox-db
+          property: password
+      
+      # These need to be set manually in Render dashboard
+      - key: APP_KEY
+        sync: false
+      - key: APP_URL
+        sync: false
+
+  - type: pserv
+    name: sisalmox-db
+    runtime: postgres15
+    plan: free
+    region: ohio
+    ipAllowList: []
+    databases:
+      - name: sisalmox
+        user: sisalmox_user

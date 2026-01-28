@@ -1,0 +1,216 @@
+🚀 SISALMOX - RENDER DEPLOYMENT (28 de Janeiro de 2026)
+
+═══════════════════════════════════════════════════════════════
+
+✅ MIGRAÇÃO CONCLUÍDA: Railway → Render
+
+═══════════════════════════════════════════════════════════════
+
+📋 CONFIGURAÇÃO RENDER CRIADA:
+
+✅ render.yaml
+   └─ Configuração automática do Render
+   └─ Web service + PostgreSQL
+   └─ Variáveis de ambiente
+
+✅ RENDER_DEPLOYMENT.md
+   └─ Guia completo de deployment
+   └─ Troubleshooting
+   └─ Segurança
+
+═══════════════════════════════════════════════════════════════
+
+🎯 5 PASSOS PARA DEPLOY NO RENDER
+
+PASSO 1: Push para GitHub
+────────────────────────────────────────────────────────────
+
+Terminal (na pasta do projeto):
+
+  git add .
+  git commit -m "Mudar para Render deployment"
+  git push origin main
+
+PASSO 2: Conectar GitHub ao Render
+────────────────────────────────────────────────────────────
+
+1. Acesse render.com
+2. Nova conta ou login
+3. Clique "New +" → "Web Service"
+4. Autorize GitHub
+5. Selecione repositório "sisalmox"
+6. Render detecta Dockerfile automaticamente ✨
+
+PASSO 3: Configurar Variáveis
+────────────────────────────────────────────────────────────
+
+Na página do web service, adicione:
+
+  APP_KEY=base64:SEU_APP_KEY_AQUI
+  APP_URL=https://seu-app-name.onrender.com
+
+Gere APP_KEY localmente:
+  php artisan key:generate --show
+
+PASSO 4: Criar Banco de Dados
+────────────────────────────────────────────────────────────
+
+No Render:
+  Clique "New +" → "PostgreSQL"
+  
+  Nome: sisalmox-db
+  Database: sisalmox
+  User: sisalmox_user
+  Region: Ohio (mesma do web service)
+  Plan: Free
+
+Clique "Create Database"
+
+Render conecta automaticamente via render.yaml! ✨
+
+PASSO 5: Deploy!
+────────────────────────────────────────────────────────────
+
+Opção A: Manual
+  Clique no web service
+  Clique "Manual Deploy"
+  Aguarde ~3-5 minutos
+
+Opção B: Automático
+  Qualquer git push para main
+  Render detecta automaticamente
+
+App estará em: https://seu-app-name.onrender.com
+
+═══════════════════════════════════════════════════════════════
+
+📊 RENDER vs RAILWAY
+
+┌────────────────┬────────────────┬────────────────┐
+│ Aspecto        │ Render         │ Railway        │
+├────────────────┼────────────────┼────────────────┤
+│ Preço          │ Mais barato     │ Grátis primeiro│
+│ Free Tier      │ Completo       │ Grátis         │
+│ Docker         │ Sim ✅         │ Sim ✅         │
+│ PostgreSQL     │ Incluído       │ Incluído       │
+│ SSL            │ Automático ✅  │ Automático ✅  │
+│ Backups        │ Plan pago      │ Automático     │
+│ Escalabilidade │ Boa            │ Melhor         │
+│ UX             │ Intuitiva      │ Intuitiva      │
+└────────────────┴────────────────┴────────────────┘
+
+═══════════════════════════════════════════════════════════════
+
+🔐 VANTAGENS DO RENDER
+
+✅ Free tier completo (web + PostgreSQL)
+✅ Docker suportado nativamente
+✅ Variáveis de ambiente automáticas via render.yaml
+✅ GitHub integration perfeita
+✅ Preço barato para production
+✅ Suporte a PostgreSQL
+✅ SSL automático
+✅ Logs em tempo real
+✅ Dashboard limpo e intuitivo
+
+═══════════════════════════════════════════════════════════════
+
+⚡ COMANDOS RENDER ÚTEIS
+
+Via Shell no Dashboard:
+
+  # Migrations
+  php artisan migrate --force
+
+  # Cache
+  php artisan config:cache
+
+  # Tinker
+  php artisan tinker
+
+  # Ver logs
+  tail -f storage/logs/laravel.log
+
+═══════════════════════════════════════════════════════════════
+
+🎯 CHECKLIST ANTES DE FAZER PUSH
+
+✅ Verificações:
+  [ ] Todos os commits locais feitos
+  [ ] .env real NÃO está commitado
+  [ ] .env.example atualizado
+  [ ] Dockerfile testado (opcional)
+  [ ] composer.json verificado
+  [ ] package.json verificado
+
+✅ Render:
+  [ ] Conta Render criada
+  [ ] GitHub autorizado
+  [ ] render.yaml no repositório ✅
+
+═══════════════════════════════════════════════════════════════
+
+📱 MONITORAMENTO NO RENDER
+
+Dashboard Render oferece:
+
+  • Logs em tempo real
+  • CPU/Memory/Disk usage
+  • Deployment history
+  • Restart da aplicação
+  • Alertas
+  • Webhooks
+
+═══════════════════════════════════════════════════════════════
+
+🆘 PROBLEMAS COMUNS
+
+Problema: "Build failed"
+→ Verifique logs em Render
+→ Confirme Dockerfile existe
+→ git push novamente
+
+Problema: "Cannot connect to database"
+→ PostgreSQL foi criado?
+→ render.yaml configurado?
+→ Aguarde 2 min para conexão
+
+Problema: "App is very slow"
+→ Free tier tem recursos limitados
+→ Upgrade para Starter plan
+→ Configure Redis cache
+
+═══════════════════════════════════════════════════════════════
+
+📞 PRÓXIMOS PASSOS
+
+1. git push origin main
+2. Acessar render.com
+3. Conectar GitHub
+4. Criar web service (Dockerfile)
+5. Criar PostgreSQL
+6. Adicionar variáveis de ambiente
+7. Deploy!
+
+TEMPO TOTAL: ~10 minutos
+
+═══════════════════════════════════════════════════════════════
+
+📚 DOCUMENTAÇÃO
+
+  • RENDER_DEPLOYMENT.md - Guia completo
+  • render.yaml - Configuração automática
+  • Dockerfile - Build para production
+
+═══════════════════════════════════════════════════════════════
+
+✨ STATUS
+
+Aplicação: ✅ Pronto para Render
+Dockerfile: ✅ Otimizado
+render.yaml: ✅ Criado
+Documentação: ✅ Completa
+
+PRONTO PARA DEPLOY! 🚀
+
+═══════════════════════════════════════════════════════════════
