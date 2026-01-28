@@ -1,28 +1,31 @@
-# Multi-stage build para Railway
+# Build para Render
 FROM php:8.3-apache
 
-# Set working directory
 WORKDIR /app
 
-# Install Node.js and system dependencies
-RUN apt-get update && apt-get install -y \
+# Update and install all dependencies in one efficient layer
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
     curl \
     git \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Install PHP dependencies
-RUN apt-get update && apt-get install -y \
+    ca-certificates \
     libxml2-dev \
     libzip-dev \
     libpq-dev \
     libfreetype6-dev \
     libjpeg62-turbo-dev \
     libpng-dev \
-    libbz2-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install \
+    libbz2-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y --no-install-recommends nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
+    docker-php-ext-install \
     pdo \
     pdo_pgsql \
     pdo_mysql \
@@ -30,10 +33,7 @@ RUN apt-get update && apt-get install -y \
     zip \
     bcmath \
     gd \
-    bz2 \
-    openssl \
-    soap \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    bz2
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
@@ -64,8 +64,7 @@ RUN echo '<Directory /app/public>\n\
 # Set Apache document root
 RUN sed -i 's|/var/www/html|/app/public|g' /etc/apache2/sites-available/000-default.conf
 
-# Cache configuration will be done in Procfile release phase
 EXPOSE 80
 
-# Default to running Apache
+# Start Apache
 CMD ["apache2-foreground"]
