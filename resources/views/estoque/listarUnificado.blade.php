@@ -26,8 +26,8 @@
                     <label for="search" class="form-label">
                         <i class="fas fa-search"></i> Buscar Item
                     </label>
-                    <input type="text" class="form-control" id="search" name="search" 
-                           placeholder="Nome ou Patrimônio..." 
+                          <input type="text" class="form-control" id="search" name="search" 
+                              placeholder="Nome do item..." 
                            value="{{ $filtros['search'] ?? '' }}">
                 </div>
 
@@ -124,9 +124,6 @@
                             <!-- Item (Nome do Produto) -->
                             <td>
                                 <div class="fw-bold">{{ $item->nome_produto }}</div>
-                                @if($item->patrimonio)
-                                    <small class="text-muted">Patrimônio: <code>{{ $item->patrimonio }}</code></small>
-                                @endif
                                 @if($item->serie)
                                     <small class="text-muted d-block">Série: {{ $item->serie }}</small>
                                 @endif

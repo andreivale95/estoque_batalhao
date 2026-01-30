@@ -142,7 +142,12 @@
                 <tr>
                     <td class="col-data">{{ \Carbon\Carbon::parse($m->data_movimentacao)->format('d/m/Y H:i:s') }}</td>
                     <td class="col-produto">{{ $m->produto->nome ?? '—' }} - {{ optional($m->produto()->first()?->tamanho()->first())->tamanho ?? 'Tamanho Único' }}</td>
-                    <td class="col-tipo">{{ $m->tipo_movimentacao }}</td>
+                    <td class="col-tipo">
+                        {{ $m->tipo_movimentacao }}
+                        @if(($m->movimentacao_origem_id ?? null) || str_contains($m->observacao ?? '', 'Desfeito movimentação'))
+                            <span class="label label-danger" style="margin-left:6px;">Desfeita</span>
+                        @endif
+                    </td>
                     <td class="col-fornecedor">{{ $m->fornecedor }}</td>
                     <td class="col-nota_fiscal">{{ $m->nota_fiscal }}</td>
                     <td class="col-quantidade">{{ $m->quantidade }}</td>

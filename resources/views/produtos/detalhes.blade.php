@@ -15,12 +15,69 @@
         <div class="box box-primary">
             <div class="box-body">
                 <h3>{{ $produto->nome }}</h3>
-                <p><strong>Patrimônio:</strong> {{ $produto->patrimonio ?? '-' }}</p>
+                @if(($produto->tipo_controle ?? '') !== 'permanente')
+                    <p><strong>Patrimônio:</strong> {{ $produto->patrimonio ?? '-' }}</p>
+                @endif
                 <p><strong>Quantidade total:</strong> {{ $quantidadeTotal }}</p>
 
                 <hr>
                 <h4>Localização dos Itens</h4>
                 <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
+                    @if(($produto->tipo_controle ?? '') === 'permanente')
+                        @php
+                            $secoesByPatrimonio = [];
+                            foreach($itensPatrimoniais as $item) {
+                                $secaoId = $item->fk_secao;
+                                $secaoNome = $item->secao->nome ?? 'Sem seção';
+                                if (!isset($secoesByPatrimonio[$secaoId])) {
+                                    $secoesByPatrimonio[$secaoId] = [
+                                        'nome' => $secaoNome,
+                                        'itens' => []
+                                    ];
+                                }
+                                $secoesByPatrimonio[$secaoId]['itens'][] = $item;
+                            }
+                        @endphp
+
+                        @forelse($secoesByPatrimonio as $secaoId => $secao)
+                            <div class="panel panel-default">
+                                <div class="panel-heading" role="tab" id="heading-{{ $secaoId }}">
+                                    <h4 class="panel-title">
+                                        <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapse-{{ $secaoId }}" aria-expanded="false" aria-controls="collapse-{{ $secaoId }}">
+                                            <i class="fa fa-folder"></i> Seção: {{ $secao['nome'] }}
+                                            <span class="badge bg-blue" style="margin-left: 10px;">{{ count($secao['itens']) }} {{ count($secao['itens']) == 1 ? 'item' : 'itens' }}</span>
+                                        </a>
+                                    </h4>
+                                </div>
+                                <div id="collapse-{{ $secaoId }}" class="panel-collapse collapse" role="tabpanel" aria-labelledby="heading-{{ $secaoId }}">
+                                    <div class="panel-body">
+                                        <div class="list-group">
+                                            @foreach($secao['itens'] as $item)
+                                                <div class="list-group-item">
+                                                    <p style="margin: 4px 0;">
+                                                        <strong>Patrimônio:</strong> {{ $item->patrimonio }}
+                                                    </p>
+                                                    <p style="margin: 4px 0; color: #666; font-size: 12px;">
+                                                        Série: {{ $item->serie ?? '-' }} | Condição: {{ ucfirst($item->condicao ?? 'bom') }}
+                                                        | Status: {{ $item->quantidade_cautelada > 0 ? 'Cautelado' : 'Disponível' }}
+                                                    </p>
+                                                    @if($item->observacao)
+                                                        <p style="margin: 4px 0; color: #666; font-size: 12px;">
+                                                            Observação: {{ $item->observacao }}
+                                                        </p>
+                                                    @endif
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="alert alert-info">
+                                Nenhum item permanente cadastrado.
+                            </div>
+                        @endforelse
+                    @else
                     @php
                         $secoesByItem = [];
                         foreach($todosOsItens as $item) {
@@ -192,6 +249,7 @@
                             Nenhuma seção com itens deste produto.
                         </div>
                     @endforelse
+                    @endif
                 </div>
 
                 <hr>

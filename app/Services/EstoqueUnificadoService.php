@@ -149,10 +149,10 @@ class EstoqueUnificadoService
                 'ip.quantidade_cautelada',
                 DB::raw('CASE WHEN ip.quantidade_cautelada > 0 THEN 0 ELSE 1 END as disponivel'),
                 DB::raw('1 as quantidade_total'),
-                DB::raw('NULL as preco_unitario'),
-                DB::raw('NULL as valor_total'),
-                DB::raw('NULL as unidade'),
-                DB::raw('NULL as unidade_nome_label'),
+                DB::raw("(SELECT hm.valor_unitario FROM historico_movimentacoes hm WHERE hm.fk_produto = ip.fk_produto AND hm.tipo_movimentacao = 'entrada' ORDER BY hm.data_movimentacao DESC LIMIT 1) as preco_unitario"),
+                DB::raw("(SELECT hm.valor_unitario FROM historico_movimentacoes hm WHERE hm.fk_produto = ip.fk_produto AND hm.tipo_movimentacao = 'entrada' ORDER BY hm.data_movimentacao DESC LIMIT 1) as valor_total"),
+                'p.unidade as unidade',
+                'u.nome as unidade_nome_label',
                 's.nome as secao_nome',
                 'ip.data_entrada',
                 'ip.data_saida',
@@ -164,7 +164,9 @@ class EstoqueUnificadoService
             )
             ->join('produtos as p', 'p.id', '=', 'ip.fk_produto')
             ->leftJoin('categorias as c', 'c.id', '=', 'p.fk_categoria')
-            ->leftJoin('secaos as s', 's.id', '=', 'ip.fk_secao');
+            ->leftJoin('secaos as s', 's.id', '=', 'ip.fk_secao')
+            ->leftJoin('unidades as u', 'u.id', '=', 'p.unidade')
+            ->whereNull('ip.data_saida');
 
         // Combinar com UNION
         return $consumo->union($permanente);

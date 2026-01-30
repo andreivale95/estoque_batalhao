@@ -1,0 +1,124 @@
+# Docker Compose com configurações customizadas para MySQL
+# Use este arquivo para tuning de performance
+
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sisalmox_app
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - ./storage:/app/storage
+      - ./bootstrap/cache:/app/bootstrap/cache
+    ports:
+      - "${APP_PORT:-80}:80"
+    environment:
+      - APP_NAME=${APP_NAME:-SISALMOX}
+      - APP_ENV=${APP_ENV:-local}
+      - APP_KEY=${APP_KEY}
+      - APP_DEBUG=${APP_DEBUG:-true}
+      - APP_URL=${APP_URL:-http://localhost}
+      - DB_CONNECTION=${DB_CONNECTION:-mysql}
+      - DB_HOST=${DB_HOST:-mysql}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_DATABASE=${DB_DATABASE:-sisalmox_db_local}
+      - DB_USERNAME=${DB_USERNAME:-sisalmox_user}
+      - DB_PASSWORD=${DB_PASSWORD:-sisalmox_password}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - sisalmox_network
+
+  mysql:
+    image: mysql:8.0
+    container_name: sisalmox_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-sisalmox_db_local}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
+      MYSQL_USER: ${DB_USERNAME:-sisalmox_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-sisalmox_password}
+      MYSQL_ALLOW_EMPTY_PASSWORD: "false"
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+      # Usar arquivo SQL customizado para inicializar
+      # - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+      --max_allowed_packet=67108864
+      --max_connections=1000
+    networks:
+      - sisalmox_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${DB_USERNAME:-sisalmox_user}", "-p${DB_PASSWORD:-sisalmox_password}"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: sisalmox_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: ${DB_HOST:-mysql}
+      PMA_PORT: ${DB_PORT:-3306}
+      PMA_USER: ${DB_USERNAME:-sisalmox_user}
+      PMA_PASSWORD: ${DB_PASSWORD:-sisalmox_password}
+      UPLOAD_LIMIT: 300M
+      MAX_EXECUTION_TIME: 600
+      MEMORY_LIMIT: 256M
+    ports:
+      - "${PHPMYADMIN_PORT:-8080}:80"
+    depends_on:
+      - mysql
+    networks:
+      - sisalmox_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: sisalmox_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sisalmox_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Mailhog para testes de email (opcional)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: sisalmox_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - sisalmox_network
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  sisalmox_network:
+    driver: bridge

@@ -33,10 +33,6 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="form-group has-feedback col-md-2">
-                                <label class="control-label">PATRIMÔNIO:</label>
-                                <input type="text" class="form-control" name="patrimonio" value="{{ request()->patrimonio }}" placeholder="Número do patrimônio">
-                            </div>
                             <div class="form-group has-feedback col-md-2"
                                 style="display: flex; flex-direction: column; justify-content: flex-end;">
                                 <label class="control-label">Estoque:</label>
@@ -85,18 +81,16 @@
                         <thead>
                             <tr>
                                 <!-- Coluna de seleção removida -->
+                                <th>Tipo</th>
                                 <th>Produto</th>
                                 <th>Localização</th>
-                                <th>Patrimônio</th>
                                 <th>Disponível</th>
                                 <th>Cautelado</th>
                                 <th>Quantidade</th>
                                 <th>Unidade</th>
                                 <th>Categoria</th>
-                                <th>Estoque</th>
                                 <th>Valor Médio</th>
                                 <th>Subtotal</th>
-                                <th>Transferência</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -116,15 +110,31 @@
                                     onclick="window.location='{{ $rota }}'"
                                     title="Clique para ver detalhes do produto">
                                     <td>
+                                        @if(($estoque->tipo ?? '') === 'consumo')
+                                            <span class="badge bg-success" title="Consumo">
+                                                <i class="fa fa-layer-group"></i>
+                                            </span>
+                                        @else
+                                            <span class="badge bg-info" title="Permanente">
+                                                <i class="fa fa-shield"></i>
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td>
                                         {{ $estoque->nome }}
                                     </td>
                                     <td>
                                         @php
-                                            // Busca todos os itens deste produto
-                                            $itens = App\Models\Itens_estoque::where('fk_produto', $estoque->fk_produto)
-                                                ->with(['secao'])
-                                                ->get();
-                                            
+                                            if (($estoque->tipo ?? '') === 'permanente') {
+                                                $itens = App\Models\ItenPatrimonial::where('fk_produto', $estoque->fk_produto)
+                                                    ->with(['secao'])
+                                                    ->get();
+                                            } else {
+                                                $itens = App\Models\Itens_estoque::where('fk_produto', $estoque->fk_produto)
+                                                    ->with(['secao'])
+                                                    ->get();
+                                            }
+
                                             // Agrupa apenas seções únicas
                                             $localizacoes = $itens->map(function($item) {
                                                 return $item->secao ? $item->secao->nome : 'Sem seção';
@@ -141,7 +151,6 @@
                                             <small class="text-muted">-</small>
                                         @endif
                                     </td>
-                                    <td>{{ $estoque->patrimonio ?? '-' }}</td>
                                     <td>
                                         @php
                                             // Usar o disponível já calculado e agregado pelo serviço
@@ -156,8 +165,14 @@
                                     <td>
                                         @php
                                             // Calcula total de itens cautelados para este produto
-                                            $totalCautelado = App\Models\Itens_estoque::where('fk_produto', $estoque->fk_produto)
-                                                ->sum('quantidade_cautelada');
+                                            if (($estoque->tipo ?? '') === 'permanente') {
+                                                $totalCautelado = App\Models\ItenPatrimonial::where('fk_produto', $estoque->fk_produto)
+                                                    ->where('quantidade_cautelada', '>', 0)
+                                                    ->count();
+                                            } else {
+                                                $totalCautelado = App\Models\Itens_estoque::where('fk_produto', $estoque->fk_produto)
+                                                    ->sum('quantidade_cautelada');
+                                            }
                                         @endphp
                                         <span class="text-warning" style="font-weight: bold;">{{ $totalCautelado }}</span>
                                     </td>
@@ -175,20 +190,8 @@
                                         @endphp
                                         {{ $categoria ? $categoria->nome : 'N/A' }}
                                     </td>
-                                    <td>{{ $estoque->unidade_nome }}</td>
                                     <td>R$ {{ number_format($valorUnitario, 2, ',', '.') }}</td>
                                     <td>R$ {{ number_format($subtotal, 2, ',', '.') }}</td>
-                                    <td>
-                                        @if (Auth::user()->fk_unidade == $estoque->unidade)
-                                            <button type="button" class="btn btn-warning btn-sm" data-toggle="modal"
-                                                data-target="#modalTransferencia{{ $estoque->id }}"
-                                                onclick="event.stopPropagation();">
-                                                <i class="fa fa-exchange-alt"></i>
-                                            </button>
-                                        @else
-                                            <span class="text-muted">Acesso restrito</span>
-                                        @endif
-                                    </td>
                                 </tr>
 
                                 <!-- Modal de Transferência -->

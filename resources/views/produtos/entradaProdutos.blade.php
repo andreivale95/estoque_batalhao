@@ -79,7 +79,7 @@
                                 <select id="fk_produto_add" class="form-control select2-produto">
                                     <option value="">Selecione um Produto</option>
                                     @foreach ($produtos as $produto)
-                                        <option value="{{ $produto->id }}">{{ $produto->nome }} -  {{ optional($produto->tamanho()->first())->tamanho ?? 'Tamanho Único' }}</option>
+                                        <option value="{{ $produto->id }}" data-tipo="{{ $produto->tipo_controle }}">{{ $produto->nome }} -  {{ optional($produto->tamanho()->first())->tamanho ?? 'Tamanho Único' }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -87,6 +87,12 @@
                                 <label for="quantidade_add">Quantidade:</label>
                                 <input type="number" id="quantidade_add" class="form-control" min="1"
                                     placeholder="Digite a quantidade">
+                            </div>
+                            <div class="form-group col-md-6" id="patrimonios-add-wrapper" style="display: none;">
+                                <label for="patrimonios_add">Patrimônios (1 por linha):</label>
+                                <textarea id="patrimonios_add" class="form-control" rows="2"
+                                    placeholder="Ex: 1001&#10;1002&#10;1003"></textarea>
+                                <small class="text-muted">A quantidade deve ser igual ao número de patrimônios informados.</small>
                             </div>
                             <div class="form-group col-md-6">
                                 <label for="observacao_add">Observações:</label>
@@ -103,6 +109,7 @@
                                         <th>Produto</th>
                                         <th>Quantidade</th>
                                         <th>Observações</th>
+                                        <th>Patrimônios</th>
                                         <th>Ações</th>
                                     </tr>
                                 </thead>
@@ -127,6 +134,7 @@
     <!-- Scripts -->
     <script>
         $(document).ready(function() {
+            let rowIndex = 0;
             $('.select2-produto').select2({
                 placeholder: "Selecione um Produto",
                 allowClear: true,
@@ -135,35 +143,91 @@
             function getProdutoText(select) {
                 return select.find('option:selected').text();
             }
-            function addItemToTable(produtoId, produtoText, quantidade, observacao) {
+            function getProdutoTipo(select) {
+                return select.find('option:selected').data('tipo');
+            }
+            function escapeHtml(value) {
+                return String(value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+            function addItemToTable(produtoId, produtoText, quantidade, observacao, patrimonios) {
+                const patrimoniosList = patrimonios && patrimonios.length ? patrimonios.join('<br>') : '-';
+                const patrimoniosRaw = patrimonios && patrimonios.length ? patrimonios.join('\n') : '';
+                const patrimoniosInputs = patrimonios && patrimonios.length
+                    ? `<input type="hidden" name="patrimonios_raw[]" value="${escapeHtml(patrimoniosRaw)}">`
+                    : '<input type="hidden" name="patrimonios_raw[]" value="">';
                 var row = `<tr>
                     <td><input type="hidden" name="fk_produto[]" value="${produtoId}">${produtoText}</td>
                     <td><input type="hidden" name="quantidade[]" value="${quantidade}">${quantidade}</td>
                     <td><input type="hidden" name="observacao[]" value="${observacao}">${observacao}</td>
+                    <td>${patrimoniosInputs}${patrimoniosList}</td>
                     <td>
                         <button type="button" class="btn btn-danger btn-sm remover-item">Remover</button>
                     </td>
                 </tr>`;
                 $('#tabela-itens tbody').append(row);
+                rowIndex++;
             }
+            function togglePatrimoniosWrapper() {
+                const select = $('#fk_produto_add');
+                const tipo = getProdutoTipo(select);
+                if (tipo === 'permanente') {
+                    $('#patrimonios-add-wrapper').show();
+                    $('#quantidade_add').prop('readonly', true).val('');
+                } else {
+                    $('#patrimonios-add-wrapper').hide();
+                    $('#patrimonios_add').val('');
+                    $('#quantidade_add').prop('readonly', false);
+                }
+            }
+            function syncQuantidadeFromPatrimonios() {
+                const linhas = ($('#patrimonios_add').val() || '').split('\n');
+                const count = linhas.map(l => l.trim()).filter(l => l.length > 0).length;
+                $('#quantidade_add').val(count > 0 ? count : '');
+            }
+            $('#fk_produto_add').on('change', togglePatrimoniosWrapper);
+            $('#patrimonios_add').on('input', syncQuantidadeFromPatrimonios);
             $('#add-item').on('click', function(e) {
                 e.preventDefault();
                 var select = $('#fk_produto_add');
                 var produtoId = select.val();
                 var produtoText = getProdutoText(select);
+                var tipo = getProdutoTipo(select);
+                if (tipo === 'permanente') {
+                    syncQuantidadeFromPatrimonios();
+                }
                 var quantidade = $('#quantidade_add').val();
                 var observacao = $('#observacao_add').val();
+                var patrimonios = [];
+                if (tipo === 'permanente') {
+                    const linhas = ($('#patrimonios_add').val() || '').split('\n');
+                    patrimonios = linhas.map(l => l.trim()).filter(l => l.length > 0);
+                    if (!patrimonios.length) {
+                        alert('Informe os patrimônios para itens permanentes.');
+                        return;
+                    }
+                    if (parseInt(quantidade, 10) !== patrimonios.length) {
+                        alert('A quantidade deve ser igual ao número de patrimônios informados.');
+                        return;
+                    }
+                }
                 if(produtoId && quantidade) {
-                    addItemToTable(produtoId, produtoText, quantidade, observacao);
+                    addItemToTable(produtoId, produtoText, quantidade, observacao, patrimonios);
                     select.val('');
                     $('#quantidade_add').val('');
                     $('#observacao_add').val('');
+                    $('#patrimonios_add').val('');
                     select.trigger('change');
                 }
             });
             $(document).on('click', '.remover-item', function() {
                 $(this).closest('tr').remove();
             });
+            togglePatrimoniosWrapper();
         });
     </script>
 @endsection

@@ -55,51 +55,82 @@ class ProdutoController extends Controller {
     {
         try {
             $produto = Produto::findOrFail($id);
+            $todosOsItens = collect();
+            $itensPatrimoniais = collect();
 
-            // Consolida itens soltos com mesma quantidade e lote na mesma seção
-            $this->consolidarItensRaiz($id);
+            if ($produto->tipo_controle === 'permanente') {
+                $quantidadeTotal = ItenPatrimonial::where('fk_produto', $id)
+                    ->whereNull('data_saida')
+                    ->count();
 
-            // Busca itens de consumo
-            $quantidadeTotal = Itens_estoque::where('fk_produto', $id)->sum('quantidade');
+                $itensPatrimoniais = ItenPatrimonial::where('fk_produto', $id)
+                    ->whereNull('data_saida')
+                    ->with(['secao'])
+                    ->orderBy('fk_secao')
+                    ->orderBy('patrimonio')
+                    ->get();
 
-            // Busca todos os itens de consumo deste produto com suas hierarquias
-            $todosOsItens = Itens_estoque::where('fk_produto', $id)
-                ->with([
-                    'secao', 
-                    'itemPai.produto',
-                    'itensFilhos' => function($q) {
-                        $q->with([
-                            'produto',
-                            'itensFilhos' => function($q2) {
-                                $q2->with('produto');
-                            }
-                        ]);
-                    }
-                ])
-                ->orderBy('fk_secao')
-                ->get();
+                $detalhesSecao = ItenPatrimonial::select(
+                    'itens_patrimoniais.fk_secao',
+                    'secaos.nome as secao_nome',
+                    DB::raw('COUNT(*) as quantidade')
+                )
+                ->leftJoin('secaos', 'secaos.id', '=', 'itens_patrimoniais.fk_secao')
+                ->where('itens_patrimoniais.fk_produto', $id)
+                ->whereNull('itens_patrimoniais.data_saida')
+                ->groupBy('itens_patrimoniais.fk_secao', 'secaos.nome')
+                ->having(DB::raw('COUNT(*)'), '>', 0)
+                ->get()
+                ->map(function ($row) {
+                    return [
+                        'secao_id' => $row->fk_secao,
+                        'secao_nome' => $row->secao_nome ?? 'Sem seção',
+                        'quantidade' => $row->quantidade,
+                    ];
+                });
+            } else {
+                // Consolida itens soltos com mesma quantidade e lote na mesma seção
+                $this->consolidarItensRaiz($id);
 
-            $detalhesSecao = Itens_estoque::select(
-                'itens_estoque.fk_secao',
-                'secaos.nome as secao_nome',
-                DB::raw('SUM(itens_estoque.quantidade) as quantidade')
-            )
-            ->leftJoin('secaos', 'secaos.id', '=', 'itens_estoque.fk_secao')
-            ->where('itens_estoque.fk_produto', $id)
-            ->groupBy('itens_estoque.fk_secao', 'secaos.nome')
-            ->get()
-            ->map(function ($row) {
-                return [
-                    'secao_id' => $row->fk_secao,
-                    'secao_nome' => $row->secao_nome ?? 'Sem seção',
-                    'quantidade' => $row->quantidade,
-                ];
-            });
+                // Busca itens de consumo
+                $quantidadeTotal = Itens_estoque::where('fk_produto', $id)->sum('quantidade');
 
-            // Busca itens patrimoniais também
-            $itensPatrimoniais = ItenPatrimonial::where('fk_produto', $id)
-                ->with(['secao'])
-                ->get();
+                // Busca todos os itens de consumo deste produto com suas hierarquias
+                $todosOsItens = Itens_estoque::where('fk_produto', $id)
+                    ->where('quantidade', '>', 0)
+                    ->with([
+                        'secao', 
+                        'itemPai.produto',
+                        'itensFilhos' => function($q) {
+                            $q->with([
+                                'produto',
+                                'itensFilhos' => function($q2) {
+                                    $q2->with('produto');
+                                }
+                            ]);
+                        }
+                    ])
+                    ->orderBy('fk_secao')
+                    ->get();
+
+                $detalhesSecao = Itens_estoque::select(
+                    'itens_estoque.fk_secao',
+                    'secaos.nome as secao_nome',
+                    DB::raw('SUM(itens_estoque.quantidade) as quantidade')
+                )
+                ->leftJoin('secaos', 'secaos.id', '=', 'itens_estoque.fk_secao')
+                ->where('itens_estoque.fk_produto', $id)
+                ->groupBy('itens_estoque.fk_secao', 'secaos.nome')
+                ->having(DB::raw('SUM(itens_estoque.quantidade)'), '>', 0)
+                ->get()
+                ->map(function ($row) {
+                    return [
+                        'secao_id' => $row->fk_secao,
+                        'secao_nome' => $row->secao_nome ?? 'Sem seção',
+                        'quantidade' => $row->quantidade,
+                    ];
+                });
+            }
 
             return view('produtos.detalhes', compact('produto', 'quantidadeTotal', 'detalhesSecao', 'todosOsItens', 'itensPatrimoniais'));
         } catch (Exception $e) {
@@ -374,16 +405,6 @@ class ProdutoController extends Controller {
                 'tipo_controle' => 'required|in:consumo,permanente',
             ]);
 
-            // Validação adicional para itens permanentes
-            if ($request->tipo_controle === 'permanente') {
-                $request->validate([
-                    'patrimonios' => 'required|array|min:1',
-                    'patrimonios.*.patrimonio' => 'required|string|unique:itens_patrimoniais,patrimonio',
-                    'patrimonios.*.serie' => 'nullable|string',
-                    'patrimonios.*.condicao' => 'required|in:novo,bom,regular,ruim',
-                ]);
-            }
-
             DB::beginTransaction();
 
             // Verifica se o produto já existe
@@ -407,29 +428,6 @@ class ProdutoController extends Controller {
                 'ativo' => 'Y',
                 'tipo_controle' => $request->tipo_controle,
             ]);
-
-            // Se é um item permanente, criar registros em itens_patrimoniais
-            if ($request->tipo_controle === 'permanente') {
-                // Buscar uma seção padrão da unidade do usuário
-                $secaoParadrão = Secao::where('fk_unidade', Auth::user()->fk_unidade)->first();
-                
-                if (!$secaoParadrão) {
-                    DB::rollBack();
-                    return back()->with('error', 'Nenhuma seção de armazenamento disponível para sua unidade. Contate o administrador.');
-                }
-
-                foreach ($request->patrimonios as $patrimonialData) {
-                    ItenPatrimonial::create([
-                        'fk_produto' => $produto->id,
-                        'patrimonio' => $patrimonialData['patrimonio'],
-                        'serie' => $patrimonialData['serie'] ?? null,
-                        'fk_secao' => $secaoParadrão->id,
-                        'condicao' => $patrimonialData['condicao'],
-                        'data_entrada' => now(),
-                        'quantidade_cautelada' => 0,
-                    ]);
-                }
-            }
 
             DB::commit();
             Log::info('Produto registrado com sucesso', ['produto_id' => $produto->id, 'usuario' => Auth::user()->cpf]);

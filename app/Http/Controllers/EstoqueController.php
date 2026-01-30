@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 use App\Models\Categoria;
 use App\Models\HistoricoMovimentacao;
 use App\Models\Itens_estoque;
+use App\Models\ItenPatrimonial;
 use App\Models\Unidade;
 use App\Models\Produto;
 use App\Models\Secao;
@@ -395,6 +396,24 @@ class EstoqueController extends Controller
                 return redirect()->back()->with('error', 'Você não tem permissão para movimentar produtos de outra unidade.');
             }
 
+            $produtoEntrada = $request->fk_produto ? Produto::find($request->fk_produto) : null;
+            if ($produtoEntrada && $produtoEntrada->tipo_controle === 'permanente') {
+                $patrimonios = $request->input('patrimonios', []);
+                $patrimonios = array_values(array_filter(array_map('trim', (array) $patrimonios)));
+                $patrimoniosObservacoes = $request->input('patrimonios_observacoes', []);
+                if (count($patrimonios) === 0) {
+                    return back()->with('warning', 'Informe os patrimônios para itens permanentes.');
+                }
+                if (count($patrimonios) !== count(array_unique($patrimonios))) {
+                    return back()->with('warning', 'Há patrimônios duplicados na lista informada.');
+                }
+                $patrimonioExistente = ItenPatrimonial::whereIn('patrimonio', $patrimonios)->exists();
+                if ($patrimonioExistente) {
+                    return back()->with('warning', 'Um ou mais patrimônios já estão cadastrados no sistema.');
+                }
+                $request->merge(['quantidade' => count($patrimonios)]);
+            }
+
             $valorBr = $request->get('valor'); // "250000"
             $valorFinal = ((float) $valorBr) / 100; // resultado: 250.00
 
@@ -418,6 +437,48 @@ class EstoqueController extends Controller
             ]);
 
             $dataEntrada = Carbon::parse($request->data_entrada);
+
+            if ($produtoEntrada && $produtoEntrada->tipo_controle === 'permanente') {
+                $patrimonios = $request->input('patrimonios', []);
+                $patrimonios = array_values(array_filter(array_map('trim', (array) $patrimonios)));
+                $patrimoniosObservacoes = $request->input('patrimonios_observacoes', []);
+
+                foreach ($patrimonios as $index => $patrimonio) {
+                    ItenPatrimonial::create([
+                        'fk_produto' => $request->fk_produto,
+                        'patrimonio' => $patrimonio,
+                        'serie' => null,
+                        'fk_secao' => $request->fk_secao,
+                        'condicao' => 'bom',
+                        'data_entrada' => $dataEntrada,
+                        'quantidade_cautelada' => 0,
+                        'observacao' => $patrimoniosObservacoes[$index] ?? null,
+                    ]);
+                }
+
+                HistoricoMovimentacao::create([
+                    'fk_produto' => $request->fk_produto,
+                    'tipo_movimentacao' => 'entrada',
+                    'quantidade' => count($patrimonios),
+                    'valor_total' => $valorFinal * count($patrimonios),
+                    'valor_unitario' => $valorFinal,
+                    'responsavel' => Auth::user()->nome,
+                    'observacao' => $request->observacao ?? 'Entrada de bens patrimoniais',
+                    'data_movimentacao' => $dataEntrada,
+                    'fk_unidade' => $request->unidade,
+                    'fonte' => $request->fonte,
+                    'data_trp' => $request->data_trp,
+                    'sei' => $request->sei,
+                    'fornecedor' => $request->fornecedor,
+                    'nota_fiscal' => $request->nota_fiscal,
+                ]);
+
+                return redirect()->route('estoque.listar', [
+                    'nome' => '',
+                    'categoria' => '',
+                    'unidade' => Auth::user()->fk_unidade
+                ])->with('success', 'Bens patrimoniais registrados com sucesso!');
+            }
 
             // Busca o item no estoque pela seção específica, considerando se está em um container
             $itemEstoque = Itens_estoque::where('fk_produto', $request->fk_produto)
@@ -528,6 +589,55 @@ class EstoqueController extends Controller
                 // Validação individual
                 $produto = Produto::find($produtoId);
                 if (!$produto) continue;
+                if ($produto->tipo_controle === 'permanente') {
+                    $patrimoniosRaw = $request->input("patrimonios_raw.$i", '');
+                    $patrimonios = preg_split("/\r\n|\r|\n/", $patrimoniosRaw);
+                    $patrimonios = array_values(array_filter(array_map('trim', $patrimonios)));
+                    if (count($patrimonios) === 0) {
+                        return back()->with('warning', 'Informe os patrimônios para itens permanentes.');
+                    }
+                    $quantidades[$i] = count($patrimonios);
+                    if (count($patrimonios) !== count(array_unique($patrimonios))) {
+                        return back()->with('warning', 'Há patrimônios duplicados na lista informada.');
+                    }
+                    $patrimonioExistente = ItenPatrimonial::whereIn('patrimonio', $patrimonios)->exists();
+                    if ($patrimonioExistente) {
+                        return back()->with('warning', 'Um ou mais patrimônios já estão cadastrados no sistema.');
+                    }
+
+                    $secaoPadrao = Secao::where('fk_unidade', $request->unidade)->first();
+                    if (!$secaoPadrao) {
+                        return back()->with('warning', 'Nenhuma seção disponível para esta unidade.');
+                    }
+
+                    foreach ($patrimonios as $patrimonio) {
+                        ItenPatrimonial::create([
+                            'fk_produto' => $produtoId,
+                            'patrimonio' => $patrimonio,
+                            'serie' => null,
+                            'fk_secao' => $secaoPadrao->id,
+                            'condicao' => 'bom',
+                            'data_entrada' => $request->data_entrada,
+                            'quantidade_cautelada' => 0,
+                        ]);
+                    }
+
+                    HistoricoMovimentacao::create([
+                        'fk_produto' => $produtoId,
+                        'tipo_movimentacao' => 'entrada',
+                        'quantidade' => count($patrimonios),
+                        'responsavel' => Auth::user()->nome,
+                        'observacao' => $observacoes[$i] ?? 'Entrada de bens patrimoniais',
+                        'data_movimentacao' => now(),
+                        'fk_unidade' => $request->unidade,
+                        'fonte' => $request->fonte,
+                        'data_trp' => $request->data_trp,
+                        'sei' => $request->sei,
+                        'fornecedor' => $request->fornecedor,
+                        'nota_fiscal' => $request->nota_fiscal,
+                    ]);
+                    continue;
+                }
                 // Verifica se o produto já existe no estoque
                 $itemEstoque = Itens_estoque::where('fk_produto', $produtoId)->where('unidade', $request->unidade)->first();
                 if ($itemEstoque) {
@@ -701,6 +811,7 @@ class EstoqueController extends Controller
                 'data_saida' => 'required|date',
                 'fk_produto' => 'required|array',
                 'quantidade' => 'required|array',
+                'tipo' => 'required|array',
             ], [
                 'militar.required' => 'Selecione o militar responsável pela saída.',
                 'militar.exists' => 'Militar selecionado não encontrado.',
@@ -708,9 +819,13 @@ class EstoqueController extends Controller
                 'data_saida.date' => 'Data da saída inválida.',
                 'fk_produto.required' => 'Adicione pelo menos um item à lista.',
                 'quantidade.required' => 'Informe a quantidade para cada item.',
+                'tipo.required' => 'Tipo de item não informado.',
             ]);
+            
             $produtos = $request->fk_produto;
             $quantidades = $request->quantidade;
+            $tipos = $request->tipo;
+            $patrimoniosArray = $request->patrimonios ?? [];
             $observacoes = $request->observacao;
             $militarId = $request->input('militar');
             $dataSaida = Carbon::parse($request->data_saida);
@@ -720,9 +835,27 @@ class EstoqueController extends Controller
             $loteSaida = uniqid('saida_');
             $erros = [];
             $itensProcessar = [];
-            foreach ($produtos as $i => $estoqueId) {
+
+            // Reorganiza os patrimônios por índice
+            $patrimoniosPorItem = [];
+            $currentIndex = 0;
+            foreach ($patrimoniosArray as $patrimonioId) {
+                if (!isset($patrimoniosPorItem[$currentIndex])) {
+                    $patrimoniosPorItem[$currentIndex] = [];
+                }
+                $patrimoniosPorItem[$currentIndex][] = $patrimonioId;
+                
+                // Quando o número de patrimônios corresponder à quantidade, avança para o próximo item
+                if (isset($quantidades[$currentIndex]) && count($patrimoniosPorItem[$currentIndex]) >= $quantidades[$currentIndex]) {
+                    $currentIndex++;
+                }
+            }
+
+            foreach ($produtos as $i => $produtoIdOrEstoqueId) {
                 $quantidadeSolicitada = isset($quantidades[$i]) ? (int)$quantidades[$i] : 0;
-                if (empty($estoqueId)) {
+                $tipo = $tipos[$i] ?? 'consumo';
+
+                if (empty($produtoIdOrEstoqueId)) {
                     $erros[] = "Produto não selecionado na linha " . ($i+1);
                     continue;
                 }
@@ -730,45 +863,136 @@ class EstoqueController extends Controller
                     $erros[] = "Quantidade inválida para o produto na linha " . ($i+1);
                     continue;
                 }
-                $estoque = Itens_estoque::where('id', $estoqueId)
-                    ->where('unidade', Auth::user()->fk_unidade)
-                    ->first();
-                if (!$estoque) {
-                    $erros[] = "Produto não encontrado no estoque (ID: $estoqueId) na linha " . ($i+1);
-                    continue;
+
+                if ($tipo === 'consumo') {
+                    // Processa item de consumo
+                    $estoque = Itens_estoque::where('id', $produtoIdOrEstoqueId)
+                        ->where('unidade', Auth::user()->fk_unidade)
+                        ->first();
+                    
+                    if (!$estoque) {
+                        $erros[] = "Produto não encontrado no estoque (ID: $produtoIdOrEstoqueId) na linha " . ($i+1);
+                        continue;
+                    }
+                    if ($quantidadeSolicitada > $estoque->quantidade) {
+                        $erros[] = "Quantidade solicitada maior que a disponível para o produto " . ($estoque->produto->nome ?? $produtoIdOrEstoqueId) . " (Disponível: $estoque->quantidade) na linha " . ($i+1);
+                        continue;
+                    }
+                    
+                    $itensProcessar[] = [
+                        'tipo' => 'consumo',
+                        'estoque' => $estoque,
+                        'quantidade' => $quantidadeSolicitada,
+                        'observacao' => $observacoes[$i] ?? ''
+                    ];
+                } else {
+                    // Processa item permanente
+                    $patrimonios = $patrimoniosPorItem[$i] ?? [];
+                    
+                    if (empty($patrimonios)) {
+                        $erros[] = "Nenhum patrimônio selecionado para o item permanente na linha " . ($i+1);
+                        continue;
+                    }
+                    
+                    if (count($patrimonios) != $quantidadeSolicitada) {
+                        $erros[] = "Quantidade de patrimônios não corresponde à quantidade informada na linha " . ($i+1);
+                        continue;
+                    }
+                    
+                    // Valida os patrimônios
+                    $itensPatrimoniais = ItenPatrimonial::whereIn('id', $patrimonios)
+                        ->whereNull('data_saida')
+                        ->get();
+                    
+                    if ($itensPatrimoniais->count() != count($patrimonios)) {
+                        $erros[] = "Alguns patrimônios selecionados não estão disponíveis na linha " . ($i+1);
+                        continue;
+                    }
+                    
+                    $itensProcessar[] = [
+                        'tipo' => 'permanente',
+                        'patrimonios' => $itensPatrimoniais,
+                        'quantidade' => $quantidadeSolicitada,
+                        'observacao' => $observacoes[$i] ?? '',
+                        'produto_id' => $itensPatrimoniais->first()->fk_produto
+                    ];
                 }
-                if ($quantidadeSolicitada > $estoque->quantidade) {
-                    $erros[] = "Quantidade solicitada maior que a disponível para o produto " . ($estoque->produto->nome ?? $estoqueId) . " (Disponível: $estoque->quantidade) na linha " . ($i+1);
-                    continue;
-                }
-                $itensProcessar[] = [
-                    'estoque' => $estoque,
-                    'quantidade' => $quantidadeSolicitada,
-                    'observacao' => $observacoes[$i] ?? ''
-                ];
             }
+
             if (!empty($erros)) {
                 return back()->withErrors($erros)->withInput();
             }
+
             $motivo = $request->input('motivo');
-            foreach ($itensProcessar as $item) {
-                $estoque = $item['estoque'];
-                $quantidadeSolicitada = $item['quantidade'];
-                $estoque->quantidade -= $quantidadeSolicitada;
-                $estoque->save();
-                HistoricoMovimentacao::create([
-                    'fk_produto' => $estoque->fk_produto,
-                    'tipo_movimentacao' => 'saida_manual_multipla',
-                    'quantidade' => $quantidadeSolicitada,
-                    'responsavel' => Auth::user()->nome,
-                    'observacao' => "Motivo: {$motivo}. Obs: {$obsGeral}",
-                    'data_movimentacao' => $dataSaida,
-                    'fk_unidade' => Auth::user()->fk_unidade,
-                    'militar' => $destinatario,
-                    'lote_saida' => $loteSaida,
+            
+            DB::beginTransaction();
+            
+            try {
+                foreach ($itensProcessar as $item) {
+                    if ($item['tipo'] === 'consumo') {
+                        // Processa saída de item de consumo
+                        $estoque = $item['estoque'];
+                        $quantidadeSolicitada = $item['quantidade'];
+                        $estoque->quantidade -= $quantidadeSolicitada;
+                        $estoque->save();
+
+                        HistoricoMovimentacao::create([
+                            'fk_produto' => $estoque->fk_produto,
+                            'tipo_movimentacao' => 'saida_manual_multipla',
+                            'quantidade' => $quantidadeSolicitada,
+                            'responsavel' => Auth::user()->nome,
+                            'observacao' => "Motivo: {$motivo}. Obs: {$obsGeral}",
+                            'data_movimentacao' => $dataSaida,
+                            'fk_unidade' => Auth::user()->fk_unidade,
+                            'militar' => $destinatario,
+                            'lote_saida' => $loteSaida,
+                        ]);
+                    } else {
+                        // Processa saída de itens permanentes
+                        foreach ($item['patrimonios'] as $patrimonio) {
+                            $patrimonio->data_saida = $dataSaida;
+                            $patrimonio->save();
+
+                            // Busca o valor unitário do último registro de entrada deste produto
+                            $valorUnitario = HistoricoMovimentacao::where('fk_produto', $patrimonio->fk_produto)
+                                ->where('tipo_movimentacao', 'entrada')
+                                ->whereNotNull('valor_unitario')
+                                ->orderBy('data_movimentacao', 'desc')
+                                ->value('valor_unitario');
+
+                            HistoricoMovimentacao::create([
+                                'fk_produto' => $patrimonio->fk_produto,
+                                'tipo_movimentacao' => 'saida_manual_multipla',
+                                'quantidade' => 1,
+                                'responsavel' => Auth::user()->nome,
+                                'observacao' => "Patrimônio: {$patrimonio->patrimonio}. Motivo: {$motivo}. Obs: {$obsGeral}",
+                                'data_movimentacao' => $dataSaida,
+                                'fk_unidade' => Auth::user()->fk_unidade,
+                                'militar' => $destinatario,
+                                'lote_saida' => $loteSaida,
+                                'valor_unitario' => $valorUnitario ?? 0,
+                            ]);
+                            
+                            Log::info('Histórico de saída criado para patrimônio', [
+                                'patrimonio' => $patrimonio->patrimonio,
+                                'produto_id' => $patrimonio->fk_produto,
+                                'lote_saida' => $loteSaida
+                            ]);
+                        }
+                    }
+                }
+                
+                DB::commit();
+                
+                return redirect()->route('estoque.recibo', $loteSaida);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('Erro ao processar saída múltipla', [
+                    'erro' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
                 ]);
+                throw $e;
             }
-            return redirect()->route('estoque.recibo', $loteSaida);
         } catch (\Exception $e) {
             Log::error('Erro ao realizar saída múltipla', [$e]);
             return back()->with('warning', 'Houve um erro ao realizar a saída múltipla: ' . $e->getMessage())->withInput();
@@ -787,17 +1011,29 @@ class EstoqueController extends Controller
     }
     public function saidaMultiplosForm()
     {
-        // Carrega todos os itens da unidade
+        // Carrega todos os itens de consumo da unidade
         $rawItems = Itens_estoque::with('produto', 'secao')
             ->where('unidade', Auth::user()->fk_unidade)
             ->get();
 
-        // Agrupa por produto+seção e soma quantidades, mas manteremos um representante (primeiro id) por combinação
+        // Carrega todos os itens permanentes da unidade
+        $rawPatrimoniais = ItenPatrimonial::with('produto', 'secao')
+            ->whereHas('produto', function($q) {
+                $q->whereHas('unidade', function($qu) {
+                    $qu->where('unidades.id', Auth::user()->fk_unidade);
+                });
+            })
+            ->whereNull('data_saida') // Apenas itens que não saíram
+            ->get();
+
+        // Agrupa itens de consumo por produto+seção
         $groupedByProdSec = $rawItems->groupBy(function ($item) {
             return $item->fk_produto . '_' . ($item->fk_secao ?? 0);
         });
 
         $sectionsMap = [];
+        
+        // Processa itens de consumo
         foreach ($groupedByProdSec as $key => $group) {
             $first = $group->first();
             $parts = explode('_', $key);
@@ -805,7 +1041,7 @@ class EstoqueController extends Controller
             $secaoId = (int)$parts[1];
             $quantidade = $group->sum('quantidade');
 
-            if ($quantidade <= 0) continue; // não incluir se estoque zero
+            if ($quantidade <= 0) continue;
 
             if (!isset($sectionsMap[$prodId])) $sectionsMap[$prodId] = [];
             $sectionsMap[$prodId][] = [
@@ -813,26 +1049,65 @@ class EstoqueController extends Controller
                 'secao_id' => $secaoId,
                 'secao_nome' => optional($first->secao)->nome ?? 'Sem seção',
                 'quantidade' => $quantidade,
+                'tipo' => 'consumo',
+                'patrimonios' => []
+            ];
+        }
+
+        // Processa itens permanentes (agrupa por produto+seção)
+        $groupedPatrimoniais = $rawPatrimoniais->groupBy(function ($item) {
+            return $item->fk_produto . '_' . ($item->fk_secao ?? 0);
+        });
+
+        foreach ($groupedPatrimoniais as $key => $group) {
+            $first = $group->first();
+            $parts = explode('_', $key);
+            $prodId = (int)$parts[0];
+            $secaoId = (int)$parts[1];
+            
+            // Lista de patrimônios disponíveis nesta seção
+            $patrimonios = $group->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'patrimonio' => $item->patrimonio,
+                    'serie' => $item->serie,
+                    'condicao' => $item->condicao,
+                    'observacao' => $item->observacao
+                ];
+            })->toArray();
+
+            if (!isset($sectionsMap[$prodId])) $sectionsMap[$prodId] = [];
+            $sectionsMap[$prodId][] = [
+                'estoque_id' => $first->id, // id do primeiro item patrimonial (para referência)
+                'secao_id' => $secaoId,
+                'secao_nome' => optional($first->secao)->nome ?? 'Sem seção',
+                'quantidade' => count($patrimonios),
+                'tipo' => 'permanente',
+                'patrimonios' => $patrimonios
             ];
         }
 
         // Monta lista de produtos únicos com estoque total > 0
         $productsGrouped = [];
+        $allItems = $rawItems->merge($rawPatrimoniais);
+        
         foreach ($sectionsMap as $prodId => $secs) {
-            $produto = $rawItems->firstWhere('fk_produto', $prodId)->produto ?? null;
+            $produto = $allItems->firstWhere('fk_produto', $prodId)->produto ?? null;
             if (!$produto) continue;
             $total = array_sum(array_column($secs, 'quantidade'));
             if ($total <= 0) continue;
+            
             $productsGrouped[] = [
                 'id' => $produto->id,
                 'nome' => $produto->nome,
                 'quantidade_total' => $total,
+                'tipo_controle' => $produto->tipo_controle ?? 'consumo'
             ];
         }
 
         $itens_estoque = collect($productsGrouped);
         $militares = \App\Models\EfetivoMilitar::all();
-        // Passa o mapa de seções como JSON para a view
+        
         return view('estoque.saidaMultiplos', compact('itens_estoque', 'militares'))->with('sectionsMap', $sectionsMap);
     }
 

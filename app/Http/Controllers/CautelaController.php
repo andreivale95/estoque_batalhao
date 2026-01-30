@@ -9,6 +9,7 @@ use App\Models\CautelaProduto;
 use App\Models\Produto;
 use App\Models\Secao;
 use App\Models\Itens_estoque;
+use App\Models\ItenPatrimonial;
 use Illuminate\Support\Facades\Auth;
 
 class CautelaController extends Controller
@@ -59,24 +60,37 @@ class CautelaController extends Controller
 
     public function create()
     {
-        // Carrega todos os itens de estoque da unidade do usuário agrupados por produto+seção
+        // Carrega itens de consumo
         $rawItems = Itens_estoque::with('produto', 'secao')
             ->where('unidade', Auth::user()->fk_unidade)
-            ->where('quantidade', '>', 0)  // apenas com estoque > 0
+            ->where('quantidade', '>', 0)
             ->get();
 
-        // Agrupa por produto+seção
+        // Carrega itens permanentes disponíveis
+        $rawPatrimoniais = ItenPatrimonial::with('produto', 'secao')
+            ->whereNull('data_saida')
+            ->where(function($q) {
+                $q->whereNull('quantidade_cautelada')
+                  ->orWhere('quantidade_cautelada', 0);
+            })
+            ->whereHas('produto', function($q) {
+                $q->where('unidade', Auth::user()->fk_unidade);
+            })
+            ->get();
+
+        // Agrupa consumo por produto+seção
         $groupedByProdSec = $rawItems->groupBy(function ($item) {
             return $item->fk_produto . '_' . ($item->fk_secao ?? 0);
         });
 
         $sectionsMap = [];
+
         foreach ($groupedByProdSec as $key => $group) {
             $first = $group->first();
             $parts = explode('_', $key);
             $prodId = (int)$parts[0];
             $secaoId = (int)$parts[1];
-            $quantidade = $group->sum('quantidade');
+            $quantidade = (int)$group->sum('quantidade');
 
             if ($quantidade <= 0) continue;
 
@@ -85,7 +99,43 @@ class CautelaController extends Controller
                 'estoque_id' => (int)$first->id,
                 'secao_id' => $secaoId,
                 'secao_nome' => optional($first->secao)->nome ?? 'Sem seção',
-                'quantidade' => (int)$quantidade,
+                'quantidade' => $quantidade,
+                'tipo' => 'consumo',
+                'patrimonios' => [],
+            ];
+        }
+
+        // Agrupa permanentes por produto+seção
+        $groupedPatrimoniais = $rawPatrimoniais->groupBy(function ($item) {
+            return $item->fk_produto . '_' . ($item->fk_secao ?? 0);
+        });
+
+        foreach ($groupedPatrimoniais as $key => $group) {
+            $first = $group->first();
+            $parts = explode('_', $key);
+            $prodId = (int)$parts[0];
+            $secaoId = (int)$parts[1];
+
+            $patrimonios = $group->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'patrimonio' => $item->patrimonio,
+                    'serie' => $item->serie,
+                    'condicao' => $item->condicao,
+                    'observacao' => $item->observacao,
+                ];
+            })->values()->toArray();
+
+            if (count($patrimonios) <= 0) continue;
+
+            if (!isset($sectionsMap[$prodId])) $sectionsMap[$prodId] = [];
+            $sectionsMap[$prodId][] = [
+                'estoque_id' => (int)$first->id,
+                'secao_id' => $secaoId,
+                'secao_nome' => optional($first->secao)->nome ?? 'Sem seção',
+                'quantidade' => count($patrimonios),
+                'tipo' => 'permanente',
+                'patrimonios' => $patrimonios,
             ];
         }
 
@@ -97,8 +147,9 @@ class CautelaController extends Controller
 
         // Lista de produtos únicos
         $productsGrouped = [];
+        $allItems = $rawItems->merge($rawPatrimoniais);
         foreach ($sectionsMap as $prodId => $secs) {
-            $produto = $rawItems->firstWhere('fk_produto', (int)$prodId)->produto ?? null;
+            $produto = $allItems->firstWhere('fk_produto', (int)$prodId)->produto ?? null;
             if (!$produto) continue;
             $total = array_sum(array_column($secs, 'quantidade'));
             if ($total <= 0) continue;
@@ -106,6 +157,7 @@ class CautelaController extends Controller
                 'id' => (int)$produto->id,
                 'nome' => $produto->nome,
                 'quantidade_total' => (int)$total,
+                'tipo_controle' => $produto->tipo_controle ?? 'consumo',
             ];
         }
 
@@ -131,6 +183,8 @@ class CautelaController extends Controller
             'produtos' => 'required|array',
             'secoes' => 'required|array',
             'quantidades' => 'required|array',
+            'tipos' => 'required|array',
+            'patrimonios' => 'nullable|array',
         ]);
 
         $cautela = Cautela::create([
@@ -143,6 +197,41 @@ class CautelaController extends Controller
         ]);
 
         foreach ($request->produtos as $index => $produtoId) {
+            $tipo = $request->tipos[$index] ?? 'consumo';
+
+            if ($tipo === 'permanente') {
+                $patrimonioId = $request->patrimonios[$index] ?? null;
+                if (!$patrimonioId) {
+                    return redirect()->back()->with('error', 'Selecione o patrimônio para o item permanente.');
+                }
+
+                $itemPatrimonial = ItenPatrimonial::where('id', $patrimonioId)
+                    ->whereNull('data_saida')
+                    ->where(function($q) {
+                        $q->whereNull('quantidade_cautelada')
+                          ->orWhere('quantidade_cautelada', 0);
+                    })
+                    ->firstOrFail();
+
+                if ((int)$itemPatrimonial->fk_produto !== (int)$produtoId) {
+                    return redirect()->back()->with('error', 'Patrimônio não corresponde ao produto selecionado.');
+                }
+
+                // Marca como cautelado
+                $itemPatrimonial->quantidade_cautelada = 1;
+                $itemPatrimonial->save();
+
+                // Registra na cautela
+                CautelaProduto::create([
+                    'cautela_id' => $cautela->id,
+                    'produto_id' => $produtoId,
+                    'estoque_id' => null,
+                    'iten_patrimonial_id' => $itemPatrimonial->id,
+                    'quantidade' => 1,
+                ]);
+                continue;
+            }
+
             $estoqueId = $request->secoes[$index];
             $quantidade = $request->quantidades[$index];
 
@@ -170,13 +259,13 @@ class CautelaController extends Controller
 
     public function show($id)
     {
-        $cautela = Cautela::with(['produtos.produto', 'produtos.estoque.secao'])->findOrFail($id);
+        $cautela = Cautela::with(['produtos.produto', 'produtos.estoque.secao', 'produtos.itenPatrimonial.secao'])->findOrFail($id);
         return view('cautelas.show', compact('cautela'));
     }
 
     public function devolucao($id)
     {
-        $cautela = Cautela::with(['produtos.produto', 'produtos.estoque.secao'])->findOrFail($id);
+        $cautela = Cautela::with(['produtos.produto', 'produtos.estoque.secao', 'produtos.itenPatrimonial.secao'])->findOrFail($id);
         return view('cautelas.devolucao', compact('cautela'));
     }
 
@@ -197,6 +286,25 @@ class CautelaController extends Controller
             }
 
             $cautelaItem = CautelaProduto::findOrFail($itemId);
+
+            // Itens permanentes: devolução unitária
+            if ($cautelaItem->iten_patrimonial_id) {
+                $pendente = $cautelaItem->quantidadePendente();
+                if ($quantidadeDevolver > $pendente) {
+                    return redirect()->back()->with('error', 'Quantidade de devolução excede a quantidade pendente para o patrimônio do produto: ' . $cautelaItem->produto->nome);
+                }
+
+                $itemPatrimonial = ItenPatrimonial::findOrFail($cautelaItem->iten_patrimonial_id);
+                $itemPatrimonial->quantidade_cautelada = 0;
+                $itemPatrimonial->save();
+
+                $cautelaItem->quantidade_devolvida += $quantidadeDevolver;
+                if ($cautelaItem->isDevolvido() && !$cautelaItem->data_devolucao) {
+                    $cautelaItem->data_devolucao = now();
+                }
+                $cautelaItem->save();
+                continue;
+            }
             
             // Valida se a quantidade não excede o pendente
             $pendente = $cautelaItem->quantidadePendente();

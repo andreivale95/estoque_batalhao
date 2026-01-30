@@ -57,7 +57,16 @@
                             <select id="fk_produto_add" class="form-control select2-produto">
                                 <option value="">Selecione um Produto</option>
                                 @foreach ($itens_estoque as $item)
-                                    <option value="{{ $item['id'] }}" data-total="{{ $item['quantidade_total'] }}">{{ $item['nome'] }}</option>
+                                    <option value="{{ $item['id'] }}" 
+                                            data-total="{{ $item['quantidade_total'] }}"
+                                            data-tipo="{{ $item['tipo_controle'] ?? 'consumo' }}">
+                                        {{ $item['nome'] }}
+                                        @if(($item['tipo_controle'] ?? 'consumo') === 'permanente')
+                                            <span class="badge bg-info">Permanente</span>
+                                        @else
+                                            <span class="badge bg-success">Consumo</span>
+                                        @endif
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
@@ -76,6 +85,10 @@
                             <label for="secao_display">Seção:</label>
                             <input type="text" id="secao_display" class="form-control" readonly>
                         </div>
+                    </div>
+                    
+                    <!-- Campo para itens de consumo -->
+                    <div class="row" id="campos_consumo" style="display: none;">
                         <div class="form-group col-md-2">
                             <label for="quantidade_add">Quantidade:</label>
                             <input type="number" id="quantidade_add" class="form-control" min="1" placeholder="Digite a quantidade">
@@ -84,13 +97,52 @@
                             <button type="button" class="btn btn-warning" id="add-item">Adicionar Item</button>
                         </div>
                     </div>
+                    
+                    <!-- Campo para itens permanentes -->
+                    <div id="campos_permanente" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-12">
+                                <label><strong>Selecione os patrimônios para dar saída:</strong></label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div id="lista_patrimonios" class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                    <table class="table table-sm table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th width="50">
+                                                    <input type="checkbox" id="select_all_patrimonios">
+                                                </th>
+                                                <th>Patrimônio</th>
+                                                <th>Série</th>
+                                                <th>Condição</th>
+                                                <th>Observação</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="patrimonios_tbody">
+                                            <!-- Preenchido via JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="form-group col-md-12">
+                                <button type="button" class="btn btn-warning" id="add-item-permanente">Adicionar Patrimônios Selecionados</button>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="table-responsive">
                         <table class="table table-bordered" id="tabela-itens">
                             <thead>
                                 <tr>
+                                    <th>Tipo</th>
                                     <th>Produto</th>
                                     <th>Seção</th>
                                     <th>Quantidade</th>
+                                    <th>Patrimônios</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
@@ -117,28 +169,53 @@ $(document).ready(function() {
         allowClear: true,
         width: '100%'
     });
+    
+    var currentTipo = 'consumo';
+    var currentPatrimonios = [];
+    
     function getProdutoText(select) {
         return select.find('option:selected').text();
     }
-    function addItemToTable(produtoId, produtoText, quantidade, secao) {
+    
+    function addItemToTable(produtoId, produtoText, quantidade, secao, tipo, patrimonios = []) {
+        var tipoDisplay = tipo === 'permanente' ? '<span class="badge bg-info"><i class="fa fa-shield"></i></span>' : '<span class="badge bg-success"><i class="fa fa-layer-group"></i></span>';
+        var patrimoniosDisplay = '-';
+        var patrimoniosInput = '';
+        
+        if (tipo === 'permanente' && patrimonios.length > 0) {
+            // Exibe os números de patrimônio
+            var numeros = patrimonios.map(p => p.numero || p).join(', ');
+            patrimoniosDisplay = numeros;
+            
+            // Envia os IDs para o backend
+            patrimoniosInput = patrimonios.map(p => {
+                var id = p.id || p;
+                return `<input type="hidden" name="patrimonios[]" value="${id}">`;
+            }).join('');
+        }
+        
         var row = `<tr>
+            <td>${tipoDisplay}<input type="hidden" name="tipo[]" value="${tipo}"></td>
             <td><input type="hidden" name="fk_produto[]" value="${produtoId}">${produtoText}</td>
             <td><input type="hidden" name="secao[]" value="${secao}">${secao}</td>
             <td><input type="hidden" name="quantidade[]" value="${quantidade}">${quantidade}</td>
+            <td>${patrimoniosDisplay}${patrimoniosInput}</td>
             <td>
                 <button type="button" class="btn btn-danger btn-sm remover-item">Remover</button>
             </td>
         </tr>`;
         $('#tabela-itens tbody').append(row);
     }
+    
+    // Adicionar item de consumo
     $('#add-item').on('click', function(e) {
         e.preventDefault();
         var produtoSelect = $('#fk_produto_add');
         var produtoId = produtoSelect.val();
-        var produtoText = produtoSelect.find('option:selected').text();
+        var produtoText = produtoSelect.find('option:selected').text().trim();
         var secaoSelect = $('#fk_secao_add');
-        var estoqueId = secaoSelect.val(); // este é o id do registro em itens_estoque (valor esperado pelo controller)
-        var secaoText = secaoSelect.find('option:selected').text();
+        var estoqueId = secaoSelect.val();
+        var secaoText = secaoSelect.find('option:selected').text().replace(/\s*\(Disponível:.*\)\s*/i, '').trim();
         var quantidade = parseInt($('#quantidade_add').val() || 0, 10);
 
         if (!produtoId) {
@@ -154,11 +231,10 @@ $(document).ready(function() {
             return;
         }
 
-        // Verifica quantidade disponível para o estoque selecionado
         var available = 0;
         if (typeof sectionsMap !== 'undefined' && sectionsMap[produtoId]) {
             for (var i = 0; i < sectionsMap[produtoId].length; i++) {
-                if (sectionsMap[produtoId][i].estoque_id == estoqueId) {
+                if (sectionsMap[produtoId][i].estoque_id == estoqueId && sectionsMap[produtoId][i].tipo === 'consumo') {
                     available = sectionsMap[produtoId][i].quantidade;
                     break;
                 }
@@ -169,18 +245,50 @@ $(document).ready(function() {
             return;
         }
 
-        // Para manter compatibilidade com o controller existente, enviamos o id do registro de estoque
-        addItemToTable(estoqueId, produtoText, quantidade, secaoText);
-        // Limpa campos
-        produtoSelect.val('');
+        addItemToTable(estoqueId, produtoText, quantidade, secaoText, 'consumo', []);
+        limparCampos();
+    });
+    
+    // Adicionar itens permanentes
+    $('#add-item-permanente').on('click', function(e) {
+        e.preventDefault();
+        var produtoSelect = $('#fk_produto_add');
+        var produtoId = produtoSelect.val();
+        var produtoText = produtoSelect.find('option:selected').text().trim();
+        var secaoSelect = $('#fk_secao_add');
+        var secaoText = secaoSelect.find('option:selected').text().replace(/\s*\(Disponível:.*\)\s*/i, '').trim();
+        
+        var patrimoniosInfo = [];
+        $('#patrimonios_tbody input[type="checkbox"]:checked').each(function() {
+            patrimoniosInfo.push({
+                id: $(this).data('id'),
+                numero: $(this).val()
+            });
+        });
+        
+        if (patrimoniosInfo.length === 0) {
+            alert('Selecione pelo menos um patrimônio.');
+            return;
+        }
+        
+        addItemToTable(produtoId, produtoText, patrimoniosInfo.length, secaoText, 'permanente', patrimoniosInfo);
+        limparCampos();
+    });
+    
+    function limparCampos() {
+        $('#fk_produto_add').val('').trigger('change');
         $('#quantidade_add').val('');
         $('#secao_display').val('');
-        secaoSelect.html('<option value="">Selecione a seção</option>');
-        produtoSelect.trigger('change');
-    });
+        $('#fk_secao_add').html('<option value="">Selecione a seção</option>');
+        $('#patrimonios_tbody').html('');
+        $('#campos_consumo').hide();
+        $('#campos_permanente').hide();
+    }
+    
     $(document).on('click', '.remover-item', function() {
         $(this).closest('tr').remove();
     });
+    
     $('#form-saida-multipla').on('submit', function(e) {
         var temItens = $('#tabela-itens tbody tr').length > 0;
         var dataSaida = $('input[name="data_saida"]').val();
@@ -197,45 +305,88 @@ $(document).ready(function() {
             return false;
         }
     });
-    // Mapa de seções por produto passado do controller
+    
     var sectionsMap = {!! json_encode($sectionsMap ?? []) !!};
 
     $('#fk_produto_add').on('change', function() {
         var produtoId = $(this).val();
+        var produtoOption = $(this).find('option:selected');
+        var tipo = produtoOption.data('tipo') || 'consumo';
+        currentTipo = tipo;
+        
         var secaoSelect = $('#fk_secao_add');
         secaoSelect.html('<option value="">Selecione a seção</option>');
         $('#qtd_disponivel').val('');
         $('#secao_display').val('');
+        $('#patrimonios_tbody').html('');
+        $('#campos_consumo').hide();
+        $('#campos_permanente').hide();
+        
         if (!produtoId) return;
 
         var sections = sectionsMap[produtoId] || [];
         var total = 0;
+        
         for (var i = 0; i < sections.length; i++) {
             var s = sections[i];
             var optionText = s.secao_nome + ' (Disponível: ' + s.quantidade + ')';
-            secaoSelect.append('<option value="' + s.estoque_id + '" data-qty="' + s.quantidade + '">' + optionText + '</option>');
+            secaoSelect.append('<option value="' + s.estoque_id + '" data-qty="' + s.quantidade + '" data-tipo="' + s.tipo + '">' + optionText + '</option>');
             total += s.quantidade;
         }
         $('#qtd_disponivel').val(total > 0 ? total : '');
     });
 
-    // Ao selecionar seção, mostra a seção escolhida e a quantidade disponível naquela seção
     $('#fk_secao_add').on('change', function() {
         var estoqueId = $(this).val();
         var prodId = $('#fk_produto_add').val();
+        
         if (!estoqueId || !prodId) {
             $('#secao_display').val('');
             $('#qtd_disponivel').val('');
+            $('#campos_consumo').hide();
+            $('#campos_permanente').hide();
             return;
         }
+        
         var sections = sectionsMap[prodId] || [];
         for (var i = 0; i < sections.length; i++) {
             if (sections[i].estoque_id == estoqueId) {
                 $('#secao_display').val(sections[i].secao_nome || '');
                 $('#qtd_disponivel').val(sections[i].quantidade);
+                
+                if (sections[i].tipo === 'permanente') {
+                    // Mostrar campos de patrimônio
+                    $('#campos_permanente').show();
+                    $('#campos_consumo').hide();
+                    
+                    // Preencher tabela de patrimônios
+                    var tbody = $('#patrimonios_tbody');
+                    tbody.html('');
+                    var patrimonios = sections[i].patrimonios || [];
+                    for (var j = 0; j < patrimonios.length; j++) {
+                        var p = patrimonios[j];
+                        var row = `<tr>
+                            <td><input type="checkbox" class="patrimonio-check" value="${p.patrimonio}" data-id="${p.id}"></td>
+                            <td>${p.patrimonio}</td>
+                            <td>${p.serie || '-'}</td>
+                            <td>${p.condicao || '-'}</td>
+                            <td>${p.observacao || '-'}</td>
+                        </tr>`;
+                        tbody.append(row);
+                    }
+                } else {
+                    // Mostrar campos de quantidade
+                    $('#campos_consumo').show();
+                    $('#campos_permanente').hide();
+                }
                 break;
             }
         }
+    });
+    
+    // Selecionar/desselecionar todos os patrimônios
+    $('#select_all_patrimonios').on('change', function() {
+        $('.patrimonio-check').prop('checked', $(this).is(':checked'));
     });
 });
 </script>

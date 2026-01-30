@@ -47,6 +47,8 @@
                                     <thead>
                                         <tr>
                                             <th>Produto</th>
+                                            <th>Tipo</th>
+                                            <th>Patrimônio</th>
                                             <th>Seção</th>
                                             <th>Qtd Cautelada</th>
                                             <th>Qtd Devolvida</th>
@@ -62,7 +64,27 @@
                                         @if($pendente > 0)
                                         <tr>
                                             <td>{{ $item->produto->nome }}</td>
-                                            <td>{{ $item->estoque->secao->nome ?? 'Sem seção' }}</td>
+                                            <td>
+                                                @if($item->iten_patrimonial_id)
+                                                    <span class="label label-info">Permanente</span>
+                                                @else
+                                                    <span class="label label-success">Consumo</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($item->iten_patrimonial_id)
+                                                    {{ $item->itenPatrimonial->patrimonio ?? '-' }}
+                                                @else
+                                                    -
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($item->iten_patrimonial_id)
+                                                    {{ $item->itenPatrimonial->secao->nome ?? 'Sem seção' }}
+                                                @else
+                                                    {{ $item->estoque->secao->nome ?? 'Sem seção' }}
+                                                @endif
+                                            </td>
                                             <td>{{ $item->quantidade }}</td>
                                             <td>{{ $item->quantidade_devolvida }}</td>
                                             <td><strong>{{ $pendente }}</strong></td>
@@ -74,6 +96,7 @@
                                                        min="0" 
                                                        max="{{ $pendente }}" 
                                                        value="{{ $pendente }}" 
+                                                       @if($item->iten_patrimonial_id) readonly @endif
                                                        style="width: 100px;">
                                             </td>
                                         </tr>

@@ -39,7 +39,7 @@
                                 <select name="fk_produto" id="fk_produto" class="form-control" required>
                                     <option value="">-- Selecione um produto --</option>
                                     @foreach($produtos as $produto)
-                                        <option value="{{ $produto->id }}" {{ old('fk_produto') == $produto->id ? 'selected' : '' }}>
+                                        <option value="{{ $produto->id }}" data-tipo="{{ $produto->tipo_controle }}" {{ old('fk_produto') == $produto->id ? 'selected' : '' }}>
                                             {{ $produto->nome }} ({{ $produto->unidade }})
                                         </option>
                                     @endforeach
@@ -100,6 +100,16 @@
                                 <label for="quantidade">Quantidade <span style="color: red;">*</span>:</label>
                                 <input type="number" name="quantidade" id="quantidade" class="form-control" 
                                     min="1" placeholder="Digite a quantidade" value="{{ old('quantidade') }}" required>
+                            </div>
+
+                            <!-- Patrimônios (somente permanente) -->
+                            <div class="form-group col-md-6" id="patrimonios-row" style="display: none;">
+                                <label>Patrimônios <span style="color: red;">*</span>:</label>
+                                <div id="patrimonios-container"></div>
+                                <button type="button" id="btn-add-patrimonio" class="btn btn-sm btn-info" style="margin-top: 8px;">
+                                    <i class="fa fa-plus"></i> Adicionar Patrimônio
+                                </button>
+                                <small class="text-muted d-block" style="margin-top: 6px;">A quantidade será igual ao número de patrimônios informados.</small>
                             </div>
 
                             <!-- Valor Unitário -->
@@ -209,6 +219,79 @@
                 containerRow.style.display = 'none';
             }
         });
+
+        function getProdutoTipo() {
+            const select = document.getElementById('fk_produto');
+            const option = select.options[select.selectedIndex];
+            return option ? option.getAttribute('data-tipo') : null;
+        }
+
+        let patrimonioIndex = 0;
+
+        function syncQuantidadeFromPatrimonios() {
+            const count = document.querySelectorAll('.patrimonio-item').length;
+            const quantidadeInput = document.getElementById('quantidade');
+            quantidadeInput.value = count > 0 ? count : '';
+        }
+
+        function addPatrimonioRow(valor = '', observacao = '') {
+            const container = document.getElementById('patrimonios-container');
+            const rowId = `patrimonio-${patrimonioIndex++}`;
+
+            const row = document.createElement('div');
+            row.className = 'patrimonio-item';
+            row.id = rowId;
+            row.style.marginBottom = '8px';
+            row.innerHTML = `
+                <div class="row">
+                    <div class="form-group col-md-4">
+                        <input type="text" name="patrimonios[]" class="form-control" placeholder="Patrimônio" value="${valor}" required>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <input type="text" name="patrimonios_observacoes[]" class="form-control" placeholder="Observação" value="${observacao}">
+                    </div>
+                    <div class="form-group col-md-2">
+                        <button type="button" class="btn btn-danger btn-sm" onclick="removePatrimonioRow('${rowId}')">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(row);
+            syncQuantidadeFromPatrimonios();
+        }
+
+        function removePatrimonioRow(rowId) {
+            const row = document.getElementById(rowId);
+            if (row) row.remove();
+            syncQuantidadeFromPatrimonios();
+        }
+
+        function togglePatrimonios() {
+            const tipo = getProdutoTipo();
+            const row = document.getElementById('patrimonios-row');
+            const quantidadeInput = document.getElementById('quantidade');
+            if (tipo === 'permanente') {
+                row.style.display = 'block';
+                quantidadeInput.readOnly = true;
+                if (document.querySelectorAll('.patrimonio-item').length === 0) {
+                    addPatrimonioRow();
+                } else {
+                    syncQuantidadeFromPatrimonios();
+                }
+            } else {
+                row.style.display = 'none';
+                document.getElementById('patrimonios-container').innerHTML = '';
+                quantidadeInput.readOnly = false;
+            }
+        }
+
+        document.getElementById('fk_produto').addEventListener('change', togglePatrimonios);
+        document.getElementById('btn-add-patrimonio').addEventListener('click', function() {
+            addPatrimonioRow();
+        });
+
+        togglePatrimonios();
 
         document.getElementById('valor').addEventListener('input', function(e) {
             let raw = e.target.value.replace(/\D/g, ''); // só números

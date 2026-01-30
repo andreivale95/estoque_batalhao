@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ItenPatrimonial;
 
 class CautelaProduto extends Model
 {
@@ -15,6 +16,7 @@ class CautelaProduto extends Model
         'cautela_id',
         'produto_id',
         'estoque_id',
+        'iten_patrimonial_id',
         'quantidade',
         'quantidade_devolvida',
         'data_devolucao',
@@ -47,5 +49,10 @@ class CautelaProduto extends Model
     public function estoque()
     {
         return $this->belongsTo(Itens_estoque::class, 'estoque_id');
+    }
+
+    public function itenPatrimonial()
+    {
+        return $this->belongsTo(ItenPatrimonial::class, 'iten_patrimonial_id');
     }
 }
