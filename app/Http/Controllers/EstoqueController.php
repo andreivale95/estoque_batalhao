@@ -7,6 +7,7 @@ use App\Models\Categoria;
 use App\Models\HistoricoMovimentacao;
 use App\Models\Itens_estoque;
 use App\Models\ItenPatrimonial;
+use App\Models\ItemFoto;
 use App\Models\Unidade;
 use App\Models\Produto;
 use App\Models\Secao;
@@ -330,6 +331,8 @@ class EstoqueController extends Controller
                 return back()->with('warning', 'A seção de origem deve ser diferente da seção de destino.');
             }
 
+            DB::beginTransaction();
+
             // Busca item na seção origem
             $queryOrigem = Itens_estoque::where('fk_produto', $request->fk_produto)
                 ->where('unidade', Auth::user()->fk_unidade);
@@ -344,6 +347,7 @@ class EstoqueController extends Controller
             $itemOrigem = $queryOrigem->first();
 
             if (!$itemOrigem || $itemOrigem->quantidade < $request->quantidade) {
+                DB::rollBack();
                 return back()->with('warning', 'Quantidade insuficiente na seção de origem.');
             }
 
@@ -373,7 +377,7 @@ class EstoqueController extends Controller
             // Log de movimentação
             HistoricoMovimentacao::create([
                 'fk_produto' => $request->fk_produto,
-                'tipo_movimentacao' => 'transferencia_secoes',
+                'tipo_movimentacao' => 'transferencia',
                 'quantidade' => $request->quantidade,
                 'responsavel' => Auth::user()->nome,
                 'observacao' => $request->observacao ?? 'Transferência entre seções',
@@ -381,10 +385,70 @@ class EstoqueController extends Controller
                 'fk_unidade' => Auth::user()->fk_unidade,
             ]);
 
+            DB::commit();
             return back()->with('success', 'Produto transferido entre seções com sucesso!');
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('Erro ao transferir entre seções', ['exception' => $e->getMessage()]);
-            return back()->with('warning', 'Houve um erro ao transferir entre seções.');
+            return back()->with('warning', 'Houve um erro ao transferir entre seções: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Transferir patrimônios entre seções
+     */
+    public function transferirPatrimonios(Request $request)
+    {
+        try {
+            Log::info('Transferência de patrimônios iniciada', ['request' => $request->all()]);
+            
+            $validated = $request->validate([
+                'fk_produto' => 'required|exists:produtos,id',
+                'fk_secao_destino' => 'required|exists:secaos,id',
+                'patrimonio_ids' => 'required|array|min:1',
+                'patrimonio_ids.*' => 'required|exists:itens_patrimoniais,id',
+            ], [
+                'fk_produto.required' => 'Produto não informado.',
+                'fk_secao_destino.required' => 'Seção de destino não informada.',
+                'patrimonio_ids.required' => 'Nenhum patrimônio selecionado.',
+                'patrimonio_ids.min' => 'Selecione pelo menos um patrimônio.',
+            ]);
+
+            DB::beginTransaction();
+
+            $patrimoniostransferidos = 0;
+            foreach ($validated['patrimonio_ids'] as $patrimonioId) {
+                $patrimonio = ItenPatrimonial::find($patrimonioId);
+                
+                if ($patrimonio && is_null($patrimonio->data_saida)) {
+                    // Verifica se a seção de destino é diferente
+                    if ($patrimonio->fk_secao !== (int)$validated['fk_secao_destino']) {
+                        $patrimonio->fk_secao = $validated['fk_secao_destino'];
+                        $patrimonio->save();
+                        $patrimoniostransferidos++;
+                        
+                        Log::info('Patrimônio transferido', [
+                            'patrimonio_id' => $patrimonioId,
+                            'patrimonio_numero' => $patrimonio->patrimonio,
+                            'secao_destino' => $validated['fk_secao_destino']
+                        ]);
+                    }
+                }
+            }
+
+            if ($patrimoniostransferidos === 0) {
+                DB::rollBack();
+                    Log::warning('Nenhum patrimônio foi transferido');
+                return back()->with('warning', 'Nenhum patrimônio foi transferido.');
+            }
+
+            DB::commit();
+                Log::info("$patrimoniostransferidos patrimônio(s) transferido(s) com sucesso");
+            return back()->with('success', "$patrimoniostransferidos patrimônio(s) transferido(s) com sucesso!");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Erro ao transferir patrimônios', ['exception' => $e->getMessage()]);
+            return back()->with('warning', 'Houve um erro ao transferir patrimônios: ' . $e->getMessage());
         }
     }
 
@@ -434,7 +498,17 @@ class EstoqueController extends Controller
                 'sei' => 'nullable|string',
                 'valor' => 'nullable|numeric',
                 'observacao' => 'nullable|string',
+                'fotos' => 'nullable|array|max:3',
+                'fotos.*' => 'image|max:5120',
             ]);
+
+            if ($produtoEntrada && $produtoEntrada->tipo_controle === 'permanente') {
+                $request->validate([
+                    'patrimonios_fotos' => 'nullable|array',
+                    'patrimonios_fotos.*' => 'nullable|array|max:2',
+                    'patrimonios_fotos.*.*' => 'image|max:5120',
+                ]);
+            }
 
             $dataEntrada = Carbon::parse($request->data_entrada);
 
@@ -442,9 +516,11 @@ class EstoqueController extends Controller
                 $patrimonios = $request->input('patrimonios', []);
                 $patrimonios = array_values(array_filter(array_map('trim', (array) $patrimonios)));
                 $patrimoniosObservacoes = $request->input('patrimonios_observacoes', []);
+                $patrimoniosFotos = $request->file('patrimonios_fotos', []);
 
+                $itensCriados = [];
                 foreach ($patrimonios as $index => $patrimonio) {
-                    ItenPatrimonial::create([
+                    $iten = ItenPatrimonial::create([
                         'fk_produto' => $request->fk_produto,
                         'patrimonio' => $patrimonio,
                         'serie' => null,
@@ -454,6 +530,10 @@ class EstoqueController extends Controller
                         'quantidade_cautelada' => 0,
                         'observacao' => $patrimoniosObservacoes[$index] ?? null,
                     ]);
+                    $itensCriados[] = $iten;
+
+                    $fotosDoPatrimonio = $patrimoniosFotos[$index] ?? [];
+                    $this->salvarFotosPatrimonio($fotosDoPatrimonio, $iten, 2);
                 }
 
                 HistoricoMovimentacao::create([
@@ -509,7 +589,7 @@ class EstoqueController extends Controller
                 // Não mais atualiza campo 'produtos.valor' — média é mantida no estoque
             } else {
                 // Cria novo registro de estoque na seção específica
-                Itens_estoque::create([
+                $itemEstoque = Itens_estoque::create([
                     'fk_produto' => $request->fk_produto,
                     'fk_secao' => $request->fk_secao,
                     'fk_item_pai' => $request->fk_item_pai ?? null,
@@ -551,6 +631,8 @@ class EstoqueController extends Controller
                 'nota_fiscal' => $request->nota_fiscal,
             ]);
 
+            $this->salvarFotosEntrada($request->file('fotos', []), $itemEstoque, 3);
+
             return redirect()->route('estoque.listar', [
                 'nome' => '',
                 'categoria' => '',
@@ -559,6 +641,64 @@ class EstoqueController extends Controller
         } catch (\Exception $e) {
             Log::error('Erro ao dar entrada no Estoque', ['exception' => $e->getMessage()]);
             return back()->with('warning', 'Houve um erro ao dar entrada no Estoque.');
+        }
+    }
+
+    private function salvarFotosEntrada($files, $itemEstoque = null, $max = 3)
+    {
+        if (empty($files)) {
+            return;
+        }
+
+        $ordem = 1;
+        foreach (array_slice($files, 0, $max) as $file) {
+            if (!$file || !$file->isValid()) {
+                continue;
+            }
+
+            $path = $file->store('itens_fotos', 'public');
+
+            if ($itemEstoque) {
+                ItemFoto::create([
+                    'fk_itens_estoque' => $itemEstoque->id,
+                    'fk_iten_patrimonial' => null,
+                    'caminho_arquivo' => $path,
+                    'nome_original' => $file->getClientOriginalName(),
+                    'tipo_mime' => $file->getClientMimeType(),
+                    'tamanho' => $file->getSize(),
+                    'ordem' => $ordem,
+                ]);
+            }
+
+            $ordem++;
+        }
+    }
+
+    private function salvarFotosPatrimonio($files, $itenPatrimonial, $max = 2)
+    {
+        if (empty($files) || !$itenPatrimonial) {
+            return;
+        }
+
+        $ordem = 1;
+        foreach (array_slice($files, 0, $max) as $file) {
+            if (!$file || !$file->isValid()) {
+                continue;
+            }
+
+            $path = $file->store('itens_fotos', 'public');
+
+            ItemFoto::create([
+                'fk_itens_estoque' => null,
+                'fk_iten_patrimonial' => $itenPatrimonial->id,
+                'caminho_arquivo' => $path,
+                'nome_original' => $file->getClientOriginalName(),
+                'tipo_mime' => $file->getClientMimeType(),
+                'tamanho' => $file->getSize(),
+                'ordem' => $ordem,
+            ]);
+
+            $ordem++;
         }
     }
     public function entradaProdutoEstoque(Request $request)

@@ -29,7 +29,7 @@
                         </div>
                     @endif
 
-                    <form action="{{ route('estoque.entrada') }}" method="POST">
+                    <form action="{{ route('estoque.entrada') }}" method="POST" enctype="multipart/form-data">
                         @csrf
 
                         <div class="row">
@@ -102,16 +102,6 @@
                                     min="1" placeholder="Digite a quantidade" value="{{ old('quantidade') }}" required>
                             </div>
 
-                            <!-- Patrimônios (somente permanente) -->
-                            <div class="form-group col-md-6" id="patrimonios-row" style="display: none;">
-                                <label>Patrimônios <span style="color: red;">*</span>:</label>
-                                <div id="patrimonios-container"></div>
-                                <button type="button" id="btn-add-patrimonio" class="btn btn-sm btn-info" style="margin-top: 8px;">
-                                    <i class="fa fa-plus"></i> Adicionar Patrimônio
-                                </button>
-                                <small class="text-muted d-block" style="margin-top: 6px;">A quantidade será igual ao número de patrimônios informados.</small>
-                            </div>
-
                             <!-- Valor Unitário -->
                             <div class="form-group col-md-3">
                                 <label for="valor">Preço Unitário (R$) <span style="color: red;">*</span>:</label>
@@ -175,6 +165,28 @@
                             </div>
                         </div>
 
+                        <div class="row" style="margin-top: 10px;" id="fotos-consumo-row">
+                            <div class="form-group col-md-12">
+                                <label for="fotos_upload">Fotos do Item (até 3 imagens):</label>
+                                <input type="file" id="fotos_upload" name="fotos[]" class="form-control" multiple accept="image/*">
+                                <small class="text-muted">Formatos aceitos: JPG, PNG, GIF (máx 5MB por imagem).</small>
+                            </div>
+                        </div>
+
+                        <!-- Patrimônios (somente permanente) -->
+                        <div class="row" id="patrimonios-row" style="display: none; margin-top: 20px;">
+                            <div class="form-group col-md-12">
+                                <label style="font-size: 18px; font-weight: bold;">
+                                    <i class="fa fa-barcode"></i> Patrimônios <span style="color: red;">*</span>
+                                </label>
+                                <div id="patrimonios-container"></div>
+                                <button type="button" id="btn-add-patrimonio" class="btn btn-sm btn-info" style="margin-top: 8px;">
+                                    <i class="fa fa-plus"></i> Adicionar Patrimônio
+                                </button>
+                                <small class="text-muted d-block" style="margin-top: 6px;">A quantidade será igual ao número de patrimônios informados.</small>
+                            </div>
+                        </div>
+
                         <!-- Botões -->
                         <div class="form-group text-right">
                             <a href="{{ route('estoque.listar') }}" class="btn btn-danger">
@@ -191,6 +203,22 @@
     </div>
 
     <script>
+        document.getElementById('fotos_upload').addEventListener('change', function() {
+            if (this.files && this.files.length > 3) {
+                alert('Selecione no máximo 3 imagens.');
+                this.value = '';
+            }
+        });
+
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.classList.contains('patrimonio-fotos')) {
+                if (e.target.files && e.target.files.length > 2) {
+                    alert('Selecione no máximo 2 imagens por patrimônio.');
+                    e.target.value = '';
+                }
+            }
+        });
+
         // Dados de containers por seção vindos do backend
         const containersPorSecao = @json($todosContainers ?? []);
 
@@ -237,6 +265,7 @@
         function addPatrimonioRow(valor = '', observacao = '') {
             const container = document.getElementById('patrimonios-container');
             const rowId = `patrimonio-${patrimonioIndex++}`;
+            const index = patrimonioIndex - 1;
 
             const row = document.createElement('div');
             row.className = 'patrimonio-item';
@@ -249,6 +278,10 @@
                     </div>
                     <div class="form-group col-md-6">
                         <input type="text" name="patrimonios_observacoes[]" class="form-control" placeholder="Observação" value="${observacao}">
+                    </div>
+                    <div class="form-group col-md-6">
+                        <input type="file" name="patrimonios_fotos[${index}][]" class="form-control patrimonio-fotos" multiple accept="image/*">
+                        <small class="text-muted">Até 2 fotos por patrimônio.</small>
                     </div>
                     <div class="form-group col-md-2">
                         <button type="button" class="btn btn-danger btn-sm" onclick="removePatrimonioRow('${rowId}')">
@@ -267,13 +300,25 @@
             syncQuantidadeFromPatrimonios();
         }
 
+        function reindexPatrimoniosFotos() {
+            const rows = document.querySelectorAll('.patrimonio-item');
+            rows.forEach(function(row, index) {
+                const fileInput = row.querySelector('input.patrimonio-fotos');
+                if (fileInput) {
+                    fileInput.name = `patrimonios_fotos[${index}][]`;
+                }
+            });
+        }
+
         function togglePatrimonios() {
             const tipo = getProdutoTipo();
             const row = document.getElementById('patrimonios-row');
             const quantidadeInput = document.getElementById('quantidade');
+            const fotosConsumo = document.getElementById('fotos-consumo-row');
             if (tipo === 'permanente') {
                 row.style.display = 'block';
                 quantidadeInput.readOnly = true;
+                if (fotosConsumo) fotosConsumo.style.display = 'none';
                 if (document.querySelectorAll('.patrimonio-item').length === 0) {
                     addPatrimonioRow();
                 } else {
@@ -283,6 +328,7 @@
                 row.style.display = 'none';
                 document.getElementById('patrimonios-container').innerHTML = '';
                 quantidadeInput.readOnly = false;
+                if (fotosConsumo) fotosConsumo.style.display = 'block';
             }
         }
 
@@ -290,6 +336,13 @@
         document.getElementById('btn-add-patrimonio').addEventListener('click', function() {
             addPatrimonioRow();
         });
+
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function() {
+                reindexPatrimoniosFotos();
+            });
+        }
 
         togglePatrimonios();
 

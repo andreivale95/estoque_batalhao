@@ -70,6 +70,9 @@ public function militares()
     {
         return $this->hasMany(ItenPatrimonial::class, 'fk_produto');
     }
+
+    public function fotos()
+    {
+        return $this->hasMany(ItemFoto::class, 'fk_produto');
+    }
 }
-
-

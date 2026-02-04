@@ -55,6 +55,7 @@ Route::middleware(['auth', 'verified'])->controller(EstoqueController::class)->g
     Route::post('registros/estoque/item/{id}/mover', 'moverItem')->name('estoque.item.mover');
     Route::post('/estoque/transferencia', [EstoqueController::class, 'transferir'])->name('estoque.transferir');
     Route::post('/estoque/transferencia-secoes', [EstoqueController::class, 'transferirEntreSeccoes'])->name('estoque.transferir.secoes');
+    Route::post('/estoque/transferencia-patrimonios', [EstoqueController::class, 'transferirPatrimonios'])->name('estoque.transferir.patrimonios');
     Route::post('/estoque/saida-multiplos', [EstoqueController::class, 'saidaMultiplos'])->name('estoque.saidaMultiplos');
     Route::get('/estoque/recibo/{saida}',  [EstoqueController::class, 'recibo'])->name('estoque.recibo');
 

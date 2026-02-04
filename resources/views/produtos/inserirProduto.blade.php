@@ -31,7 +31,7 @@
                     </div>
                 @endif
 
-                <form action="{{ route('produto.cadastrar') }}" method="POST">
+                <form action="{{ route('produto.cadastrar') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     
                     <div class="row">
@@ -107,6 +107,17 @@
                         <!-- Container removido - use a seção de Containers no menu Estoque -->
                     </div>
 
+                    <!-- Campo de Foto do Produto -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Foto do Produto</label>
+                                <input type="file" name="foto" class="form-control" accept="image/*">
+                                <small class="text-muted">Formatos aceitos: JPG, PNG, GIF (máx 5MB).</small>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <button type="submit" class="btn btn-primary">
                             <i class="fa fa-save"></i> Cadastrar Produto
@@ -128,4 +139,24 @@
         </div>
     </section>
 </div>
+
+<script>
+    document.querySelector('input[name="foto"]').addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+            // Valida tamanho (máx 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('A imagem não pode exceder 5MB.');
+                this.value = '';
+                return;
+            }
+            // Valida tipo
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('Formato de arquivo não permitido. Use JPG, PNG ou GIF.');
+                this.value = '';
+            }
+        }
+    });
+</script>
 @endsection

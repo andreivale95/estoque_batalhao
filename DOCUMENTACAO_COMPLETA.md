@@ -189,7 +189,29 @@ O **SISALMOX** é um sistema de gerenciamento de almoxarifado desenvolvido em **
 
 ---
 
-### 5. **CAUTELAS (EMPRÉSTIMOS)**
+### 5. **FOTOS DE ITENS**
+
+#### **Tabela: item_fotos**
+- **Objetivo**: Armazenar fotos de produtos, itens de estoque e patrimônios
+- **Campos**:
+  - `id` (PK)
+  - `fk_itens_estoque`: FK para itens_estoque (nullable)
+  - `fk_iten_patrimonial`: FK para itens_patrimoniais (nullable)
+  - `fk_produto`: FK para produtos (nullable)
+  - `caminho_arquivo`: Caminho do arquivo no storage
+  - `nome_original`: Nome original do arquivo
+  - `tipo_mime`: Tipo MIME da imagem
+  - `tamanho`: Tamanho do arquivo em bytes
+  - `ordem`: Ordem de exibição
+  - `created_at`, `updated_at`: Timestamps
+- **Relacionamentos**: 
+  - One-to-Many com produtos (até 1 foto por produto)
+  - One-to-Many com itens_estoque (até 3 fotos para consumo)
+  - One-to-Many com itens_patrimoniais (até 2 fotos por patrimônio)
+
+---
+
+### 6. **CAUTELAS (EMPRÉSTIMOS)**
 
 #### **Tabela: cautelas**
 - **Objetivo**: Registrar empréstimos de materiais
@@ -209,6 +231,7 @@ O **SISALMOX** é um sistema de gerenciamento de almoxarifado desenvolvido em **
   - `cautela_id`: FK para cautelas
   - `produto_id`: FK para produtos
   - `estoque_id`: FK para itens_estoque (opcional)
+  - `iten_patrimonial_id`: FK para itens_patrimoniais (opcional)
   - `quantidade`: Quantidade emprestada
   - `quantidade_devolvida`: Quantidade devolvida
   - `data_devolucao`: Data da devolução
@@ -224,17 +247,18 @@ O **SISALMOX** é um sistema de gerenciamento de almoxarifado desenvolvido em **
 
 ---
 
-### 6. **HISTÓRICO E MOVIMENTAÇÕES**
+### 7. **HISTÓRICO E MOVIMENTAÇÕES**
 
 #### **Tabela: historico_movimentacoes**
 - **Objetivo**: Registrar todas as movimentações de estoque para auditoria
 - **Campos principais**:
   - `id` (PK)
   - `fk_produto`: FK para produtos
-  - `tipo_movimentacao`: entrada, saída, transferência, saída_kit, saída_manual_multipla
+  - `tipo_movimentacao`: entrada, saída, transferência, saída_kit, saída_manual_multipla, desfazer
   - `quantidade`: Quantidade movimentada
   - `data_movimentacao`: Data/hora da movimentação
   - `responsavel`: Pessoa responsável
+  - `movimentacao_origem_id`: ID da movimentação original (para desfazer)
   - `fk_unidade`: Unidade origem
   - `unidade_origem`: ID da unidade de origem
   - `unidade_destino`: ID da unidade destino
@@ -306,12 +330,13 @@ users ◄──┬─── perfis ◄─── perfil_permissao ──► permi
                          ├─── efetivo_militar
                          └─── kits
                              
-categorias ◄─┬─── produtos ◄─┬─── itens_estoque ◄── cautela_produto ──► cautelas
-             └─ tipoprodutos └─── itens_patrimoniais
-             
-                         └─── containers
-                         └─── historico_movimentacoes
-                         └─── efetivo_militar_produto
+categorias ◄─┬─── produtos ◄─┬─── itens_estoque ◄─┬─ cautela_produto ──► cautelas
+             └─ tipoprodutos │                     └─ item_fotos
+                             ├─── itens_patrimoniais ◄─ item_fotos
+                             ├─── containers
+                             ├─── historico_movimentacoes
+                             ├─── efetivo_militar_produto
+                             └─── item_fotos
 
 itens_estoque ◄─── historico_movimentacoes
 ```
@@ -336,8 +361,13 @@ itens_estoque ◄─── historico_movimentacoes
 | cautela_produto | cautelas | N:1 | cautela_id |
 | cautela_produto | produtos | N:1 | produto_id |
 | cautela_produto | itens_estoque | N:1 | estoque_id |
+| cautela_produto | itens_patrimoniais | N:1 | iten_patrimonial_id |
+| item_fotos | produtos | N:1 | fk_produto |
+| item_fotos | itens_estoque | N:1 | fk_itens_estoque |
+| item_fotos | itens_patrimoniais | N:1 | fk_iten_patrimonial |
 | historico_movimentacoes | produtos | N:1 | fk_produto |
 | historico_movimentacoes | unidades | N:1 | fk_unidade |
+| historico_movimentacoes | historico_movimentacoes | N:1 | movimentacao_origem_id |
 | secaos | unidades | N:1 | fk_unidade |
 | efetivo_militar | unidades | N:1 | fk_unidade |
 | efetivo_militar_produto | efetivo_militar | N:1 | fk_efetivo_militar |
@@ -365,6 +395,7 @@ itens_estoque ◄─── historico_movimentacoes
 - ✅ Tipo de controle (consumo vs permanente)
 - ✅ Agrupamento em kits
 - ✅ Status ativo/inativo
+- ✅ Upload de foto do produto (até 1 imagem por produto)
 
 ### **3. GESTÃO DE ESTOQUE**
 - ✅ Controle de quantidade por produto
@@ -374,6 +405,9 @@ itens_estoque ◄─── historico_movimentacoes
 - ✅ Lote e fornecedor
 - ✅ Data de entrada/saída
 - ✅ Estrutura hierárquica (itens pai/filho)
+- ✅ Upload de fotos na entrada (até 3 para itens de consumo, 2 por patrimônio para permanentes)
+- ✅ Galeria de fotos por item no estoque
+- ✅ Visualização unificada de estoque (consumo + permanente)
 
 ### **4. MOVIMENTAÇÕES DE ESTOQUE**
 - ✅ Entrada de produtos
@@ -383,6 +417,9 @@ itens_estoque ◄─── historico_movimentacoes
 - ✅ Saída manual múltipla
 - ✅ Histórico completo auditável
 - ✅ Rastreamento de responsável
+- ✅ Desfazer movimentações (entrada/saída)
+- ✅ Indicador visual de movimentações desfeitas
+- ✅ Suporte a itens permanentes e de consumo
 
 ### **5. CAUTELAS (EMPRÉSTIMOS)**
 - ✅ Criar cautelas de empréstimo
@@ -391,13 +428,19 @@ itens_estoque ◄─── historico_movimentacoes
 - ✅ Data prevista de devolucão
 - ✅ Rastrear responsáveis
 - ✅ Status de devolução
+- ✅ Suporte para itens permanentes com seleção de patrimônio
+- ✅ Controle de quantidade cautelada por item/patrimônio
+- ✅ Sistema de devolução parcial e total
 
 ### **6. ITENS PATRIMONIAIS**
 - ✅ Número de patrimônio único
 - ✅ Número de série
 - ✅ Condição do item
-- ✅ Controle de cautela
+- ✅ Controle de cautela por patrimônio
 - ✅ Rastreamento por seção
+- ✅ Fotos individuais por patrimônio (até 2 fotos)
+- ✅ Controle de saída permanente (baixa)
+- ✅ Observações por item
 
 ### **7. CONTAINERS/RECIPIENTES**
 - ✅ Tipos de containers (caixa, prateleira, armário)
@@ -426,6 +469,17 @@ itens_estoque ◄─── historico_movimentacoes
 - ✅ ACP (Adicional de Custos Pessoal)
 - ✅ Compatibilidade com sistema legado
 
+### **11. SISTEMA DE FOTOS**
+- ✅ Upload de foto no cadastro de produto (1 por produto)
+- ✅ Upload de fotos na entrada de estoque:
+  - Até 3 fotos para itens de consumo
+  - Até 2 fotos por patrimônio para itens permanentes
+- ✅ Galeria de fotos na página de detalhes do produto
+- ✅ Validação de formato (JPG, PNG, GIF) e tamanho (máx 5MB)
+- ✅ Armazenamento organizado em `storage/app/public/`
+- ✅ Limpeza automática de arquivos órfãos ao deletar registros
+- ✅ URLs públicas para exibição de imagens
+
 ---
 
 ## 📈 ESTATÍSTICAS DO BANCO DE DADOS
@@ -440,6 +494,8 @@ itens_estoque ◄─── historico_movimentacoes
 | produtos | 2 |
 | tamanhos | 17 |
 | itens_estoque | 5 |
+| itens_patrimoniais | - |
+| item_fotos | - |
 | historico_movimentacoes | 5 |
 | kits | 1 |
 | cautelas | 0 |
@@ -448,8 +504,9 @@ itens_estoque ◄─── historico_movimentacoes
 | modulos | 5 |
 | permissoes | 7 |
 | fontes | 2 |
+| containers | - |
 
-**Total de tabelas**: 40+
+**Total de tabelas**: 42+
 
 ---
 
@@ -558,6 +615,7 @@ Todas as tabelas possuem:
 - `transferência`: Movimentação entre unidades
 - `saída_kit`: Saída de todos os itens de um kit
 - `saída_manual_multipla`: Saída de múltiplos produtos
+- `desfazer`: Reversão de movimentação anterior
 
 ### **status (users, perfis, containers)**
 - `s` ou `S`: Ativo/Sim
@@ -576,7 +634,45 @@ Todas as tabelas possuem:
 
 ---
 
-## 🎯 PRÓXIMOS PASSOS PARA DESENVOLVIMENTO
+## � ATUALIZAÇÕES RECENTES (Janeiro-Fevereiro 2026)
+
+### **Gestão de Itens Patrimoniais**
+- ✅ Implementado controle de itens permanentes com número de patrimônio
+- ✅ Sistema de cautela para patrimônios com seleção individual
+- ✅ Controle de saída permanente (baixa) de patrimônios
+- ✅ Fotos individuais por patrimônio (até 2 por item)
+- ✅ Observações específicas por patrimônio
+
+### **Sistema de Fotos**
+- ✅ Upload de foto no cadastro de produto
+- ✅ Upload de fotos na entrada de estoque:
+  - Até 3 fotos para itens de consumo
+  - Até 2 fotos por patrimônio para permanentes
+- ✅ Galeria de fotos na página de detalhes
+- ✅ Validação de formato e tamanho
+- ✅ Limpeza automática de arquivos órfãos
+
+### **Movimentações Aprimoradas**
+- ✅ Função de desfazer movimentações (entrada/saída)
+- ✅ Suporte completo para itens permanentes
+- ✅ Indicador visual de movimentações desfeitas
+- ✅ Rastreamento de movimentação origem
+
+### **Melhorias na Interface**
+- ✅ Visualização unificada de estoque (consumo + permanente)
+- ✅ Lista de patrimônios movida para o final do formulário
+- ✅ Campos dinâmicos baseados em tipo de controle
+- ✅ Validações client-side e server-side aprimoradas
+
+### **Banco de Dados**
+- ✅ Nova tabela: `item_fotos` (fotos de produtos/estoque/patrimônios)
+- ✅ Novo campo: `iten_patrimonial_id` em `cautela_produto`
+- ✅ Novo campo: `fk_produto` em `item_fotos`
+- ✅ Relacionamentos cascade delete para integridade
+
+---
+
+## �🎯 PRÓXIMOS PASSOS PARA DESENVOLVIMENTO
 
 1. ✅ Implementar dashboards com estatísticas
 2. ✅ Gerar relatórios em PDF

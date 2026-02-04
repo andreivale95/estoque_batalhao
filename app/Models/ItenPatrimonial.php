@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ItemFoto;
 
 class ItenPatrimonial extends Model
 {
@@ -32,5 +33,10 @@ class ItenPatrimonial extends Model
     public function secao()
     {
         return $this->belongsTo(Secao::class, 'fk_secao');
+    }
+
+    public function fotos()
+    {
+        return $this->hasMany(ItemFoto::class, 'fk_iten_patrimonial');
     }
 }

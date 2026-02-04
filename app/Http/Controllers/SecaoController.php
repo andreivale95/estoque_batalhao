@@ -6,47 +6,96 @@ use Illuminate\Http\Request;
 use App\Models\Secao;
 use App\Models\Unidade;
 use App\Models\Itens_estoque;
-use Illuminate\Support\Facades\Log; // Adicionando o uso do Log
+use App\Models\ItenPatrimonial;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class SecaoController extends Controller
 {
     public function transferirLoteForm($unidadeId, $secaoId)
     {
         $secao = Secao::findOrFail($secaoId);
-        $itens = Itens_estoque::where('fk_secao', $secaoId)->get();
-        $outrasSecoes = Secao::where('fk_unidade', $unidadeId)->where('id', '!=', $secaoId)->get();
-        return view('secoes.transferir_lote', compact('secao', 'itens', 'outrasSecoes'));
+        $itens = Itens_estoque::where('fk_secao', $secaoId)->with('produto')->get();
+        $itensPatrimoniais = ItenPatrimonial::where('fk_secao', $secaoId)
+            ->whereNull('data_saida')
+            ->with('produto')
+            ->get();
+        $todasSecoes = Secao::where('fk_unidade', $unidadeId)->orderBy('nome')->get();
+        return view('secoes.transferir_lote', compact('secao', 'itens', 'itensPatrimoniais', 'todasSecoes'));
     }
 
     public function transferirLote(Request $request, $unidadeId, $secaoId)
     {
         $request->validate([
-            'item_id' => 'required|array',
+            'item_id' => 'nullable|array',
+            'patrimonio_id' => 'nullable|array',
             'nova_secao' => 'required|integer',
         ]);
-        $quantidades = $request->input('quantidade_transferir', []);
-        foreach ($request->item_id as $idx => $itemId) {
-            $item = Itens_estoque::find($itemId);
-            $qtdTransferir = isset($quantidades[$idx]) ? intval($quantidades[$idx]) : 0;
-            if ($item && $qtdTransferir > 0 && $qtdTransferir <= $item->quantidade) {
-                $itemDestino = Itens_estoque::where('fk_secao', $request->nova_secao)
-                    ->where('fk_produto', $item->fk_produto)
-                    ->where('lote', $item->lote)
-                    ->first();
-                if ($itemDestino) {
-                    $itemDestino->quantidade += $qtdTransferir;
-                    $itemDestino->save();
-                } else {
-                    $novoItem = $item->replicate();
-                    $novoItem->fk_secao = $request->nova_secao;
-                    $novoItem->quantidade = $qtdTransferir;
-                    $novoItem->save();
+        
+        DB::beginTransaction();
+        try {
+            // Transferir itens de consumo
+            if ($request->has('item_id') && is_array($request->item_id)) {
+                $quantidades = $request->input('quantidade_transferir', []);
+                foreach ($request->item_id as $idx => $itemId) {
+                    if (!$itemId) continue;
+                    
+                    $item = Itens_estoque::find($itemId);
+                    $qtdTransferir = isset($quantidades[$idx]) ? intval($quantidades[$idx]) : 0;
+                    
+                    if ($item && $qtdTransferir > 0 && $qtdTransferir <= $item->quantidade) {
+                        $itemDestino = Itens_estoque::where('fk_secao', $request->nova_secao)
+                            ->where('fk_produto', $item->fk_produto)
+                            ->where('lote', $item->lote)
+                            ->first();
+                        
+                        if ($itemDestino) {
+                            $itemDestino->quantidade += $qtdTransferir;
+                            $itemDestino->save();
+                        } else {
+                            $novoItem = $item->replicate();
+                            $novoItem->fk_secao = $request->nova_secao;
+                            $novoItem->quantidade = $qtdTransferir;
+                            $novoItem->save();
+                        }
+                        
+                        $item->quantidade -= $qtdTransferir;
+                        if ($item->quantidade == 0) {
+                            $item->delete();
+                        } else {
+                            $item->save();
+                        }
+                    }
                 }
-                $item->quantidade -= $qtdTransferir;
-                $item->save();
             }
+            
+            // Transferir itens patrimoniais
+            if ($request->has('patrimonio_id') && is_array($request->patrimonio_id)) {
+                foreach ($request->patrimonio_id as $patrimonioId) {
+                    if (!$patrimonioId) continue;
+                    
+                    $patrimonio = ItenPatrimonial::find($patrimonioId);
+                    if ($patrimonio && is_null($patrimonio->data_saida)) {
+                        $patrimonio->fk_secao = $request->nova_secao;
+                        $patrimonio->save();
+                        
+                        Log::info("Patrimônio transferido", [
+                            'patrimonio' => $patrimonio->patrimonio,
+                            'nova_secao' => $request->nova_secao
+                        ]);
+                    }
+                }
+            }
+            
+            DB::commit();
+            return redirect()->route('secoes.ver', ['unidade' => $unidadeId, 'secao' => $secaoId])
+                ->with('success', 'Itens transferidos com sucesso!');
+                
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Erro ao transferir itens', ['error' => $e->getMessage()]);
+            return redirect()->back()->with('error', 'Erro ao transferir itens: ' . $e->getMessage());
         }
-        return redirect()->route('secoes.ver', ['unidade' => $unidadeId, 'secao' => $secaoId])->with('success', 'Itens transferidos com sucesso!');
     }
     /**
      * Get the items for a specific section.

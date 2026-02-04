@@ -28,7 +28,7 @@
 
                 </div>
                 <div class="panel-body" style="background-color: white;">
-                    <form action="{{ route('estoque.entrada') }}" method="POST">
+                    <form action="{{ route('estoque.entrada') }}" method="POST" enctype="multipart/form-data">
                         @csrf
 
                         <div class="row">
@@ -169,6 +169,12 @@
                             <input type="text" name="observacao" class="form-control" placeholder="Nome do Fornecedor">
                         </div>
 
+                        <div class="form-group col-md-12" id="fotos-consumo-row">
+                            <label for="fotos_upload">Fotos do Item (até 3 imagens):</label>
+                            <input type="file" id="fotos_upload" name="fotos[]" class="form-control" multiple accept="image/*">
+                            <small class="text-muted">Formatos aceitos: JPG, PNG, GIF (máx 5MB por imagem).</small>
+                        </div>
+
 
 
 
@@ -195,6 +201,13 @@
     <!-- /.content-wrapper -->
 
     <script>
+        document.getElementById('fotos_upload').addEventListener('change', function() {
+            if (this.files && this.files.length > 3) {
+                alert('Selecione no máximo 3 imagens.');
+                this.value = '';
+            }
+        });
+
         document.getElementById('valor').addEventListener('input', function(e) {
             let raw = e.target.value.replace(/\D/g, ''); // só números
             let valorCentavos = raw ? parseInt(raw, 10) : 0;
@@ -208,5 +221,21 @@
                 .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             e.target.value = valorFormatado;
         });
-    </script>
+    <script>
+        document.getElementById('fotos_upload').addEventListener('change', function() {
+            if (this.files && this.files.length > 3) {
+                alert('Selecione no máximo 3 imagens.');
+                this.value = '';
+            }
+        });
+
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.classList.contains('patrimonio-fotos')) {
+                if (e.target.files && e.target.files.length > 2) {
+                    alert('Selecione no máximo 2 imagens por patrimônio.');
+                    e.target.value = '';
+                }
+            }
+        });
+
 @endsection

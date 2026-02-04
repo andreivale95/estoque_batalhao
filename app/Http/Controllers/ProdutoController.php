@@ -8,6 +8,7 @@ use App\Models\Condicao;
 use App\Models\HistoricoRevisoes;
 use App\Models\Itens_estoque;
 use App\Models\ItenPatrimonial;
+use App\Models\ItemFoto;
 use App\Models\Kit;
 use App\Models\MinMaxKm;
 use App\Models\Tamanho;
@@ -57,6 +58,11 @@ class ProdutoController extends Controller {
             $produto = Produto::findOrFail($id);
             $todosOsItens = collect();
             $itensPatrimoniais = collect();
+            
+            // Buscar todas as seções da unidade do usuário
+            $todasSecoes = Secao::where('fk_unidade', Auth::user()->fk_unidade)
+                ->orderBy('nome')
+                ->get();
 
             if ($produto->tipo_controle === 'permanente') {
                 $quantidadeTotal = ItenPatrimonial::where('fk_produto', $id)
@@ -65,7 +71,7 @@ class ProdutoController extends Controller {
 
                 $itensPatrimoniais = ItenPatrimonial::where('fk_produto', $id)
                     ->whereNull('data_saida')
-                    ->with(['secao'])
+                    ->with(['secao', 'fotos'])
                     ->orderBy('fk_secao')
                     ->orderBy('patrimonio')
                     ->get();
@@ -132,7 +138,7 @@ class ProdutoController extends Controller {
                 });
             }
 
-            return view('produtos.detalhes', compact('produto', 'quantidadeTotal', 'detalhesSecao', 'todosOsItens', 'itensPatrimoniais'));
+            return view('produtos.detalhes', compact('produto', 'quantidadeTotal', 'detalhesSecao', 'todosOsItens', 'itensPatrimoniais', 'todasSecoes'));
         } catch (Exception $e) {
             Log::error('Erro ao carregar detalhes do produto', ['error' => $e->getMessage()]);
             return back()->with('warning', 'Erro ao carregar detalhes do produto: ' . $e->getMessage());
@@ -403,6 +409,7 @@ class ProdutoController extends Controller {
                 'nome' => 'required|string|max:255',
                 'categoria' => 'required|exists:categorias,id',
                 'tipo_controle' => 'required|in:consumo,permanente',
+                'foto' => 'nullable|image|mimes:jpeg,png,gif|max:5120',
             ]);
 
             DB::beginTransaction();
@@ -428,6 +435,22 @@ class ProdutoController extends Controller {
                 'ativo' => 'Y',
                 'tipo_controle' => $request->tipo_controle,
             ]);
+
+            // Salva a foto se fornecida
+            if ($request->hasFile('foto')) {
+                $file = $request->file('foto');
+                $fileName = time() . '_produto_' . $produto->id . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs('produtos', $fileName, 'public');
+                
+                // Salva informação da foto na tabela item_fotos com referência ao produto
+                ItemFoto::create([
+                    'fk_itens_estoque' => null,
+                    'fk_iten_patrimonial' => null,
+                    'fk_produto' => $produto->id,
+                    'caminho_arquivo' => $path,
+                    'ordem' => 1,
+                ]);
+            }
 
             DB::commit();
             Log::info('Produto registrado com sucesso', ['produto_id' => $produto->id, 'usuario' => Auth::user()->cpf]);
