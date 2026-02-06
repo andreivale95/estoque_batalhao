@@ -112,7 +112,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Foto do Produto</label>
-                                <input type="file" name="foto" class="form-control" accept="image/*">
+                                <input type="file" name="foto" class="form-control" accept="image/*" id="foto-input">
                                 <small class="text-muted">Formatos aceitos: JPG, PNG, GIF (máx 5MB).</small>
                             </div>
                         </div>
@@ -159,4 +159,109 @@
         }
     });
 </script>
+
+<div class="modal fade" id="modalCropFotoProduto" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title"><i class="fa fa-crop"></i> Recortar foto</h5>
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div style="width: 100%; max-height: 60vh; overflow: hidden;">
+                    <img id="cropperImage" src="" alt="Prévia" style="max-width: 100%; display: block;">
+                </div>
+                <small class="text-muted">Arraste para ajustar o enquadramento. Proporção fixa 1:1.</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btnCropConfirmar">
+                    <i class="fa fa-check"></i> Aplicar recorte
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+
+@push('styles')
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
+@endpush
+
+@push('scripts')
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script>
+        (function () {
+            var input = document.getElementById('foto-input');
+            var image = document.getElementById('cropperImage');
+            var cropper = null;
+            var modalId = '#modalCropFotoProduto';
+
+            if (!input || !image) {
+                return;
+            }
+
+            input.addEventListener('change', function () {
+                var files = input.files;
+                if (!files || !files.length) {
+                    return;
+                }
+
+                var file = files[0];
+                var reader = new FileReader();
+                reader.onload = function (event) {
+                    image.src = event.target.result;
+                    $(modalId).modal('show');
+                };
+                reader.readAsDataURL(file);
+            });
+
+            $(modalId).on('shown.bs.modal', function () {
+                if (cropper) {
+                    cropper.destroy();
+                }
+                cropper = new Cropper(image, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    autoCropArea: 1,
+                    responsive: true,
+                    background: false,
+                });
+            });
+
+            $(modalId).on('hidden.bs.modal', function () {
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+            });
+
+            document.getElementById('btnCropConfirmar').addEventListener('click', function () {
+                if (!cropper) {
+                    $(modalId).modal('hide');
+                    return;
+                }
+
+                var canvas = cropper.getCroppedCanvas({
+                    width: 500,
+                    height: 500,
+                    imageSmoothingQuality: 'high'
+                });
+
+                canvas.toBlob(function (blob) {
+                    if (!blob) {
+                        $(modalId).modal('hide');
+                        return;
+                    }
+
+                    var originalName = input.files[0] ? input.files[0].name : 'foto.jpg';
+                    var file = new File([blob], originalName, { type: blob.type });
+                    var dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    input.files = dataTransfer.files;
+                    $(modalId).modal('hide');
+                }, 'image/jpeg', 0.9);
+            });
+        })();
+    </script>
+@endpush

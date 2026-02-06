@@ -64,6 +64,8 @@
 
 
 
+    @stack('styles')
+
 
 </head>
 

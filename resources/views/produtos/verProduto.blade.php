@@ -30,8 +30,15 @@
                         <div class="col-md-6">
                             <div class="box box-primary">
                                 <div class="box-header">
-                                    @if (session('path'))
-                                        <img src="{{ asset('storage/' . session('path')) }}" alt="Imagem do Produto">
+                                    @php
+                                        $fotoProduto = $produto->fotos->sortBy('ordem')->first();
+                                    @endphp
+                                    @if($fotoProduto)
+                                        <img src="{{ $fotoProduto->url }}" alt="Imagem do Produto" style="max-width: 100%;">
+                                    @else
+                                        <div style="width: 100%; height: 200px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; color: #888;">
+                                            Sem foto
+                                        </div>
                                     @endif
                                 </div>
                                 <div class="box-body">
@@ -128,8 +135,17 @@
                                     IMAGEM DO PRODUTO
                                 </div>
                                 <div class="box-body text-center">
-                                    <img src="{{ asset('/storage/' . $produto->imagem) }}" alt="Imagem do Produto"
-                                        class="img-responsive" style="max-width: 100%;">
+                                    @php
+                                        $fotoProduto = $produto->fotos->sortBy('ordem')->first();
+                                    @endphp
+                                    @if($fotoProduto)
+                                        <img src="{{ $fotoProduto->url }}" alt="Imagem do Produto"
+                                            class="img-responsive" style="max-width: 100%;">
+                                    @else
+                                        <div style="width: 100%; height: 200px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; color: #888;">
+                                            Sem foto
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         </div>

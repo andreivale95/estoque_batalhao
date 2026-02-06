@@ -14,27 +14,40 @@
     <section class="content container-fluid">
         <div class="box box-primary">
             <div class="box-body">
-                <div class="row">
+                <div class="row" style="margin-bottom: 15px;">
                     <div class="col-md-8">
                         <h3>{{ $produto->nome }}</h3>
-                        @if(($produto->tipo_controle ?? '') !== 'permanente')
-                            <p><strong>Patrimônio:</strong> {{ $produto->patrimonio ?? '-' }}</p>
-                        @endif
+                        <p><strong>Descrição:</strong> {{ $produto->descricao ?? '-' }}</p>
+                        <p><strong>Marca:</strong> {{ $produto->marca ?? '-' }}</p>
                         <p><strong>Quantidade total:</strong> {{ $quantidadeTotal }}</p>
                     </div>
-                    @if($produto->fotos()->count() > 0)
-                        <div class="col-md-4" style="text-align: center;">
-                            <div style="border: 1px solid #ddd; padding: 10px; border-radius: 4px; background-color: #f9f9f9;">
-                                <h5 style="margin-top: 0;">Foto do Produto</h5>
-                                @foreach($produto->fotos as $foto)
-                                    <a href="{{ $foto->url }}" target="_blank" title="Abrir imagem em tamanho real">
-                                        <img src="{{ $foto->url }}" alt="Foto do produto" style="max-width: 200px; max-height: 200px; object-fit: contain;">
-                                    </a>
-                                    @break
-                                @endforeach
-                            </div>
+                    <div class="col-md-4" style="text-align: center;">
+                        @php
+                            $fotoProduto = $produto->fotos->sortBy('ordem')->first();
+                        @endphp
+                        <div style="border: 1px solid #ddd; padding: 10px; border-radius: 4px; background-color: #f9f9f9;">
+                            <h5 style="margin-top: 0;">Foto do Produto</h5>
+                            @if($fotoProduto)
+                                <a href="{{ $fotoProduto->url }}" target="_blank" title="Abrir imagem em tamanho real">
+                                    <img src="{{ $fotoProduto->url }}" alt="Foto do produto" style="max-width: 200px; max-height: 200px; object-fit: contain;">
+                                </a>
+                            @else
+                                <div style="width: 200px; height: 200px; margin: 0 auto; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; color: #888;">
+                                    Sem foto
+                                </div>
+                            @endif
+
+                            <form action="{{ route('estoque.produto.foto', $produto->id) }}" method="POST" enctype="multipart/form-data" style="margin-top: 10px; text-align: left;" id="form-foto-produto">
+                                @csrf
+                                <div class="form-group" style="margin-bottom: 8px;">
+                                    <input type="file" name="foto" accept="image/*" class="form-control" id="foto-input" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fa fa-upload"></i> Atualizar Foto
+                                </button>
+                            </form>
                         </div>
-                    @endif
+                    </div>
                 </div>
 
                 <hr>
@@ -450,4 +463,109 @@
         </div>
     </section>
 </div>
+
+    <div class="modal fade" id="modalCropFotoProduto" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary">
+                    <h5 class="modal-title"><i class="fa fa-crop"></i> Recortar foto</h5>
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div style="width: 100%; max-height: 60vh; overflow: hidden;">
+                        <img id="cropperImage" src="" alt="Prévia" style="max-width: 100%; display: block;">
+                    </div>
+                    <small class="text-muted">Arraste para ajustar o enquadramento. Proporção fixa 1:1.</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" id="btnCropConfirmar">
+                        <i class="fa fa-check"></i> Aplicar recorte
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
+
+@push('styles')
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
+@endpush
+
+@push('scripts')
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script>
+        (function () {
+            var input = document.getElementById('foto-input');
+            var image = document.getElementById('cropperImage');
+            var cropper = null;
+            var modalId = '#modalCropFotoProduto';
+
+            if (!input || !image) {
+                return;
+            }
+
+            input.addEventListener('change', function (e) {
+                var files = e.target.files;
+                if (!files || !files.length) {
+                    return;
+                }
+
+                var file = files[0];
+                var reader = new FileReader();
+                reader.onload = function (event) {
+                    image.src = event.target.result;
+                    $(modalId).modal('show');
+                };
+                reader.readAsDataURL(file);
+            });
+
+            $(modalId).on('shown.bs.modal', function () {
+                if (cropper) {
+                    cropper.destroy();
+                }
+                cropper = new Cropper(image, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    autoCropArea: 1,
+                    responsive: true,
+                    background: false,
+                });
+            });
+
+            $(modalId).on('hidden.bs.modal', function () {
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+            });
+
+            document.getElementById('btnCropConfirmar').addEventListener('click', function () {
+                if (!cropper) {
+                    $(modalId).modal('hide');
+                    return;
+                }
+
+                var canvas = cropper.getCroppedCanvas({
+                    width: 500,
+                    height: 500,
+                    imageSmoothingQuality: 'high'
+                });
+
+                canvas.toBlob(function (blob) {
+                    if (!blob) {
+                        $(modalId).modal('hide');
+                        return;
+                    }
+
+                    var originalName = input.files[0] ? input.files[0].name : 'foto.jpg';
+                    var file = new File([blob], originalName, { type: blob.type });
+                    var dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    input.files = dataTransfer.files;
+                    $(modalId).modal('hide');
+                }, 'image/jpeg', 0.9);
+            });
+        })();
+    </script>
+@endpush

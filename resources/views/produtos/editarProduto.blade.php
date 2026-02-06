@@ -135,10 +135,12 @@
                                     </div>
 
                                     {{-- campo valor removido; valor unitário é controlado pelas entradas de estoque --}}
-                                    <div class="form-group has-feedback col-md-6">
-                                        <label class="control-label" for="patrimonio">Patrimônio (se houver)</label>
-                                        <input type="text" class="form-control" name="patrimonio" value="{{ old('patrimonio', $produto->patrimonio ?? '') }}">
-                                    </div>
+                                    @if(($produto->tipo_controle ?? '') === 'permanente')
+                                        <div class="form-group has-feedback col-md-6">
+                                            <label class="control-label" for="patrimonio">Patrimônio (se houver)</label>
+                                            <input type="text" class="form-control" name="patrimonio" value="{{ old('patrimonio', $produto->patrimonio ?? '') }}">
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                             <div class="box-footer pull-right">

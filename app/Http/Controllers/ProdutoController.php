@@ -554,6 +554,45 @@ class ProdutoController extends Controller {
         }
     }
 
+    public function atualizarFotoProduto(Request $request, $id)
+    {
+        $request->validate([
+            'foto' => 'required|image|mimes:jpeg,png,gif|max:5120',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $produto = Produto::findOrFail($id);
+
+            $fotoAtual = $produto->fotos()->orderBy('ordem')->first();
+            if ($fotoAtual) {
+                $fotoAtual->delete();
+            }
+
+            $file = $request->file('foto');
+            $fileName = time() . '_produto_' . $produto->id . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('produtos', $fileName, 'public');
+
+            ItemFoto::create([
+                'fk_itens_estoque' => null,
+                'fk_iten_patrimonial' => null,
+                'fk_produto' => $produto->id,
+                'caminho_arquivo' => $path,
+                'nome_original' => $file->getClientOriginalName(),
+                'tipo_mime' => $file->getClientMimeType(),
+                'tamanho' => $file->getSize(),
+                'ordem' => 1,
+            ]);
+
+            DB::commit();
+            return back()->with('success', 'Foto do produto atualizada com sucesso!');
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Erro ao atualizar foto do produto', ['id' => $id, 'error' => $e->getMessage()]);
+            return back()->with('error', 'Erro ao atualizar foto do produto: ' . $e->getMessage());
+        }
+    }
+
 
     public function getProdutosPorUnidade($unidadeId)
     {

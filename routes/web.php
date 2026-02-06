@@ -96,6 +96,7 @@ Route::middleware(['auth', 'verified'])->controller(ProdutoController::class)->g
     Route::get('registros/produto/editar/{id}', 'editarProdutoForm')->name('produto.editar');
     Route::post('registros/produto/editar/{id}', 'editarProduto')->name('produto.editarPost');
     Route::post('registros/produto/atualizar/{id}', 'atualizarProduto')->name('produto.atualizar');
+    Route::post('estoque/produto/{id}/foto', 'atualizarFotoProduto')->name('estoque.produto.foto');
     Route::get('containers/{id}/detalhes', 'detalhesContainer')->name('container.detalhes');
 });
 
