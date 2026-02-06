@@ -23,10 +23,27 @@
                     <tr><th>Militar</th><td>{{ $movimentacao->militar }}</td></tr>
                     <tr><th>Setor</th><td>{{ $movimentacao->setor }}</td></tr>
                     <tr><th>Proc. SEI</th><td>{{ $movimentacao->sei }}</td></tr>
-                    <tr><th>Data TRP</th><td>{{ \Carbon\Carbon::parse($movimentacao->data_trp)->format('d/m/Y') }}</td></tr>
+                    <tr><th>Data TRP</th><td>{{ $movimentacao->data_trp ? \Carbon\Carbon::parse($movimentacao->data_trp)->format('d/m/Y') : '-' }}</td></tr>
                     <tr><th>Fonte</th><td>{{ $movimentacao->fonte }}</td></tr>
                     <tr><th>Observação</th><td>{{ $movimentacao->observacao }}</td></tr>
                 </table>
+
+                <hr>
+                <h4>Imagens do Item</h4>
+                @php
+                    $fotosProduto = $movimentacao->produto ? $movimentacao->produto->fotos->sortBy('ordem') : collect();
+                @endphp
+                @if($fotosProduto->count() > 0)
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        @foreach($fotosProduto as $foto)
+                            <a href="{{ $foto->url }}" target="_blank" title="Abrir imagem">
+                                <img src="{{ $foto->url }}" alt="Foto do item" style="width: 120px; height: 120px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px;">
+                            </a>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-muted">Nenhuma imagem cadastrada para este item.</p>
+                @endif
                 <a href="{{ route('movimentacoes.index') }}" class="btn btn-secondary"><i class="fa fa-arrow-left"></i> Voltar</a>
             </div>
         </div>

@@ -20,6 +20,9 @@
                         <p><strong>Descrição:</strong> {{ $produto->descricao ?? '-' }}</p>
                         <p><strong>Marca:</strong> {{ $produto->marca ?? '-' }}</p>
                         <p><strong>Quantidade total:</strong> {{ $quantidadeTotal }}</p>
+                        <a href="{{ route('movimentacoes.index', ['produto' => $produto->id]) }}" class="btn btn-info btn-sm" style="margin-top: 6px;">
+                            <i class="fa fa-exchange"></i> Ver movimentações deste item
+                        </a>
                     </div>
                     <div class="col-md-4" style="text-align: center;">
                         @php

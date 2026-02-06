@@ -16,11 +16,13 @@ class Cautela extends Model
         'responsavel_unidade',
         'data_cautela',
         'data_prevista_devolucao',
+        'fotos',
     ];
 
     protected $casts = [
         'data_cautela' => 'date',
         'data_prevista_devolucao' => 'date',
+        'fotos' => 'array',
     ];
 
     public function produtos()

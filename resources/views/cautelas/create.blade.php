@@ -18,7 +18,7 @@
     <section class="content container-fluid">
         <div class="box box-primary">
             <div class="box-body">
-                <form action="{{ route('cautelas.store') }}" method="POST">
+                <form action="{{ route('cautelas.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="form-group">
             <label for="nome_responsavel">Nome do Responsável</label>
@@ -43,6 +43,12 @@
         <div class="form-group">
             <label for="data_prevista_devolucao">Data Prevista de Devolução</label>
             <input type="date" name="data_prevista_devolucao" id="data_prevista_devolucao" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+            <label for="fotos">Fotos da Cautela</label>
+            <input type="file" name="fotos[]" id="fotos" class="form-control" accept="image/*" multiple>
+            <small class="text-muted">Você pode selecionar várias imagens (JPG, PNG, GIF). Máx 5MB cada.</small>
         </div>
 
         <div class="box box-info">

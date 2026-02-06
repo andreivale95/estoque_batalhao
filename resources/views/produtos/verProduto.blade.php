@@ -127,6 +127,10 @@
                                     <i class="fa fa-edit"></i> Editar
                                 </a>
 
+                                <a class="btn btn-info" href="{{ route('movimentacoes.index', ['produto' => $produto->id]) }}">
+                                    <i class="fa fa-exchange"></i> Ver movimentações deste item
+                                </a>
+
                             </div>
                         </div>
                         <div class="col-md-6">

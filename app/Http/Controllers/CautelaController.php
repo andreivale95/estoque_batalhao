@@ -185,7 +185,17 @@ class CautelaController extends Controller
             'quantidades' => 'required|array',
             'tipos' => 'required|array',
             'patrimonios' => 'nullable|array',
+            'fotos' => 'nullable|array',
+            'fotos.*' => 'image|mimes:jpeg,png,gif|max:5120',
         ]);
+
+        $fotos = [];
+        if ($request->hasFile('fotos')) {
+            foreach ($request->file('fotos') as $file) {
+                $path = $file->store('cautelas', 'public');
+                $fotos[] = $path;
+            }
+        }
 
         $cautela = Cautela::create([
             'nome_responsavel' => $request->nome_responsavel,
@@ -194,6 +204,7 @@ class CautelaController extends Controller
             'responsavel_unidade' => Auth::user()->nome,
             'data_cautela' => $request->data_cautela,
             'data_prevista_devolucao' => $request->data_prevista_devolucao,
+            'fotos' => $fotos,
         ]);
 
         foreach ($request->produtos as $index => $produtoId) {
