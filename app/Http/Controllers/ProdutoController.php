@@ -217,7 +217,7 @@ class ProdutoController extends Controller {
             if (!$produto) {
                 return back()->with('warning', 'Produto não encontrado.');
             }
-            $produto->ativo = 'Y';
+            $produto->ativo = true;
             $produto->save();
             return redirect()->route('produtos.listar')->with('success', 'Produto reativado com sucesso!');
         } catch (Exception $e) {
@@ -236,7 +236,7 @@ class ProdutoController extends Controller {
             if ($estoque > 0) {
                 return back()->with('warning', 'Não é possível inativar: o estoque deste produto não está zerado.');
             }
-            $produto->ativo = 'N';
+            $produto->ativo = false;
             $produto->save();
             return redirect()->route('produtos.listar')->with('success', 'Produto inativado com sucesso!');
         } catch (Exception $e) {
@@ -394,7 +394,8 @@ class ProdutoController extends Controller {
             $categorias = Categoria::all();
             $unidades = Unidade::all();
             $unidadeUsuario = Unidade::find(Auth::user()->fk_unidade);
-            return view('produtos.inserirProduto', compact('categorias', 'unidades', 'unidadeUsuario'));
+            $tamanhos = Tamanho::all();
+            return view('produtos.inserirProduto', compact('categorias', 'unidades', 'unidadeUsuario', 'tamanhos'));
         } catch (Exception $e) {
             Log::error('Erro ao carregar formulário de inserção de produto', [$e]);
             return back()->with('warning', 'Erro ao carregar o formulário de inserção de produto.');
@@ -409,6 +410,7 @@ class ProdutoController extends Controller {
                 'nome' => 'required|string|max:255',
                 'categoria' => 'required|exists:categorias,id',
                 'tipo_controle' => 'required|in:consumo,permanente',
+                'tamanho' => 'nullable|exists:tamanhos,id',
                 'foto' => 'nullable|image|mimes:jpeg,png,gif|max:5120',
             ]);
 
@@ -429,10 +431,10 @@ class ProdutoController extends Controller {
                 'nome' => $request->nome,
                 'descricao' => $request->descricao,
                 'marca' => $request->marca,
-                'tamanho' => $request->tamanho,
+                'tamanho' => $request->tamanho ?: null,
                 'unidade' => Auth::user()->fk_unidade,
                 'fk_categoria' => $request->categoria,
-                'ativo' => 'Y',
+                'ativo' => true,
                 'tipo_controle' => $request->tipo_controle,
             ]);
 

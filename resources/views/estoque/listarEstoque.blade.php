@@ -64,6 +64,10 @@
                                         style="height: 38px;" title="Registrar entrada de produto existente">
                                         <i class="fa fa-arrow-down"></i> Registrar Entrada
                                     </a>
+                                    <a href="{{ route('estoque.exportar', ['unidade' => request()->unidade]) }}" class="btn btn-default"
+                                        style="height: 38px;" title="Exportar estoque com localização">
+                                        <i class="fa fa-file-text-o"></i> Exportar CSV
+                                    </a>
                                     <a href="{{ route('saida_estoque.saida_multipla') }}" class="btn btn-warning"
                                         style="height: 38px;">
                                         <i class="fa fa-share-square"></i> Saída Múltipla

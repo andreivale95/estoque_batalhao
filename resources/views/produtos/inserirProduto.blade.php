@@ -53,7 +53,14 @@
 
                             <div class="form-group">
                                 <label>Tamanho</label>
-                                <input type="text" name="tamanho" class="form-control" value="{{ old('tamanho') }}">
+                                <select name="tamanho" class="form-control">
+                                    <option value="">Selecione</option>
+                                    @foreach($tamanhos as $tamanho)
+                                        <option value="{{ $tamanho->id }}" {{ old('tamanho') == $tamanho->id ? 'selected' : '' }}>
+                                            {{ $tamanho->tamanho }}
+                                        </option>
+                                    @endforeach
+                                </select>
                             </div>
                         </div>
 

@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use App\Services\EstoqueUnificadoService;
+use App\Exports\EstoqueLocalizacaoExport;
 
 
 class EstoqueController extends Controller
@@ -49,6 +50,33 @@ class EstoqueController extends Controller
             'unidades' => $unidades,
             'filtros' => $filtros,
             'service' => $service
+        ]);
+    }
+
+    public function exportarEstoqueLocalizacao(Request $request)
+    {
+        $unidadeId = $request->query('unidade');
+        $unidadeId = $unidadeId ? (int) $unidadeId : null;
+
+        $export = new EstoqueLocalizacaoExport($unidadeId);
+        $headers = $export->headings();
+        $rows = $export->collection();
+
+        $fileName = 'estoque_localizacao.csv';
+
+        return response()->streamDownload(function () use ($headers, $rows) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($handle, $headers, ';');
+
+            foreach ($rows as $row) {
+                $data = is_array($row) ? $row : (array) $row;
+                fputcsv($handle, $data, ';');
+            }
+
+            fclose($handle);
+        }, $fileName, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 
@@ -887,7 +915,7 @@ class EstoqueController extends Controller
     public function formEntradaExistente(Request $request)
     {
         try {
-            $produtos = Produto::where('ativo', 'Y')->orderBy('nome')->get();
+            $produtos = Produto::where('ativo', true)->orderBy('nome')->get();
             $secoes = Secao::all();
             $unidades = Unidade::all();
             $unidadeUsuario = Unidade::find(Auth::user()->fk_unidade);
