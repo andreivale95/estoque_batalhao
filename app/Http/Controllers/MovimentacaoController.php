@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\HistoricoMovimentacao;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 
 class MovimentacaoController extends Controller
@@ -24,11 +25,18 @@ class MovimentacaoController extends Controller
 
     public function index(Request $request)
     {
-        $query = HistoricoMovimentacao::with(['produto', 'origem', 'destino'])
-            ->where(function ($query) {
-                $query->where('unidade_origem', Auth::user()->fk_unidade)
-                    ->orWhereNull('unidade_origem');
+        $podeVerOutrasUnidades = Gate::allows('autorizacao', 8);
+        $unidadeId = Auth::user()->fk_unidade;
+
+        $query = HistoricoMovimentacao::with(['produto', 'origem', 'destino']);
+
+        if (!$podeVerOutrasUnidades) {
+            $query->where(function ($q) use ($unidadeId) {
+                $q->where('fk_unidade', $unidadeId)
+                    ->orWhere('unidade_origem', $unidadeId)
+                    ->orWhere('unidade_destino', $unidadeId);
             });
+        }
 
 
         if ($request->filled('produto')) {

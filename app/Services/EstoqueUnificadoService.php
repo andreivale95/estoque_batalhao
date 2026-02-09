@@ -13,7 +13,8 @@ class EstoqueUnificadoService
      */
     public function obterEstoqueUnificado($filtros = [])
     {
-        $query = $this->construirQueryUnificada();
+        $unidadeId = !empty($filtros['unidade']) ? (int) $filtros['unidade'] : null;
+        $query = $this->construirQueryUnificada($unidadeId);
 
         // Aplicar filtros
         if (!empty($filtros['tipo'])) {
@@ -103,7 +104,7 @@ class EstoqueUnificadoService
     /**
      * Construir query UNION entre itens_estoque e itens_patrimoniais
      */
-    private function construirQueryUnificada()
+    private function construirQueryUnificada(?int $unidadeId = null)
     {
         // Query para consumo
         $consumo = DB::table('itens_estoque as ie')
@@ -134,7 +135,10 @@ class EstoqueUnificadoService
             ->join('produtos as p', 'p.id', '=', 'ie.fk_produto')
             ->leftJoin('categorias as c', 'c.id', '=', 'p.fk_categoria')
             ->leftJoin('secaos as s', 's.id', '=', 'ie.fk_secao')
-            ->leftJoin('unidades as u', 'u.id', '=', 'ie.unidade');
+            ->leftJoin('unidades as u', 'u.id', '=', 'ie.unidade')
+            ->when($unidadeId, function ($q) use ($unidadeId) {
+                $q->where('ie.unidade', $unidadeId);
+            });
 
         // Query para permanente
         $permanente = DB::table('itens_patrimoniais as ip')
@@ -166,7 +170,10 @@ class EstoqueUnificadoService
             ->leftJoin('categorias as c', 'c.id', '=', 'p.fk_categoria')
             ->leftJoin('secaos as s', 's.id', '=', 'ip.fk_secao')
             ->leftJoin('unidades as u', 'u.id', '=', 'p.unidade')
-            ->whereNull('ip.data_saida');
+            ->whereNull('ip.data_saida')
+            ->when($unidadeId, function ($q) use ($unidadeId) {
+                $q->where('p.unidade', $unidadeId);
+            });
 
         // Combinar com UNION
         return $consumo->union($permanente);

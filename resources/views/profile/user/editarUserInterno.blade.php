@@ -97,7 +97,7 @@
                                 <div class="form-group has-feedback">
                                     <label class="control-label" for="">UNIDADE DE LOTAÇÃO:</label>
 
-                                    <select name="perfil" class="form-control">
+                                    <select name="unidade" class="form-control">
 
                                         @foreach ($unidades as $unidade)
                                         <option value="{{ $unidade->id }}" {{ ( $unidade->id == $user->fk_unidade) ? 'selected' : '' }}> {{ $unidade->nome }} </option>
@@ -108,7 +108,7 @@
                                     <label class="control-label" for="">STATUS:</label>
                                     <select name="status" class="form-control">
 
-                                        @if ($perfil->status == 's')
+                                        @if ($user->status == 's')
                                         <option value="s" selected>Ativo</option>
                                         <option value="n">Inativo</option>
                                         @else

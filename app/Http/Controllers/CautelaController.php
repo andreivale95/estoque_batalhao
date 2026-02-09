@@ -11,12 +11,21 @@ use App\Models\Secao;
 use App\Models\Itens_estoque;
 use App\Models\ItenPatrimonial;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class CautelaController extends Controller
 {
     public function index(Request $request)
     {
         $query = Cautela::with('produtos.produto')->orderBy('created_at', 'desc');
+
+        $podeVerOutrasUnidades = Gate::allows('autorizacao', 8);
+        if (!$podeVerOutrasUnidades) {
+            $unidadeId = Auth::user()->fk_unidade;
+            $query->whereHas('produtos.produto', function ($q) use ($unidadeId) {
+                $q->where('unidade', $unidadeId);
+            });
+        }
         
         // Filtro por responsável
         if ($request->filled('responsavel')) {
@@ -270,19 +279,44 @@ class CautelaController extends Controller
 
     public function show($id)
     {
-        $cautela = Cautela::with(['produtos.produto', 'produtos.estoque.secao', 'produtos.itenPatrimonial.secao'])->findOrFail($id);
+        $podeVerOutrasUnidades = Gate::allows('autorizacao', 8);
+        $unidadeId = Auth::user()->fk_unidade;
+
+        $cautela = Cautela::with(['produtos.produto', 'produtos.estoque.secao', 'produtos.itenPatrimonial.secao'])
+            ->when(!$podeVerOutrasUnidades, function ($q) use ($unidadeId) {
+                $q->whereHas('produtos.produto', function ($p) use ($unidadeId) {
+                    $p->where('unidade', $unidadeId);
+                });
+            })
+            ->findOrFail($id);
         return view('cautelas.show', compact('cautela'));
     }
 
     public function devolucao($id)
     {
-        $cautela = Cautela::with(['produtos.produto', 'produtos.estoque.secao', 'produtos.itenPatrimonial.secao'])->findOrFail($id);
+        $podeVerOutrasUnidades = Gate::allows('autorizacao', 8);
+        $unidadeId = Auth::user()->fk_unidade;
+
+        $cautela = Cautela::with(['produtos.produto', 'produtos.estoque.secao', 'produtos.itenPatrimonial.secao'])
+            ->when(!$podeVerOutrasUnidades, function ($q) use ($unidadeId) {
+                $q->whereHas('produtos.produto', function ($p) use ($unidadeId) {
+                    $p->where('unidade', $unidadeId);
+                });
+            })
+            ->findOrFail($id);
         return view('cautelas.devolucao', compact('cautela'));
     }
 
     public function processDevolucao(Request $request, $id)
     {
-        $cautela = Cautela::findOrFail($id);
+        $podeVerOutrasUnidades = Gate::allows('autorizacao', 8);
+        $unidadeId = Auth::user()->fk_unidade;
+
+        $cautela = Cautela::when(!$podeVerOutrasUnidades, function ($q) use ($unidadeId) {
+            $q->whereHas('produtos.produto', function ($p) use ($unidadeId) {
+                $p->where('unidade', $unidadeId);
+            });
+        })->findOrFail($id);
         
         $request->validate([
             'itens' => 'required|array',
@@ -343,7 +377,16 @@ class CautelaController extends Controller
     public function gerarPDF($id)
     {
         try {
-            $cautela = Cautela::with('produtos.produto')->findOrFail($id);
+            $podeVerOutrasUnidades = Gate::allows('autorizacao', 8);
+            $unidadeId = Auth::user()->fk_unidade;
+
+            $cautela = Cautela::with('produtos.produto')
+                ->when(!$podeVerOutrasUnidades, function ($q) use ($unidadeId) {
+                    $q->whereHas('produtos.produto', function ($p) use ($unidadeId) {
+                        $p->where('unidade', $unidadeId);
+                    });
+                })
+                ->findOrFail($id);
             
             $pdf = \PDF::loadView('cautelas.comprovante', compact('cautela'));
             
@@ -360,7 +403,16 @@ class CautelaController extends Controller
     public function previewPDF($id)
     {
         try {
-            $cautela = Cautela::with('produtos.produto')->findOrFail($id);
+            $podeVerOutrasUnidades = Gate::allows('autorizacao', 8);
+            $unidadeId = Auth::user()->fk_unidade;
+
+            $cautela = Cautela::with('produtos.produto')
+                ->when(!$podeVerOutrasUnidades, function ($q) use ($unidadeId) {
+                    $q->whereHas('produtos.produto', function ($p) use ($unidadeId) {
+                        $p->where('unidade', $unidadeId);
+                    });
+                })
+                ->findOrFail($id);
             return view('cautelas.preview-comprovante', compact('cautela'));
         } catch (\Exception $e) {
             \Log::error('Erro ao visualizar comprovante', [$e]);
@@ -374,7 +426,15 @@ class CautelaController extends Controller
     public function listarPorItem(Request $request)
     {
         // Obtém todos os CautelaProduto com relacionamentos
+        $podeVerOutrasUnidades = Gate::allows('autorizacao', 8);
+        $unidadeId = Auth::user()->fk_unidade;
+
         $cautelas = CautelaProduto::with(['produto', 'cautela'])
+            ->when(!$podeVerOutrasUnidades, function ($q) use ($unidadeId) {
+                $q->whereHas('produto', function ($p) use ($unidadeId) {
+                    $p->where('unidade', $unidadeId);
+                });
+            })
             ->get();
 
         // Agrupa por produto e calcula

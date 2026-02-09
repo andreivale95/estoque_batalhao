@@ -21,6 +21,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use App\Services\EstoqueUnificadoService;
 use App\Exports\EstoqueLocalizacaoExport;
+use Illuminate\Support\Facades\Gate;
 
 
 class EstoqueController extends Controller
@@ -28,19 +29,27 @@ class EstoqueController extends Controller
     public function listarEstoque(Request $request)
     {
         $service = new EstoqueUnificadoService();
+
+        $podeVerOutrasUnidades = Gate::allows('autorizacao', 8);
+        $unidadeFiltro = $podeVerOutrasUnidades
+            ? $request->query('unidade', '')
+            : Auth::user()->fk_unidade;
         
         $filtros = [
             'tipo' => $request->query('tipo', ''),
             'fk_categoria' => $request->query('categoria', ''),
             'fk_secao' => $request->query('secao', ''),
             'search' => $request->query('search', ''),
-            'per_page' => $request->query('per_page', 15)
+            'per_page' => $request->query('per_page', 15),
+            'unidade' => $unidadeFiltro,
         ];
 
         $itens = $service->obterEstoqueUnificado($filtros);
         $categorias = Categoria::all();
         $secoes = Secao::all();
-        $unidades = Unidade::all();
+        $unidades = $podeVerOutrasUnidades
+            ? Unidade::all()
+            : Unidade::where('id', Auth::user()->fk_unidade)->get();
 
         return view('estoque.listarEstoque', [
             'itens' => $itens,
@@ -49,14 +58,19 @@ class EstoqueController extends Controller
             'secoes' => $secoes,
             'unidades' => $unidades,
             'filtros' => $filtros,
-            'service' => $service
+            'service' => $service,
+            'podeVerOutrasUnidades' => $podeVerOutrasUnidades,
         ]);
     }
 
     public function exportarEstoqueLocalizacao(Request $request)
     {
+        $podeVerOutrasUnidades = Gate::allows('autorizacao', 8);
         $unidadeId = $request->query('unidade');
         $unidadeId = $unidadeId ? (int) $unidadeId : null;
+        if (!$podeVerOutrasUnidades) {
+            $unidadeId = Auth::user()->fk_unidade;
+        }
 
         $export = new EstoqueLocalizacaoExport($unidadeId);
         $headers = $export->headings();
@@ -484,7 +498,7 @@ class EstoqueController extends Controller
     {
         try {
             // Verifica se o usuário tem permissão
-            if (Auth::user()->fk_unidade != $request->unidade) {
+            if (Auth::user()->fk_unidade != $request->unidade && !Gate::allows('autorizacao', 8)) {
                 return redirect()->back()->with('error', 'Você não tem permissão para movimentar produtos de outra unidade.');
             }
 
@@ -732,7 +746,7 @@ class EstoqueController extends Controller
     public function entradaProdutoEstoque(Request $request)
     {
         try {
-            if (Auth::user()->fk_unidade != $request->unidade) {
+            if (Auth::user()->fk_unidade != $request->unidade && !Gate::allows('autorizacao', 8)) {
                 return redirect()->back()->with('error', 'Você não tem permissão para movimentar produtos de outra unidade.');
             }
             // Validação dos dados únicos
@@ -856,7 +870,7 @@ class EstoqueController extends Controller
     public function saidaEstoque(Request $request)
     {
         try {
-            if (Auth::user()->fk_unidade != $request->unidade) {
+            if (Auth::user()->fk_unidade != $request->unidade && !Gate::allows('autorizacao', 8)) {
                 return redirect()->back()->with('error', 'Você não tem permissão para movimentar produtos de outra unidade.');
             }
 
@@ -915,16 +929,22 @@ class EstoqueController extends Controller
     public function formEntradaExistente(Request $request)
     {
         try {
-            $produtos = Produto::where('ativo', true)->orderBy('nome')->get();
+            $produtos = Produto::where('ativo', true)
+                ->where('unidade', Auth::user()->fk_unidade)
+                ->orderBy('nome')
+                ->get();
             $secoes = Secao::all();
-            $unidades = Unidade::all();
+            $podeVerOutrasUnidades = Gate::allows('autorizacao', 8);
+            $unidades = $podeVerOutrasUnidades
+                ? Unidade::all()
+                : Unidade::where('id', Auth::user()->fk_unidade)->get();
             $unidadeUsuario = Unidade::find(Auth::user()->fk_unidade);
             $isAdmin = Auth::user()->fk_perfil == 1;
             
             // Containers não mais usados - eh_container foi removido
             $todosContainers = [];
 
-            return view('estoque/estoque_form_entrada_existente', compact('produtos', 'secoes', 'unidades', 'unidadeUsuario', 'isAdmin', 'todosContainers'));
+            return view('estoque/estoque_form_entrada_existente', compact('produtos', 'secoes', 'unidades', 'unidadeUsuario', 'isAdmin', 'todosContainers', 'podeVerOutrasUnidades'));
         } catch (Exception $e) {
             Log::error('Erro ao carregar formulário de entrada', ['exception' => $e->getMessage()]);
             return back()->with('warning', 'Houve um erro ao carregar o formulário de entrada.');
@@ -1460,13 +1480,19 @@ class EstoqueController extends Controller
     public function listarUnificado(Request $request)
     {
         $service = new EstoqueUnificadoService();
+
+        $podeVerOutrasUnidades = Gate::allows('autorizacao', 8);
+        $unidadeFiltro = $podeVerOutrasUnidades
+            ? $request->query('unidade', '')
+            : Auth::user()->fk_unidade;
         
         $filtros = [
             'tipo' => $request->query('tipo', ''),
             'fk_categoria' => $request->query('categoria', ''),
             'fk_secao' => $request->query('secao', ''),
             'search' => $request->query('search', ''),
-            'per_page' => $request->query('per_page', 15)
+            'per_page' => $request->query('per_page', 15),
+            'unidade' => $unidadeFiltro,
         ];
 
         $itens = $service->obterEstoqueUnificado($filtros);

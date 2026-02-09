@@ -40,7 +40,7 @@
                                     <option value="">-- Selecione um produto --</option>
                                     @foreach($produtos as $produto)
                                         <option value="{{ $produto->id }}" data-tipo="{{ $produto->tipo_controle }}" {{ old('fk_produto') == $produto->id ? 'selected' : '' }}>
-                                            {{ $produto->nome }} ({{ $produto->unidade }})
+                                            {{ $produto->nome }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -61,23 +61,8 @@
                         </div>
 
                         <div class="row">
-                            <!-- Unidade -->
-                            <div class="form-group col-md-4">
-                                <label for="unidade">Unidade <span style="color: red;">*</span>:</label>
-                                @if($isAdmin)
-                                    <select name="unidade" id="unidade" class="form-control" required>
-                                        <option value="">-- Selecione a Unidade --</option>
-                                        @foreach($unidades as $unidade)
-                                            <option value="{{ $unidade->id }}" {{ old('unidade', Auth::user()->fk_unidade) == $unidade->id ? 'selected' : '' }}>
-                                                {{ $unidade->nome }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                @else
-                                    <input type="hidden" name="unidade" value="{{ Auth::user()->fk_unidade }}">
-                                    <input type="text" class="form-control" value="{{ $unidadeUsuario->nome ?? 'Unidade não encontrada' }}" disabled>
-                                @endif
-                            </div>
+                            <!-- Unidade (fixa para o usuário) -->
+                            <input type="hidden" name="unidade" value="{{ Auth::user()->fk_unidade }}">
 
                             <!-- Data de Entrada -->
                             <div class="form-group col-md-4">

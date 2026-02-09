@@ -37,15 +37,20 @@
                                 style="display: flex; flex-direction: column; justify-content: flex-end;">
                                 <label class="control-label">Estoque:</label>
                                 <div style="display: flex; gap: 8px;">
-                                    <select name="unidade" class="form-control" style="width: 70%;">
-                                        <option value="">Selecione</option>
-                                        @foreach ($unidades as $unidade)
-                                            <option value="{{ $unidade->id }}"
-                                                {{ request()->unidade == $unidade->id ? 'selected' : '' }}>
-                                                {{ $unidade->nome }}
-                                            </option>
-                                        @endforeach
-                                    </select>
+                                    @if($podeVerOutrasUnidades)
+                                        <select name="unidade" class="form-control" style="width: 70%;">
+                                            <option value="">Selecione</option>
+                                            @foreach ($unidades as $unidade)
+                                                <option value="{{ $unidade->id }}"
+                                                    {{ request()->unidade == $unidade->id ? 'selected' : '' }}>
+                                                    {{ $unidade->nome }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    @else
+                                        <input type="hidden" name="unidade" value="{{ $unidades->first()->id ?? '' }}">
+                                        <input type="text" class="form-control" style="width: 70%;" value="{{ $unidades->first()->nome ?? '' }}" disabled>
+                                    @endif
                                     <button class="btn btn-primary" type="submit"
                                         style="height: 38px; align-self: flex-end;">
                                         <i class="fa fa-search"></i>

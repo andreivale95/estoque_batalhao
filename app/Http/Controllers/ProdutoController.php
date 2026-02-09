@@ -26,6 +26,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Models\Secao;
+use Illuminate\Support\Facades\Gate;
 
 
 class ProdutoController extends Controller {
@@ -303,8 +304,13 @@ class ProdutoController extends Controller {
             $categorias = Categoria::all();
             $todasMarcas = Produto::select('marca')->distinct()->pluck('marca');
 
+            $podeVerOutrasUnidades = Gate::allows('autorizacao', 8);
+            $unidadeId = Auth::user()->fk_unidade;
 
             $produtos = Produto::query()
+                ->when(!$podeVerOutrasUnidades, function (Builder $query) use ($unidadeId) {
+                    return $query->where('unidade', $unidadeId);
+                })
                 ->when($request->filled('ativo'), function ($query) use ($request) {
                     return $query->where('ativo', $request->get('ativo'));
                 })
