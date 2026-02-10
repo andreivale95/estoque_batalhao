@@ -20,35 +20,35 @@
             <div class="box-body">
                 <form action="{{ route('cautelas.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
-        <div class="form-group">
-            <label for="nome_responsavel">Nome do Responsável</label>
-            <input type="text" name="nome_responsavel" id="nome_responsavel" class="form-control" required>
+        <div class="row">
+            <div class="form-group col-md-6">
+                <label for="nome_responsavel">Responsável</label>
+                <input type="text" name="nome_responsavel" id="nome_responsavel" class="form-control" required>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="telefone">Telefone</label>
+                <input type="text" name="telefone" id="telefone" class="form-control" required>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="instituicao">Instituição/Unidade</label>
+                <input type="text" name="instituicao" id="instituicao" class="form-control" required>
+            </div>
         </div>
 
-        <div class="form-group">
-            <label for="telefone">Telefone</label>
-            <input type="text" name="telefone" id="telefone" class="form-control" required>
-        </div>
-
-        <div class="form-group">
-            <label for="instituicao">Instituição/Unidade</label>
-            <input type="text" name="instituicao" id="instituicao" class="form-control" required>
-        </div>
-
-        <div class="form-group">
-            <label for="data_cautela">Data da Cautela</label>
-            <input type="date" name="data_cautela" id="data_cautela" class="form-control" required>
-        </div>
-
-        <div class="form-group">
-            <label for="data_prevista_devolucao">Data Prevista de Devolução</label>
-            <input type="date" name="data_prevista_devolucao" id="data_prevista_devolucao" class="form-control" required>
-        </div>
-
-        <div class="form-group">
-            <label for="fotos">Fotos da Cautela</label>
-            <input type="file" name="fotos[]" id="fotos" class="form-control" accept="image/*" multiple>
-            <small class="text-muted">Você pode selecionar várias imagens (JPG, PNG, GIF). Máx 5MB cada.</small>
+        <div class="row">
+            <div class="form-group col-md-3">
+                <label for="data_cautela">Data Cautela</label>
+                <input type="date" name="data_cautela" id="data_cautela" class="form-control" required>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="data_prevista_devolucao">Prev. Devolução</label>
+                <input type="date" name="data_prevista_devolucao" id="data_prevista_devolucao" class="form-control" required>
+            </div>
+            <div class="form-group col-md-6">
+                <label for="fotos">Fotos da Cautela</label>
+                <input type="file" name="fotos[]" id="fotos" class="form-control" accept="image/*" multiple>
+                <small class="text-muted">JPG, PNG, GIF. Máx 5MB cada.</small>
+            </div>
         </div>
 
         <div class="box box-info">

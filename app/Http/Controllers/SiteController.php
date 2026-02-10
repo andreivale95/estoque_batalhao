@@ -38,7 +38,19 @@ class SiteController extends Controller
                 })
                 ->count();
 
-            return view('dashboard', compact('tudo', 'cautelasPendentes'));
+            $cautelasVencidas = \App\Models\CautelaProduto::query()
+                ->where('quantidade_devolvida', '<', DB::raw('quantidade'))
+                ->whereHas('cautela', function ($q) {
+                    $q->whereDate('data_prevista_devolucao', '<', now()->toDateString());
+                })
+                ->when(!$podeVerOutrasUnidades, function ($q) use ($unidadeId) {
+                    $q->whereHas('produto', function ($p) use ($unidadeId) {
+                        $p->where('unidade', $unidadeId);
+                    });
+                })
+                ->count();
+
+            return view('dashboard', compact('tudo', 'cautelasPendentes', 'cautelasVencidas'));
         } catch (Exception $e) {
             Log::error('Error ao consultar patrimonios', [$e]);
             return back()->with('warning', 'Houve um erro ao consultar patrimonios');

@@ -40,10 +40,13 @@
                 
                 <div class="col-lg-3 col-xs-6">
                     <!-- small box -->
-                    <div class="small-box bg-warning">
+                    <div class="small-box bg-red">
                         <div class="inner">
                             <h3>{{ $cautelasPendentes }}</h3>
                             <p>Cautelas Pendentes</p>
+                            <p style="margin-top: 6px; font-size: 12px;">
+                                Vencidas: <strong>{{ $cautelasVencidas }}</strong>
+                            </p>
                         </div>
                         <div class="icon">
                             <i class="ion ion-clipboard"></i>

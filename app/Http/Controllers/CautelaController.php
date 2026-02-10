@@ -154,14 +154,16 @@ class CautelaController extends Controller
             array_values($sectionsMap)
         );
 
-        // Lista de produtos únicos
+        // Lista de produtos (mostrar todos da unidade do usuario)
         $productsGrouped = [];
-        $allItems = $rawItems->merge($rawPatrimoniais);
-        foreach ($sectionsMap as $prodId => $secs) {
-            $produto = $allItems->firstWhere('fk_produto', (int)$prodId)->produto ?? null;
-            if (!$produto) continue;
+        $produtos = Produto::where('unidade', Auth::user()->fk_unidade)
+            ->where('ativo', true)
+            ->orderBy('nome')
+            ->get();
+
+        foreach ($produtos as $produto) {
+            $secs = $sectionsMap[(string)$produto->id] ?? [];
             $total = array_sum(array_column($secs, 'quantidade'));
-            if ($total <= 0) continue;
             $productsGrouped[] = [
                 'id' => (int)$produto->id,
                 'nome' => $produto->nome,
