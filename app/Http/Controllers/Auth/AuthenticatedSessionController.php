@@ -64,22 +64,27 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
-        if (Auth::attempt($credentials)) {
-            if (isset($request['remember'])&&!empty($request['remember']))  {
-                setcookie("cpf", $request['cpf'], time()+3600);
-                setcookie("password", $request['password'], time()+3600);
-            }else{
-                setcookie("cpf", "");
-                setcookie("password", "");
-            }
-            $request->session()->regenerate();
-            Log::info('Usuário logado', [$user]);
-            return redirect()->intended('dashboard')->with('success', 'Seja Bem-Vindo'.'‎ '.  $user->nome);
+        // Verifica a senha do usuário específico
+        if (!password_verify($credentials['password'], $user->password)) {
+            return back()->withErrors([
+                'cpf' => 'Cpf ou senha não conferem.',
+            ])->onlyInput('cpf');
         }
 
-        return back()->withErrors([
-            'cpf' => 'Cpf ou senha não conferem.',
-        ])->onlyInput('cpf');
+        // Autentica manualmente o usuário correto
+        Auth::login($user, isset($request['remember']) && !empty($request['remember']));
+
+        if (isset($request['remember']) && !empty($request['remember']))  {
+            setcookie("cpf", $request['cpf'], time()+3600);
+            setcookie("password", $request['password'], time()+3600);
+        } else {
+            setcookie("cpf", "");
+            setcookie("password", "");
+        }
+
+        $request->session()->regenerate();
+        Log::info('Usuário logado', [$user]);
+        return redirect()->intended('dashboard')->with('success', 'Seja Bem-Vindo'.'‎ '.  $user->nome);
     }
     /**
      * Destroy an authenticated session.
