@@ -1,5 +1,5 @@
-# Build para Render
-FROM php:8.3-apache
+# Build para Railway
+FROM php:8.3-cli
 
 WORKDIR /app
 
@@ -51,26 +51,7 @@ RUN npm ci && npm run build
 # Set permissions for Laravel
 RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache
 
-# Enable Apache rewrite module
-RUN a2enmod rewrite
+EXPOSE 8080
 
-# Ensure only one MPM is enabled (use prefork for mod_php)
-RUN rm -f /etc/apache2/mods-enabled/mpm_event.load /etc/apache2/mods-enabled/mpm_event.conf \
-    /etc/apache2/mods-enabled/mpm_worker.load /etc/apache2/mods-enabled/mpm_worker.conf && \
-    a2dismod mpm_event mpm_worker || true && \
-    a2enmod mpm_prefork
-
-# Configure Apache for Laravel
-RUN echo '<Directory /app/public>\n\
-    AllowOverride All\n\
-    Require all granted\n\
-</Directory>' > /etc/apache2/conf-available/laravel.conf && \
-    a2enconf laravel
-
-# Set Apache document root
-RUN sed -i 's|/var/www/html|/app/public|g' /etc/apache2/sites-available/000-default.conf
-
-EXPOSE 80
-
-# Start Apache
-CMD ["apache2-foreground"]
+# Start PHP built-in server
+CMD ["sh", "-c", "php artisan storage:link || true; php -S 0.0.0.0:${PORT:-8080} -t public"]
