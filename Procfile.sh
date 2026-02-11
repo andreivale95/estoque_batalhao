@@ -5,10 +5,6 @@
 
 echo "🚀 Running Laravel post-deployment commands..."
 
-# Run migrations
-echo "📦 Running database migrations..."
-php artisan migrate --force
-
 # Clear caches
 echo "🧹 Clearing application caches..."
 php artisan config:cache
