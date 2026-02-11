@@ -54,6 +54,9 @@ RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache
 # Enable Apache rewrite module
 RUN a2enmod rewrite
 
+# Ensure only one MPM is enabled (use prefork for mod_php)
+RUN a2dismod mpm_event mpm_worker || true && a2enmod mpm_prefork
+
 # Configure Apache for Laravel
 RUN echo '<Directory /app/public>\n\
     AllowOverride All\n\
