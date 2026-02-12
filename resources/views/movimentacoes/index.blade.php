@@ -82,32 +82,30 @@
 
         <div class="row mb-3">
             <div class="col-md-12">
-                <div class="dropdown">
-                    <button class="btn btn-secondary dropdown-toggle" type="button" id="configMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Configurações de Colunas
-                    </button>
-                    <div class="dropdown-menu" aria-labelledby="configMenu" style="max-height:300px;overflow-y:auto;">
-                        <button type="button" class="btn btn-sm btn-primary mb-2" id="selectAllCols">Selecionar todos</button>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="data" checked> Data</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="produto" checked> Produto</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="tipo" checked> Tipo</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="fornecedor" checked> Fornecedor</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="nota_fiscal" checked> N.F.</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="quantidade" checked> Qtd.</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="valor_unitario"> V. Unitário</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="valor_total"> V. Total</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="unidade" checked> Unidade</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="responsavel" checked> Responsável</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="estoque" checked> Estoque</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="origem" checked> Origem</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="destino" checked> Destino</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="militar" checked> Militar</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="setor" checked> Setor</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="sei"> Proc. SEI</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="data_trp"> D. TRP</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="fonte" checked> Fonte</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="observacao" checked> Observação</label>
-                    </div>
+                <button type="button" class="btn btn-default" id="configMenuPlain" style="display:inline-block;">
+                    Configurações de Colunas
+                </button>
+                <div id="configMenuPanel" class="well well-sm" style="display:none;margin-top:8px;max-height:300px;overflow-y:auto;">
+                    <button type="button" class="btn btn-sm btn-primary mb-2" id="selectAllCols">Selecionar todos</button>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="data" checked> Data</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="produto" checked> Produto</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="tipo" checked> Tipo</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="fornecedor" checked> Fornecedor</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="nota_fiscal" checked> N.F.</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="quantidade" checked> Qtd.</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="valor_unitario"> V. Unitário</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="valor_total"> V. Total</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="unidade" checked> Unidade</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="responsavel" checked> Responsável</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="estoque" checked> Estoque</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="origem" checked> Origem</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="destino" checked> Destino</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="militar" checked> Militar</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="setor" checked> Setor</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="sei"> Proc. SEI</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="data_trp"> D. TRP</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="fonte" checked> Fonte</label>
+                    <label class="checkbox-inline"><input type="checkbox" class="toggle-col" data-col="observacao" checked> Observação</label>
                 </div>
             </div>
         </div>
@@ -233,6 +231,16 @@
     });
 
     document.addEventListener('DOMContentLoaded', function() {
+        // Toggle panel for column configuration
+        var configMenuBtn = document.getElementById('configMenuPlain');
+        var configMenuPanel = document.getElementById('configMenuPanel');
+        if (configMenuBtn && configMenuPanel) {
+            configMenuBtn.addEventListener('click', function() {
+                var isOpen = configMenuPanel.style.display !== 'none';
+                configMenuPanel.style.display = isOpen ? 'none' : 'block';
+            });
+        }
+
         // Carregar configurações salvas
         let savedCols = JSON.parse(localStorage.getItem('movCols')) || {};
         document.querySelectorAll('.toggle-col').forEach(function(checkbox) {
