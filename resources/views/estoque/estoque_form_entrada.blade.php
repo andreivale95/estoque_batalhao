@@ -4,12 +4,8 @@
         <!-- Content Header (Page header) -->
         <section class="content-header">
             <h1>
-                Entrada <b> {{ $produto->produto()->first()->nome ?? '' }} -
-                    {{ optional($produto->produto()->first()?->tamanho()->first())->tamanho ?? 'Tamanho Único' }}
-
-                </b> no Estoque. <br>
-                <small>Unidade: {{ $produto->unidade()->first()->nome }}</small>
-
+                Entrada de Itens no Estoque
+                <small>Unidade: {{ $unidadeUsuario->nome ?? 'Unidade Padrão' }}</small>
             </h1>
             <ol class="breadcrumb">
                 <li><a href="{{ route('dashboard') }}"><i class="fa fa-dashboard"></i> Dashboard</a></li>
@@ -31,21 +27,8 @@
                     <form action="{{ route('estoque.entrada') }}" method="POST" enctype="multipart/form-data">
                         @csrf
 
+                        <!-- Configurações Gerais -->
                         <div class="row">
-                            <!-- Produto -->
-
-                            <div class="form-group col-md-4">
-                                <label for="fk_produto">Produto:</label>
-                                <input type="text" class="form-control"
-                                    value="{{ $produto->produto()->first()->nome ?? '' }} -   {{ optional($produto->produto()->first()?->tamanho()->first())->tamanho ?? 'Tamanho Único' }}"
-                                    disabled>
-                            </div>
-                            <div>
-                                <!-- Campo oculto com o ID do produto (será enviado no form) -->
-                                <input type="hidden" name="fk_produto" value="{{ $produto->fk_produto }}">
-
-                            </div>
-                            
                             @if($isAdmin)
                                 <!-- Unidade editável para admin -->
                                 <div class="form-group col-md-4">
@@ -72,113 +55,113 @@
                                 </div>
                             @endif
 
-                            <!-- Lote -->
+                            <!-- Fornecedor -->
                             <div class="form-group col-md-4">
-                                <label for="lote">Lote:</label>
-                                <input type="text" name="lote" class="form-control" placeholder="Ex: LOTE123">
+                                <label for="fornecedor">Fornecedor:</label>
+                                <input type="text" name="fornecedor" class="form-control" placeholder="Nome do Fornecedor">
                             </div>
-                            <!-- Seção -->
+
+                            <!-- Nota Fiscal -->
                             <div class="form-group col-md-4">
-                                <label for="fk_secao">Seção:</label>
-                                <select name="fk_secao" id="fk_secao" class="form-control" required>
-                                    <option value="">-- Selecione a Seção --</option>
-                                    @foreach($secoes as $secao)
-                                        <option value="{{ $secao->id }}">{{ $secao->nome }}</option>
-                                    @endforeach
-                                </select>
+                                <label for="nota_fiscal">Número da Nota Fiscal:</label>
+                                <input type="text" name="nota_fiscal" class="form-control" placeholder="Ex: 00012345">
                             </div>
 
-                            <!-- Container Pai (bolsa/prateleira) -->
-                            @if($containers && count($containers) > 0)
+                            <!-- Número do Processo SEI -->
                             <div class="form-group col-md-4">
-                                <label for="fk_item_pai">Dentro de (Container/Bolsa/Prateleira):</label>
-                                <select name="fk_item_pai" id="fk_item_pai" class="form-control">
-                                    <option value="">-- Não colocar dentro de nenhum container --</option>
-                                    @foreach($containers as $container)
-                                        <option value="{{ $container->id }}">
-                                            {{ $container->produto->nome }} (Qtd: {{ $container->quantidade }})
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <small class="form-text text-muted">Selecione uma bolsa ou prateleira para colocar este item dentro</small>
+                                <label for="sei">Número do Processo SEI:</label>
+                                <input type="text" name="sei" class="form-control" placeholder="Número do Processo SEI">
                             </div>
-                            @endif
 
-                            <!-- Data de Entrada -->
+                            <!-- Fonte -->
                             <div class="form-group col-md-4">
-                                <label for="data_entrada">Data de Entrada:</label>
-                                <input type="date" name="data_entrada" class="form-control" required>
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label for="data_trp">Data TRP:</label>
-                                <input type="date" name="data_trp" class="form-control">
-                            </div>
-                            <!-- Quantidade -->
-                            <div class="form-group col-md-2">
-                                <label for="quantidade">Quantidade:</label>
-                                <input type="number" name="quantidade" class="form-control" required min="1"
-                                    placeholder="Digite a quantidade">
-                            </div>
-
-
-                            <div class="form-group has-feedback col-md-6">
-                                <label class="control-label" for="valor">Preço Unitário (R$):</label>
-                                <input type="text" class="form-control" placeholder="0,00" name="valor_formatado"
-                                    id="valor" required>
-                                <input type="hidden" name="valor" id="valor_limpo">
+                                <label for="fonte">Fonte:</label>
+                                <input type="text" name="fonte" class="form-control" list="fontes" placeholder="">
+                                <datalist id="fontes">
+                                    <option value="SENASP">
+                                    <option value="SEJUSP">
+                                    <option value="VINCI">
+                                    <option value="100">
+                                    <option value="700">
+                                    <option value="DOAÇÃO">
+                                    <option value="FUNDO A FUNDO">
+                                    <option value="OUTROS">
+                                </datalist>
                             </div>
 
+                            <!-- Observações Gerais -->
+                            <div class="form-group col-md-12">
+                                <label for="observacao">Observações Gerais:</label>
+                                <input type="text" name="observacao" class="form-control" placeholder="Observações">
+                            </div>
                         </div>
 
+                        <hr>
+                        <h4>Adicionar Itens</h4>
 
-
-                        <!-- Fornecedor -->
-                        <div class="form-group col-md-3">
-                            <label for="fornecedor">Fornecedor:</label>
-                            <input type="text" name="fornecedor" class="form-control" placeholder="Nome do Fornecedor">
-                        </div>
-                        <div class="form-group col-md-3">
-                            <label for="sei">Número do Processo SEI:</label>
-                            <input type="text" name="sei" class="form-control" placeholder="Número do Processo SEI">
-                        </div>
-
-                        <!-- Nota Fiscal -->
-                        <div class="form-group col-md-3">
-                            <label for="nota_fiscal">Número da Nota Fiscal:</label>
-                            <input type="text" name="nota_fiscal" class="form-control" placeholder="Ex: 00012345">
-                        </div>
-                        <div class="form-group col-md-3">
-                            <label for="fonte">Fonte:</label>
-                            <input type="text" name="fonte" class="form-control" list="fontes" placeholder="">
-                            <datalist id="fontes">
-                                <option value="SENASP">
-                                <option value="SEJUSP">
-                                <option value="VINCI">
-                                <option value="100">
-                                <option value="700">
-                                <option value="DOAÇÃO">
-                                <option value="FUNDO A FUNDO">
-                                <option value="OUTROS">
-                            </datalist>
+                        <!-- Seletor de Tipo -->
+                        <div class="alert alert-info">
+                            <strong>Tipo de Entrada:</strong>
+                            <div style="margin-top: 10px;">
+                                <label style="margin-right: 30px;">
+                                    <input type="radio" name="tipo_entrada" value="consumo" class="tipo-entrada-radio" checked> 
+                                    <strong>Itens de Consumo</strong>
+                                </label>
+                                <label>
+                                    <input type="radio" name="tipo_entrada" value="permanente" class="tipo-entrada-radio"> 
+                                    <strong>Itens Permanentes (Patrimôniados)</strong>
+                                </label>
+                            </div>
                         </div>
 
+                        <p style="color: #d9534f; font-weight: bold;">
+                            ⚠️ Selecione o tipo antes de adicionar itens. Não é permitido misturar tipos na mesma entrada.
+                        </p>
 
-                        <!-- Observações -->
-                        <div class="form-group col-md-12">
-                            <label for="fornecedor">Observações:</label>
-                            <input type="text" name="observacao" class="form-control" placeholder="Nome do Fornecedor">
+                        <!-- Tabela de itens -->
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover" id="itensTable">
+                                <thead style="background-color: #3c8dbc; color: white;">
+                                    <tr>
+                                        <th width="15%">Produto</th>
+                                        <th width="8%">Quantidade</th>
+                                        <th width="10%">Patrimônios</th>
+                                        <th width="10%">Valor Unit.</th>
+                                        <th width="10%">Data Entrada</th>
+                                        <th width="10%">Seção</th>
+                                        <th width="10%">Lote</th>
+                                        <th width="8%">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itensBody">
+                                </tbody>
+                            </table>
                         </div>
 
-                        <div class="form-group col-md-12" id="fotos-consumo-row">
-                            <label for="fotos_upload">Fotos do Item (até 3 imagens):</label>
-                            <input type="file" id="fotos_upload" name="fotos[]" class="form-control" multiple accept="image/*">
-                            <small class="text-muted">Formatos aceitos: JPG, PNG, GIF (máx 5MB por imagem).</small>
+                        <button type="button" class="btn btn-primary" id="addItemBtn">
+                            <i class="fa fa-plus"></i> Adicionar Item
+                        </button>
+
+                        <hr>
+
+                        <!-- Botões de Ação -->
+                        <div class="form-group text-right">
+                            <a href="{{ route('estoque.listar') }}?nome=&categoria=&unidade={{ Auth::user()->fk_unidade }}"
+                                class="btn btn-danger">
+                                Cancelar <i class="fa fa-arrow-left"></i>
+                            </a>
+                            <button type="submit" class="btn btn-success" id="submitBtn" disabled>
+                                <i class="fa fa-save"></i> Cadastrar Itens
+                            </button>
                         </div>
+                    </form>
+                </div>
+            </div>
 
-
-
-
-
+        </section>
+        <!-- /.content -->
+    </div>
+    <!-- /.content-wrapper -->
                 </div>
             </div>
 
@@ -201,41 +184,182 @@
     <!-- /.content-wrapper -->
 
     <script>
-        document.getElementById('fotos_upload').addEventListener('change', function() {
-            if (this.files && this.files.length > 3) {
-                alert('Selecione no máximo 3 imagens.');
-                this.value = '';
-            }
+        const secoes = @json($secoes);
+        const produtos = @json(\App\Models\Produto::all());
+        let tipoEntradaSelecionado = 'consumo';
+        let itemCount = 0;
+
+        // Detectar mudança de tipo de entrada
+        document.querySelectorAll('.tipo-entrada-radio').forEach(radio => {
+            radio.addEventListener('change', function() {
+                tipoEntradaSelecionado = this.value;
+                
+                // Se houver itens, avisar
+                const temItens = document.querySelectorAll('.item-row').length > 0;
+                if (temItens) {
+                    alert('Todos os itens serão removidos ao mudar o tipo de entrada.');
+                    document.getElementById('itensBody').innerHTML = '';
+                    atualizarSubmitBtn();
+                }
+            });
         });
 
-        document.getElementById('valor').addEventListener('input', function(e) {
-            let raw = e.target.value.replace(/\D/g, ''); // só números
+        // Filtrar produtos por tipo
+        function obterProdutosFiltrados() {
+            return produtos.filter(p => p.tipo_controle === tipoEntradaSelecionado);
+        }
+
+        // Adicionar novo item
+        document.getElementById('addItemBtn').addEventListener('click', function() {
+            const produtosFiltrados = obterProdutosFiltrados();
+            
+            if (produtosFiltrados.length === 0) {
+                const tipoNome = tipoEntradaSelecionado === 'permanente' ? 'Itens Permanentes' : 'Itens de Consumo';
+                alert(`Não há ${tipoNome} cadastrados no sistema.`);
+                return;
+            }
+
+            const row = document.createElement('tr');
+            row.className = 'item-row';
+            row.innerHTML = `
+                <td>
+                    <select name="produtos[]" class="form-control produto-select" required>
+                        <option value="">-- Selecione --</option>
+                        ${produtosFiltrados.map(p => `<option value="${p.id}" data-tipo="${p.tipo_controle}">${p.nome}</option>`).join('')}
+                    </select>
+                </td>
+                <td>
+                    <input type="number" name="quantidades[]" class="form-control quantidade-input" required min="1" value="1">
+                </td>
+                <td>
+                    <div class="patrimonios-cell" style="display:${tipoEntradaSelecionado === 'permanente' ? 'block' : 'none'};">
+                        <input type="text" name="patrimonios[]" class="form-control patrimonios-input" placeholder="Separar por vírgula">
+                        <small class="text-muted">Ex: 001,002,003</small>
+                    </div>
+                </td>
+                <td>
+                    <input type="text" name="valores[]" class="form-control valor-input" placeholder="0,00">
+                    <input type="hidden" name="valores_centavos[]" class="valor-centavos">
+                </td>
+                <td>
+                    <input type="date" name="datas_entrada[]" class="form-control" required>
+                </td>
+                <td>
+                    <select name="secoes[]" class="form-control" required>
+                        <option value="">-- Selecione --</option>
+                        ${secoes.map(s => `<option value="${s.id}">${s.nome}</option>`).join('')}
+                    </select>
+                </td>
+                <td>
+                    <input type="text" name="lotes[]" class="form-control" placeholder="Lote">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger remove-item">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </td>
+            `;
+
+            document.getElementById('itensBody').appendChild(row);
+            
+            // Forçar data atual
+            const dataInputs = row.querySelectorAll('input[type="date"]');
+            dataInputs.forEach(input => {
+                if (!input.value) {
+                    const today = new Date().toISOString().split('T')[0];
+                    input.value = today;
+                }
+            });
+
+            // Detectar mudança de produto
+            const produtoSelect = row.querySelector('.produto-select');
+            produtoSelect.addEventListener('change', function() {
+                const tipo = this.options[this.selectedIndex]?.dataset?.tipo;
+                const quantidadeInput = row.querySelector('.quantidade-input');
+                
+                if (tipo === 'permanente') {
+                    quantidadeInput.value = 1;
+                    quantidadeInput.disabled = true;
+                } else {
+                    quantidadeInput.disabled = false;
+                }
+            });
+
+            // Formatar valores quando digitados
+            row.querySelector('.valor-input').addEventListener('input', formatarValor);
+
+            // Remove button
+            row.querySelector('.remove-item').addEventListener('click', function() {
+                row.remove();
+                atualizarSubmitBtn();
+            });
+
+            atualizarSubmitBtn();
+        });
+
+        // Formatar valor em moeda
+        function formatarValor(e) {
+            let raw = e.target.value.replace(/\D/g, '');
             let valorCentavos = raw ? parseInt(raw, 10) : 0;
 
-            // Atualiza o campo hidden com valor em centavos
-            document.getElementById('valor_limpo').value = valorCentavos;
+            e.target.nextElementSibling.value = valorCentavos;
 
-            // Atualiza o campo visível formatado com vírgula e ponto
             let valorFormatado = (valorCentavos / 100).toFixed(2)
                 .replace('.', ',')
                 .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             e.target.value = valorFormatado;
-        });
-    <script>
-        document.getElementById('fotos_upload').addEventListener('change', function() {
-            if (this.files && this.files.length > 3) {
-                alert('Selecione no máximo 3 imagens.');
-                this.value = '';
-            }
-        });
+        }
 
-        document.addEventListener('change', function(e) {
-            if (e.target && e.target.classList.contains('patrimonio-fotos')) {
-                if (e.target.files && e.target.files.length > 2) {
-                    alert('Selecione no máximo 2 imagens por patrimônio.');
-                    e.target.value = '';
+        // Atualizar botão submit
+        function atualizarSubmitBtn() {
+            const temItens = document.querySelectorAll('.item-row').length > 0;
+            document.getElementById('submitBtn').disabled = !temItens;
+        }
+
+        // Validar formulário antes de enviar
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const linhas = document.querySelectorAll('.item-row');
+            
+            if (linhas.length === 0) {
+                e.preventDefault();
+                alert('Adicione pelo menos um item!');
+                return false;
+            }
+
+            let valido = true;
+            linhas.forEach((linha, idx) => {
+                const produto = linha.querySelector('.produto-select').value;
+                const quantidade = linha.querySelector('.quantidade-input').value;
+                const secao = linha.querySelector('select[name="secoes[]"]').value;
+                const dataEntrada = linha.querySelector('input[name="datas_entrada[]"]').value;
+                const valor = linha.querySelector('.valor-centavos').value;
+                const tipo = linha.querySelector('.produto-select').options[linha.querySelector('.produto-select').selectedIndex]?.dataset?.tipo;
+
+                if (!produto || !quantidade || !secao || !dataEntrada) {
+                    alert(`Linha ${idx + 1}: Preencha todos os campos obrigatórios`);
+                    valido = false;
+                    return;
                 }
+
+                if (!valor || parseInt(valor) === 0) {
+                    alert(`Linha ${idx + 1}: O valor unitário não pode ser zero`);
+                    valido = false;
+                    return;
+                }
+
+                if (tipo === 'permanente') {
+                    const patrimonios = linha.querySelector('.patrimonios-input').value.trim();
+                    if (!patrimonios) {
+                        alert(`Linha ${idx + 1}: Informe os patrimônios separados por vírgula`);
+                        valido = false;
+                        return;
+                    }
+                }
+            });
+
+            if (!valido) {
+                e.preventDefault();
             }
         });
-
+    </script>
 @endsection

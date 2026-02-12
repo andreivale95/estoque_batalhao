@@ -502,187 +502,195 @@ class EstoqueController extends Controller
                 return redirect()->back()->with('error', 'Você não tem permissão para movimentar produtos de outra unidade.');
             }
 
-            $produtoEntrada = $request->fk_produto ? Produto::find($request->fk_produto) : null;
-            if ($produtoEntrada && $produtoEntrada->tipo_controle === 'permanente') {
-                $patrimonios = $request->input('patrimonios', []);
-                $patrimonios = array_values(array_filter(array_map('trim', (array) $patrimonios)));
-                $patrimoniosObservacoes = $request->input('patrimonios_observacoes', []);
-                if (count($patrimonios) === 0) {
-                    return back()->with('warning', 'Informe os patrimônios para itens permanentes.');
-                }
-                if (count($patrimonios) !== count(array_unique($patrimonios))) {
-                    return back()->with('warning', 'Há patrimônios duplicados na lista informada.');
-                }
-                $patrimonioExistente = ItenPatrimonial::whereIn('patrimonio', $patrimonios)->exists();
-                if ($patrimonioExistente) {
-                    return back()->with('warning', 'Um ou mais patrimônios já estão cadastrados no sistema.');
-                }
-                $request->merge(['quantidade' => count($patrimonios)]);
-            }
-
-            $valorBr = $request->get('valor'); // "250000"
-            $valorFinal = ((float) $valorBr) / 100; // resultado: 250.00
-
-            //dd($valorFinal);
-
-            // Validação dos dados recebidos
+            // Validação dos dados recebidos para múltiplos itens
             $request->validate([
-                'quantidade' => 'required|integer|min:1',
-                'data_entrada' => 'required|date',
-                'fk_produto' => 'required|exists:produtos,id',
-                'fk_secao' => 'required|exists:secaos,id',
-                'fk_item_pai' => 'nullable|exists:itens_estoque,id',
-                'lote' => 'nullable|string',
+                'produtos' => 'required|array|min:1',
+                'produtos.*' => 'required|exists:produtos,id',
+                'quantidades' => 'required|array',
+                'quantidades.*' => 'required|integer|min:1',
+                'secoes' => 'required|array',
+                'secoes.*' => 'required|exists:secaos,id',
+                'datas_entrada' => 'required|array',
+                'datas_entrada.*' => 'required|date',
+                'valores' => 'nullable|array',
+                'valores_centavos' => 'nullable|array',
+                'lotes' => 'nullable|array',
+                'patrimonios' => 'nullable|array',
                 'fornecedor' => 'nullable|string',
                 'nota_fiscal' => 'nullable|string',
                 'fonte' => 'nullable|string',
-                'data_trp' => 'nullable|date',
                 'sei' => 'nullable|string',
-                'valor' => 'nullable|numeric',
                 'observacao' => 'nullable|string',
-                'fotos' => 'nullable|array|max:3',
-                'fotos.*' => 'image|max:5120',
             ]);
 
-            if ($produtoEntrada && $produtoEntrada->tipo_controle === 'permanente') {
-                $request->validate([
-                    'patrimonios_fotos' => 'nullable|array',
-                    'patrimonios_fotos.*' => 'nullable|array|max:2',
-                    'patrimonios_fotos.*.*' => 'image|max:5120',
-                ]);
+            $produtos = $request->input('produtos', []);
+            $quantidades = $request->input('quantidades', []);
+            $secoes = $request->input('secoes', []);
+            $datas = $request->input('datas_entrada', []);
+            $valoresCentavos = $request->input('valores_centavos', []);
+            $lotes = $request->input('lotes', []);
+            $patrimonios = $request->input('patrimonios', []);
+
+            if (count($produtos) !== count($quantidades) || count($produtos) !== count($secoes) || count($produtos) !== count($datas)) {
+                return back()->with('error', 'Dados inconsistentes. Verifique os itens.');
             }
 
-            $dataEntrada = Carbon::parse($request->data_entrada);
+            $itensProcessados = [];
 
-            if ($produtoEntrada && $produtoEntrada->tipo_controle === 'permanente') {
-                $patrimonios = $request->input('patrimonios', []);
-                $patrimonios = array_values(array_filter(array_map('trim', (array) $patrimonios)));
-                $patrimoniosObservacoes = $request->input('patrimonios_observacoes', []);
-                $patrimoniosFotos = $request->file('patrimonios_fotos', []);
+            // Processa cada item
+            for ($i = 0; $i < count($produtos); $i++) {
+                $produtoId = $produtos[$i];
+                $quantidade = $quantidades[$i];
+                $secaoId = $secoes[$i];
+                $dataEntrada = Carbon::parse($datas[$i]);
+                $valorCentavos = $valoresCentavos[$i] ?? 0;
+                $valorFinal = $valorCentavos / 100;
+                $lote = $lotes[$i] ?? null;
 
-                $itensCriados = [];
-                foreach ($patrimonios as $index => $patrimonio) {
-                    $iten = ItenPatrimonial::create([
-                        'fk_produto' => $request->fk_produto,
-                        'patrimonio' => $patrimonio,
-                        'serie' => null,
-                        'fk_secao' => $request->fk_secao,
-                        'condicao' => 'bom',
-                        'data_entrada' => $dataEntrada,
-                        'quantidade_cautelada' => 0,
-                        'observacao' => $patrimoniosObservacoes[$index] ?? null,
-                    ]);
-                    $itensCriados[] = $iten;
-
-                    $fotosDoPatrimonio = $patrimoniosFotos[$index] ?? [];
-                    $this->salvarFotosPatrimonio($fotosDoPatrimonio, $iten, 2);
+                // Validar valor não pode ser zero
+                if ($valorFinal <= 0) {
+                    \Log::warning("Valor zero ou inválido para produto: $produtoId");
+                    continue;
                 }
 
+                $produto = Produto::find($produtoId);
+                if (!$produto) {
+                    continue;
+                }
+
+                // Se é item permanente
+                if ($produto->tipo_controle === 'permanente') {
+                    // Forçar quantidade 1 para permanente
+                    $quantidade = 1;
+
+                    $patrimoniosStr = $patrimonios[$i] ?? '';
+                    $listaPatrimonios = array_filter(array_map('trim', explode(',', $patrimoniosStr)));
+
+                    if (count($listaPatrimonios) === 0) {
+                        \Log::warning("Patrimônios não fornecidos para produto permanente: $produtoId");
+                        continue;
+                    }
+
+                    // Verificar duplicatas
+                    if (count($listaPatrimonios) !== count(array_unique($listaPatrimonios))) {
+                        \Log::warning("Patrimônios duplicados para produto: $produtoId");
+                        continue;
+                    }
+
+                    // Verificar se patrimônios já existem
+                    $existentes = ItenPatrimonial::whereIn('patrimonio', $listaPatrimonios)->exists();
+                    if ($existentes) {
+                        \Log::warning("Um ou mais patrimônios já existem: produto $produtoId");
+                        continue;
+                    }
+
+                    // Criar cada patrimônio
+                    foreach ($listaPatrimonios as $patrimonio) {
+                        ItenPatrimonial::create([
+                            'fk_produto' => $produtoId,
+                            'patrimonio' => $patrimonio,
+                            'serie' => null,
+                            'fk_secao' => $secaoId,
+                            'condicao' => 'bom',
+                            'data_entrada' => $dataEntrada,
+                            'quantidade_cautelada' => 0,
+                            'observacao' => $request->observacao ?? null,
+                        ]);
+                    }
+
+                    // Criar histórico
+                    HistoricoMovimentacao::create([
+                        'fk_produto' => $produtoId,
+                        'tipo_movimentacao' => 'entrada',
+                        'quantidade' => count($listaPatrimonios),
+                        'valor_total' => $valorFinal * count($listaPatrimonios),
+                        'valor_unitario' => $valorFinal,
+                        'responsavel' => Auth::user()->nome,
+                        'observacao' => $request->observacao ?? 'Entrada de bens patrimoniais',
+                        'data_movimentacao' => $dataEntrada,
+                        'fk_unidade' => $request->unidade,
+                        'fonte' => $request->fonte,
+                        'sei' => $request->sei,
+                        'fornecedor' => $request->fornecedor,
+                        'nota_fiscal' => $request->nota_fiscal,
+                    ]);
+
+                    $itensProcessados[] = $produto->nome;
+                    continue;
+                }
+
+                // Item de consumo
+                $itemEstoque = Itens_estoque::where('fk_produto', $produtoId)
+                    ->where('unidade', $request->unidade)
+                    ->where('fk_secao', $secaoId)
+                    ->first();
+
+                if ($itemEstoque) {
+                    // Atualiza quantidade e valor
+                    $quantidadeAtual = $itemEstoque->quantidade;
+                    $valorAtual = $itemEstoque->valor_unitario ?? 0;
+
+                    $novaQuantidade = $quantidadeAtual + $quantidade;
+                    $novoValorMedio = $novaQuantidade > 0
+                        ? (($quantidadeAtual * $valorAtual) + ($quantidade * $valorFinal)) / $novaQuantidade
+                        : $valorFinal;
+
+                    $itemEstoque->quantidade = $novaQuantidade;
+                    $itemEstoque->valor_total = $novoValorMedio * $novaQuantidade;
+                    $itemEstoque->valor_unitario = $valorFinal;
+                    $itemEstoque->save();
+                } else {
+                    // Cria novo registro de estoque
+                    $itemEstoque = Itens_estoque::create([
+                        'fk_produto' => $produtoId,
+                        'fk_secao' => $secaoId,
+                        'unidade' => $request->unidade,
+                        'quantidade' => $quantidade,
+                        'valor_total' => $valorFinal * $quantidade,
+                        'valor_unitario' => $valorFinal,
+                        'quantidade_inicial' => $quantidade,
+                        'data_entrada' => $dataEntrada,
+                        'lote' => $lote,
+                        'fornecedor' => $request->fornecedor ?? null,
+                        'nota_fiscal' => $request->nota_fiscal ?? null,
+                        'fonte' => $request->fonte ?? null,
+                        'data_trp' => null,
+                        'sei' => $request->sei ?? null,
+                    ]);
+                }
+
+                // Cria histórico de movimentação
                 HistoricoMovimentacao::create([
-                    'fk_produto' => $request->fk_produto,
+                    'fk_produto' => $produtoId,
                     'tipo_movimentacao' => 'entrada',
-                    'quantidade' => count($patrimonios),
-                    'valor_total' => $valorFinal * count($patrimonios),
+                    'quantidade' => $quantidade,
+                    'valor_total' => $valorFinal * $quantidade,
                     'valor_unitario' => $valorFinal,
                     'responsavel' => Auth::user()->nome,
-                    'observacao' => $request->observacao ?? 'Entrada de bens patrimoniais',
+                    'observacao' => $request->observacao ?? 'Entrada em lote',
                     'data_movimentacao' => $dataEntrada,
                     'fk_unidade' => $request->unidade,
                     'fonte' => $request->fonte,
-                    'data_trp' => $request->data_trp,
                     'sei' => $request->sei,
                     'fornecedor' => $request->fornecedor,
                     'nota_fiscal' => $request->nota_fiscal,
                 ]);
 
-                return redirect()->route('estoque.listar', [
-                    'nome' => '',
-                    'categoria' => '',
-                    'unidade' => Auth::user()->fk_unidade
-                ])->with('success', 'Bens patrimoniais registrados com sucesso!');
+                $itensProcessados[] = $produto->nome;
             }
 
-            // Busca o item no estoque pela seção específica, considerando se está em um container
-            $itemEstoque = Itens_estoque::where('fk_produto', $request->fk_produto)
-                ->where('unidade', $request->unidade)
-                ->where('fk_secao', $request->fk_secao)
-                ->where('fk_item_pai', $request->fk_item_pai ?? null)
-                ->first();
-
-            $novoValorMedio = $valorFinal;
-
-            if ($itemEstoque) {
-                // Calcula a nova média ponderada
-                $quantidadeAtual = $itemEstoque->quantidade;
-                $valorAtual = $itemEstoque->valor_unitario ?? 0;
-
-                $novaQuantidade = $quantidadeAtual + $request->quantidade;
-                $novoValorMedio = $novaQuantidade > 0
-                    ? (($quantidadeAtual * $valorAtual) + ($request->quantidade * $valorFinal)) / $novaQuantidade
-                    : $valorFinal;
-
-                // Atualiza o estoque
-                $itemEstoque->quantidade = $novaQuantidade;
-                $itemEstoque->valor_total = $novoValorMedio * $novaQuantidade;
-                $itemEstoque->valor_unitario = $valorFinal;
-                $itemEstoque->fk_item_pai = $request->fk_item_pai ?? null;
-                $itemEstoque->save();
-
-                // Não mais atualiza campo 'produtos.valor' — média é mantida no estoque
-            } else {
-                // Cria novo registro de estoque na seção específica
-                $itemEstoque = Itens_estoque::create([
-                    'fk_produto' => $request->fk_produto,
-                    'fk_secao' => $request->fk_secao,
-                    'fk_item_pai' => $request->fk_item_pai ?? null,
-                    'unidade' => $request->unidade,
-                    'quantidade' => $request->quantidade,
-                    'valor_total' => $valorFinal * $request->quantidade,
-                    'valor_unitario' => $valorFinal,
-                    'quantidade_inicial' => $request->quantidade,
-                    'data_entrada' => $dataEntrada,
-                    'lote' => $request->lote ?? null,
-                    'fornecedor' => $request->fornecedor ?? null,
-                    'nota_fiscal' => $request->nota_fiscal ?? null,
-                    'fonte' => $request->fonte ?? null,
-                    'data_trp' => $request->data_trp ?? null,
-                    'sei' => $request->sei ?? null,
-                ]);
-
-                // não atualizamos campo 'produtos.valor'
-            }
-
-            // Não atualiza 'produtos.valor'; valor unitário fica em itens_estoque
-
-
-            // Cria histórico de movimentação
-            HistoricoMovimentacao::create([
-                'fk_produto' => $request->fk_produto,
-                'tipo_movimentacao' => 'entrada',
-                'quantidade' => $request->quantidade,
-                'valor_total' => $valorFinal * $request->quantidade,
-                'valor_unitario' => $valorFinal,
-                'responsavel' => Auth::user()->nome,
-                'observacao' => $request->observacao ?? 'Entrada no estoque',
-                'data_movimentacao' => $dataEntrada,
-                'fk_unidade' => $request->unidade,
-                'fonte' => $request->fonte,
-                'data_trp' => $request->data_trp,
-                'sei' => $request->sei,
-                'fornecedor' => $request->fornecedor,
-                'nota_fiscal' => $request->nota_fiscal,
-            ]);
-
-            $this->salvarFotosEntrada($request->file('fotos', []), $itemEstoque, 3);
+            $mensagem = count($itensProcessados) > 0 
+                ? 'Entrada de ' . count($itensProcessados) . ' produto(s) registrada(s) com sucesso!'
+                : 'Nenhum produto foi processado.';
 
             return redirect()->route('estoque.listar', [
                 'nome' => '',
                 'categoria' => '',
                 'unidade' => Auth::user()->fk_unidade
-            ])->with('success', 'Produto atualizado no estoque com sucesso!');
+            ])->with('success', $mensagem);
         } catch (\Exception $e) {
             Log::error('Erro ao dar entrada no Estoque', ['exception' => $e->getMessage()]);
-            return back()->with('warning', 'Houve um erro ao dar entrada no Estoque.');
+            return back()->with('warning', 'Houve um erro ao dar entrada no Estoque: ' . $e->getMessage());
         }
     }
 
@@ -928,47 +936,33 @@ class EstoqueController extends Controller
     }
     public function formEntradaExistente(Request $request)
     {
-        try {
-            $produtos = Produto::where('ativo', true)
-                ->where('unidade', Auth::user()->fk_unidade)
-                ->orderBy('nome')
-                ->get();
-            $secoes = Secao::all();
-            $podeVerOutrasUnidades = Gate::allows('autorizacao', 8);
-            $unidades = $podeVerOutrasUnidades
-                ? Unidade::all()
-                : Unidade::where('id', Auth::user()->fk_unidade)->get();
-            $unidadeUsuario = Unidade::find(Auth::user()->fk_unidade);
-            $isAdmin = Auth::user()->fk_perfil == 1;
-            
-            // Containers não mais usados - eh_container foi removido
-            $todosContainers = [];
-
-            return view('estoque/estoque_form_entrada_existente', compact('produtos', 'secoes', 'unidades', 'unidadeUsuario', 'isAdmin', 'todosContainers', 'podeVerOutrasUnidades'));
-        } catch (Exception $e) {
-            Log::error('Erro ao carregar formulário de entrada', ['exception' => $e->getMessage()]);
-            return back()->with('warning', 'Houve um erro ao carregar o formulário de entrada.');
-        }
+        // Redireciona para a nova entrada múltipla
+        return redirect()->route('entrada.form');
     }
 
-    public function formEntrada(Request $request, $id)
+    public function formEntrada(Request $request, $id = null)
     {
-
         try {
-
-
-            $produto = Itens_estoque::select('fk_produto', 'unidade', 'fk_secao')->where('id', $id)->first();
             $secoes = Secao::all();
             $unidadeUsuario = Unidade::find(Auth::user()->fk_unidade);
             $isAdmin = Auth::user()->fk_perfil == 1;
             
-            // Carrega os containers (itens que podem conter outros itens)
-            // Apenas containers da mesma seção
-            $containers = Itens_estoque::where('fk_secao', $produto->fk_secao)
-                ->whereNull('fk_item_pai')
-                ->whereHas('itensFilhos')
-                ->with('produto')
-                ->get();
+            // Para manter compatibilidade, se houver ID, busca o item
+            $produto = null;
+            $containers = [];
+            
+            if ($id) {
+                $produto = Itens_estoque::select('fk_produto', 'unidade', 'fk_secao')->where('id', $id)->first();
+                // Carrega os containers (itens que podem conter outros itens)
+                $containers = Itens_estoque::where('fk_secao', $produto->fk_secao)
+                    ->whereNull('fk_item_pai')
+                    ->whereHas('itensFilhos')
+                    ->with('produto')
+                    ->get();
+            } else {
+                // Passa um objeto vazio para compatibilidade com a view
+                $produto = (object)['fk_produto' => null, 'unidade' => Auth::user()->fk_unidade, 'fk_secao' => null];
+            }
 
             return view('estoque/estoque_form_entrada', compact('produto', 'secoes', 'unidadeUsuario', 'isAdmin', 'containers'));
         } catch (Exception $e) {

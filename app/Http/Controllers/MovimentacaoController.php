@@ -236,7 +236,25 @@ class MovimentacaoController extends Controller
     {
         try {
             $movimentacao = HistoricoMovimentacao::with(['produto', 'origem', 'destino', 'unidade'])->findOrFail($id);
-            return view('movimentacoes.ver', compact('movimentacao'));
+            
+            // Buscar todas as movimentações relacionadas (mesma entrada/lote)
+            // Se for entrada, buscar todas as entradas com mesma data, responsável e unidade dentro de um intervalo de 5 minutos
+            $movimentacoesRelacionadas = collect();
+            
+            if ($movimentacao->tipo_movimentacao === 'entrada') {
+                $dataInicio = \Carbon\Carbon::parse($movimentacao->created_at)->subMinutes(5);
+                $dataFim = \Carbon\Carbon::parse($movimentacao->created_at)->addMinutes(5);
+                
+                $movimentacoesRelacionadas = HistoricoMovimentacao::where('tipo_movimentacao', 'entrada')
+                    ->where('responsavel', $movimentacao->responsavel)
+                    ->where('fk_unidade', $movimentacao->fk_unidade)
+                    ->whereBetween('created_at', [$dataInicio, $dataFim])
+                    ->with('produto')
+                    ->orderBy('created_at')
+                    ->get();
+            }
+            
+            return view('movimentacoes.ver', compact('movimentacao', 'movimentacoesRelacionadas'));
         } catch (\Exception $e) {
             \Log::error('Erro ao consultar movimentação', [$e]);
             return back()->with('warning', 'Movimentação não encontrada.');

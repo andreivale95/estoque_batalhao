@@ -94,8 +94,8 @@
                         <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="fornecedor" checked> Fornecedor</label>
                         <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="nota_fiscal" checked> N.F.</label>
                         <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="quantidade" checked> Qtd.</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="valor_unitario" checked> V. Unitário</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="valor_total" checked> V. Total</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="valor_unitario"> V. Unitário</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="valor_total"> V. Total</label>
                         <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="unidade" checked> Unidade</label>
                         <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="responsavel" checked> Responsável</label>
                         <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="estoque" checked> Estoque</label>
@@ -103,8 +103,8 @@
                         <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="destino" checked> Destino</label>
                         <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="militar" checked> Militar</label>
                         <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="setor" checked> Setor</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="sei" checked> Proc. SEI</label>
-                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="data_trp" checked> D. TRP</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="sei"> Proc. SEI</label>
+                        <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="data_trp"> D. TRP</label>
                         <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="fonte" checked> Fonte</label>
                         <label class="dropdown-item"><input type="checkbox" class="toggle-col" data-col="observacao" checked> Observação</label>
                     </div>
@@ -121,8 +121,8 @@
                     <th class="col-fornecedor">Fornecedor</th>
                     <th class="col-nota_fiscal">N.F.</th>
                     <th class="col-quantidade">Qtd.</th>
-                    <th class="col-valor_unitario">V. Unitário</th>
-                    <th class="col-valor_total">V. Total</th>
+                    <th class="col-valor_unitario" style="display:none;">V. Unitário</th>
+                    <th class="col-valor_total" style="display:none;">V. Total</th>
                     <th class="col-unidade">Unidade</th>
                     <th class="col-responsavel">Responsável</th>
                     <th class="col-estoque">Estoque</th>
@@ -130,8 +130,8 @@
                     <th class="col-destino">Destino</th>
                     <th class="col-militar">Militar</th>
                     <th class="col-setor">Setor</th>
-                    <th class="col-sei">Proc. SEI</th>
-                    <th class="col-data_trp">D. TRP</th>
+                    <th class="col-sei" style="display:none;">Proc. SEI</th>
+                    <th class="col-data_trp" style="display:none;">D. TRP</th>
                     <th class="col-fonte">Fonte</th>
                     <th class="col-observacao">Observação</th>
                     <th>Ações</th>
@@ -141,7 +141,7 @@
                 @forelse($movimentacoes as $m)
                 <tr>
                     <td class="col-data">{{ \Carbon\Carbon::parse($m->data_movimentacao)->format('d/m/Y H:i:s') }}</td>
-                    <td class="col-produto">{{ $m->produto->nome ?? '—' }} - {{ optional($m->produto()->first()?->tamanho()->first())->tamanho ?? 'Tamanho Único' }}</td>
+                    <td class="col-produto">{{ $m->produto->nome ?? '—' }}</td>
                     <td class="col-tipo">
                         {{ $m->tipo_movimentacao }}
                         @if(($m->movimentacao_origem_id ?? null) || str_contains($m->observacao ?? '', 'Desfeito movimentação'))
@@ -151,19 +151,19 @@
                     <td class="col-fornecedor">{{ $m->fornecedor }}</td>
                     <td class="col-nota_fiscal">{{ $m->nota_fiscal }}</td>
                     <td class="col-quantidade">{{ $m->quantidade }}</td>
-                    <td class="col-valor_unitario">{{ number_format($m->valor_unitario, 2, ',', '.') }}</td>
-                    <td class="col-valor_total">{{ number_format($m->valor_total, 2, ',', '.') }}</td>
-                    <td class="col-unidade">{{ $m->produto->unidade }}</td>
+                    <td class="col-valor_unitario" style="display:none;">{{ number_format($m->valor_unitario, 2, ',', '.') }}</td>
+                    <td class="col-valor_total" style="display:none;">{{ number_format($m->valor_total, 2, ',', '.') }}</td>
+                    <td class="col-unidade">{{ $m->produto->unidade ?? '-' }}</td>
                     <td class="col-responsavel">{{ $m->responsavel }}</td>
-                    <td class="col-estoque">{{ $m->unidade->nome }}</td>
+                    <td class="col-estoque">{{ $m->unidade->nome ?? '-' }}</td>
                     <td class="col-origem">{{ $m->origem->nome ?? '-' }}</td>
                     <td class="col-destino">{{ $m->destino->nome ?? '-' }}</td>
                     <td class="col-militar">{{ $m->militar }}</td>
                     <td class="col-setor">{{ $m->setor }}</td>
-                    <td class="col-sei">{{ $m->sei }}</td>
-                    <td class="col-data_trp">{{ \Carbon\Carbon::parse($m->data_trp)->format('d/m/Y') }}</td>
-                    <td class="col-fonte">{{ $m->fonte }}</td>
-                    <td class="col-observacao">{{ $m->observacao }}</td>
+                    <td class="col-sei" style="display:none;">{{ $m->sei }}</td>
+                    <td class="col-data_trp" style="display:none;">{{ $m->data_trp ? \Carbon\Carbon::parse($m->data_trp)->format('d/m/Y') : '-' }}</td>
+                    <td class="col-fonte"><span class="badge badge-info">{{ $m->fonte ?? '-' }}</span></td>
+                    <td class="col-observacao">{{ $m->observacao ?? '-' }}</td>
                     <td>
                         <form action="{{ route('movimentacao.desfazer', $m->id) }}" method="POST" class="form-desfazer" style="display:inline-block;">
                             @csrf
