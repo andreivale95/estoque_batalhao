@@ -130,24 +130,62 @@ class SecaoController extends Controller
     {
         $secao = Secao::with(['unidade'])->findOrFail($secaoId);
         
-        // Busca todos os itens da seção com suas relações
-        $itens = Itens_estoque::where('fk_secao', $secaoId)
-            ->with(['produto', 'itemPai.produto', 'itensFilhos.produto'])
+        // Busca itens de consumo da secao
+        $itensConsumo = Itens_estoque::where('fk_secao', $secaoId)
+            ->with(['produto'])
             ->get();
-        
-        // Agrupa itens por produto
-        $itensPorProduto = $itens->groupBy('fk_produto')->map(function($grupo) {
+
+        // Agrupa consumo por produto para exibir quantidade total
+        $consumoAgrupado = $itensConsumo->groupBy('fk_produto')->map(function($grupo) {
             return [
                 'produto' => $grupo->first()->produto,
-                'itens' => $grupo,
-                'quantidadeSolta' => $grupo->whereNull('fk_item_pai')->sum('quantidade'),
-                'itensEmContainers' => $grupo->whereNotNull('fk_item_pai')->groupBy('fk_item_pai'),
+                'quantidade' => $grupo->sum('quantidade'),
             ];
         });
+
+        // Busca itens patrimoniais da secao (um por patrimonio)
+        $itensPatrimoniais = ItenPatrimonial::where('fk_secao', $secaoId)
+            ->whereNull('data_saida')
+            ->with(['produto'])
+            ->get();
+
+        $totalItensSecao = $consumoAgrupado->count() + $itensPatrimoniais->count();
         
         $outrasSecoes = Secao::where('fk_unidade', $unidadeId)->where('id', '!=', $secaoId)->get();
         
-        return view('secoes.ver', compact('secao', 'itens', 'itensPorProduto', 'outrasSecoes', 'unidadeId'));
+        return view('secoes.ver', compact('secao', 'itensConsumo', 'consumoAgrupado', 'itensPatrimoniais', 'totalItensSecao', 'outrasSecoes', 'unidadeId'));
+    }
+
+    public function gerarPDF($unidadeId, $secaoId)
+    {
+        try {
+            $secao = Secao::with(['unidade'])->findOrFail($secaoId);
+
+            $itensConsumo = Itens_estoque::where('fk_secao', $secaoId)
+                ->with(['produto'])
+                ->get();
+
+            $consumoAgrupado = $itensConsumo->groupBy('fk_produto')->map(function($grupo) {
+                return [
+                    'produto' => $grupo->first()->produto,
+                    'quantidade' => $grupo->sum('quantidade'),
+                ];
+            });
+
+            $itensPatrimoniais = ItenPatrimonial::where('fk_secao', $secaoId)
+                ->whereNull('data_saida')
+                ->with(['produto'])
+                ->get();
+
+            $totalItensSecao = $consumoAgrupado->count() + $itensPatrimoniais->count();
+
+            $pdf = \PDF::loadView('secoes.pdf', compact('secao', 'consumoAgrupado', 'itensPatrimoniais', 'totalItensSecao'));
+
+            return $pdf->download('Secao-' . $secao->nome . '-itens.pdf');
+        } catch (\Exception $e) {
+            \Log::error('Erro ao gerar PDF da secao', [$e]);
+            return back()->with('error', 'Erro ao gerar PDF da secao');
+        }
     }
 
     public function transferirItens(Request $request, $unidadeId, $secaoId)
