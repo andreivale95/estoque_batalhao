@@ -90,16 +90,28 @@
                         <thead>
                             <tr>
                                 <!-- Coluna de seleção removida -->
-                                <th>Tipo</th>
-                                <th>Produto</th>
-                                <th>Localização</th>
-                                <th>Disponível</th>
-                                <th>Cautelado</th>
-                                <th>Quantidade</th>
-                                <th>Unidade</th>
-                                <th>Categoria</th>
-                                <th>Valor Médio</th>
-                                <th>Subtotal</th>
+                                <th class="filterable-col" data-col="0" style="cursor:pointer;">Tipo <span class="sort-indicator"></span></th>
+                                <th class="filterable-col" data-col="1" style="cursor:pointer;">Produto <span class="sort-indicator"></span></th>
+                                <th class="filterable-col" data-col="2" style="cursor:pointer;">Localização <span class="sort-indicator"></span></th>
+                                <th class="filterable-col" data-col="3" style="cursor:pointer;">Disponível <span class="sort-indicator"></span></th>
+                                <th class="filterable-col" data-col="4" style="cursor:pointer;">Cautelado <span class="sort-indicator"></span></th>
+                                <th class="filterable-col" data-col="5" style="cursor:pointer;">Quantidade <span class="sort-indicator"></span></th>
+                                <th class="filterable-col" data-col="6" style="cursor:pointer;">Unidade <span class="sort-indicator"></span></th>
+                                <th class="filterable-col" data-col="7" style="cursor:pointer;">Categoria <span class="sort-indicator"></span></th>
+                                <th class="filterable-col" data-col="8" style="cursor:pointer;">Valor Médio <span class="sort-indicator"></span></th>
+                                <th class="filterable-col" data-col="9" style="cursor:pointer;">Subtotal <span class="sort-indicator"></span></th>
+                            </tr>
+                            <tr class="filter-row">
+                                <th><input type="text" class="form-control input-sm filter-input" data-col="0" placeholder="Filtrar Tipo"></th>
+                                <th><input type="text" class="form-control input-sm filter-input" data-col="1" placeholder="Filtrar Produto"></th>
+                                <th><input type="text" class="form-control input-sm filter-input" data-col="2" placeholder="Filtrar Localização"></th>
+                                <th><input type="text" class="form-control input-sm filter-input" data-col="3" placeholder="Filtrar Disponível"></th>
+                                <th><input type="text" class="form-control input-sm filter-input" data-col="4" placeholder="Filtrar Cautelado"></th>
+                                <th><input type="text" class="form-control input-sm filter-input" data-col="5" placeholder="Filtrar Quantidade"></th>
+                                <th><input type="text" class="form-control input-sm filter-input" data-col="6" placeholder="Filtrar Unidade"></th>
+                                <th><input type="text" class="form-control input-sm filter-input" data-col="7" placeholder="Filtrar Categoria"></th>
+                                <th><input type="text" class="form-control input-sm filter-input" data-col="8" placeholder="Filtrar Valor"></th>
+                                <th><input type="text" class="form-control input-sm filter-input" data-col="9" placeholder="Filtrar Subtotal"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -123,10 +135,12 @@
                                             <span class="badge bg-success" title="Consumo">
                                                 <i class="fa fa-layer-group"></i>
                                             </span>
+                                            <span class="sr-only">Consumo</span>
                                         @else
                                             <span class="badge bg-info" title="Permanente">
                                                 <i class="fa fa-shield"></i>
                                             </span>
+                                            <span class="sr-only">Permanente</span>
                                         @endif
                                     </td>
                                     <td>
@@ -634,6 +648,114 @@ $(document).ready(function() {
             document.getElementById(`quantidade${estoqueId}`).setAttribute('max', quantidade);
         }
     };
+
+    // Filtros por coluna (sempre ativos) e ordenacao por cabecalho
+    const filterInputs = document.querySelectorAll('.filter-input');
+    const headerCols = document.querySelectorAll('.filterable-col');
+    const table = document.querySelector('table.table');
+    const tbody = table ? table.querySelector('tbody') : null;
+
+    function applyColumnFilters() {
+        const filters = {};
+        filterInputs.forEach(function(input) {
+            const value = input.value.trim().toLowerCase();
+            if (value) {
+                filters[input.getAttribute('data-col')] = value;
+            }
+        });
+
+        document.querySelectorAll('table.table tbody tr').forEach(function(row) {
+            let show = true;
+            Object.keys(filters).forEach(function(colIndex) {
+                if (!show) {
+                    return;
+                }
+                const cell = row.children[parseInt(colIndex, 10)];
+                if (!cell) {
+                    return;
+                }
+                const text = (cell.textContent || '').toLowerCase();
+                if (!text.includes(filters[colIndex])) {
+                    show = false;
+                }
+            });
+            row.style.display = show ? '' : 'none';
+        });
+    }
+
+    function normalizeNumber(text) {
+        const cleaned = (text || '')
+            .replace(/\s+/g, '')
+            .replace(/[^0-9,.-]/g, '');
+        if (!cleaned) {
+            return NaN;
+        }
+        if (cleaned.includes(',') && cleaned.includes('.')) {
+            return parseFloat(cleaned.replace(/\./g, '').replace(',', '.'));
+        }
+        if (cleaned.includes(',')) {
+            return parseFloat(cleaned.replace(',', '.'));
+        }
+        return parseFloat(cleaned);
+    }
+
+    function getCellValue(row, colIndex) {
+        const cell = row.children[colIndex];
+        return cell ? (cell.textContent || '').trim() : '';
+    }
+
+    function updateSortIndicators(activeTh, direction) {
+        headerCols.forEach(function(th) {
+            const indicator = th.querySelector('.sort-indicator');
+            if (!indicator) {
+                return;
+            }
+            if (th === activeTh) {
+                indicator.textContent = direction === 'asc' ? ' ▲' : ' ▼';
+            } else {
+                indicator.textContent = '';
+            }
+        });
+    }
+
+    headerCols.forEach(function(th) {
+        th.addEventListener('click', function() {
+            if (!tbody) {
+                return;
+            }
+            const colIndex = parseInt(th.getAttribute('data-col'), 10);
+            const currentDir = th.getAttribute('data-sort') || 'none';
+            const nextDir = currentDir === 'asc' ? 'desc' : 'asc';
+            th.setAttribute('data-sort', nextDir);
+
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            rows.sort(function(a, b) {
+                const aText = getCellValue(a, colIndex);
+                const bText = getCellValue(b, colIndex);
+                const aNum = normalizeNumber(aText);
+                const bNum = normalizeNumber(bText);
+
+                if (!Number.isNaN(aNum) && !Number.isNaN(bNum)) {
+                    return nextDir === 'asc' ? aNum - bNum : bNum - aNum;
+                }
+
+                return nextDir === 'asc'
+                    ? aText.localeCompare(bText, 'pt-BR', { sensitivity: 'base' })
+                    : bText.localeCompare(aText, 'pt-BR', { sensitivity: 'base' });
+            });
+
+            rows.forEach(function(row) {
+                tbody.appendChild(row);
+            });
+
+            updateSortIndicators(th, nextDir);
+        });
+    });
+
+    filterInputs.forEach(function(input) {
+        input.addEventListener('input', applyColumnFilters);
+    });
+    applyColumnFilters();
 });
 </script>
 @endpush
