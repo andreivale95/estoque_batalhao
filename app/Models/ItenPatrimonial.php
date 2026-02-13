@@ -23,6 +23,14 @@ class ItenPatrimonial extends Model
         'data_saida',
         'quantidade_cautelada',
         'observacao',
+        'fornecedor',
+        'nota_fiscal',
+        'lote',
+        'fonte',
+        'data_trp',
+        'sei',
+        'valor_unitario',
+        'valor_total',
     ];
 
     // Relações

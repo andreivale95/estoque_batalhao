@@ -506,8 +506,8 @@ class EstoqueController extends Controller
             $request->validate([
                 'produtos' => 'required|array|min:1',
                 'produtos.*' => 'required|exists:produtos,id',
-                'quantidades' => 'required|array',
-                'quantidades.*' => 'required|integer|min:1',
+                'quantidades' => 'nullable|array',
+                'quantidades.*' => 'nullable|integer|min:0',
                 'secoes' => 'required|array',
                 'secoes.*' => 'required|exists:secaos,id',
                 'datas_entrada' => 'required|array',
@@ -531,7 +531,7 @@ class EstoqueController extends Controller
             $lotes = $request->input('lotes', []);
             $patrimonios = $request->input('patrimonios', []);
 
-            if (count($produtos) !== count($quantidades) || count($produtos) !== count($secoes) || count($produtos) !== count($datas)) {
+            if (count($produtos) !== count($secoes) || count($produtos) !== count($datas)) {
                 return back()->with('error', 'Dados inconsistentes. Verifique os itens.');
             }
 
@@ -540,7 +540,7 @@ class EstoqueController extends Controller
             // Processa cada item
             for ($i = 0; $i < count($produtos); $i++) {
                 $produtoId = $produtos[$i];
-                $quantidade = $quantidades[$i];
+                $quantidade = $quantidades[$i] ?? 0;
                 $secaoId = $secoes[$i];
                 $dataEntrada = Carbon::parse($datas[$i]);
                 $valorCentavos = $valoresCentavos[$i] ?? 0;
@@ -595,6 +595,14 @@ class EstoqueController extends Controller
                             'data_entrada' => $dataEntrada,
                             'quantidade_cautelada' => 0,
                             'observacao' => $request->observacao ?? null,
+                            'fornecedor' => $request->fornecedor,
+                            'nota_fiscal' => $request->nota_fiscal,
+                            'lote' => $lote,
+                            'fonte' => $request->fonte,
+                            'data_trp' => $request->data_trp ?? null,
+                            'sei' => $request->sei,
+                            'valor_unitario' => $valorFinal,
+                            'valor_total' => $valorFinal,
                         ]);
                     }
 
@@ -809,6 +817,13 @@ class EstoqueController extends Controller
                             'condicao' => 'bom',
                             'data_entrada' => $request->data_entrada,
                             'quantidade_cautelada' => 0,
+                            'observacao' => $observacoes[$i] ?? 'Entrada de bens patrimoniais',
+                            'fornecedor' => $request->fornecedor,
+                            'nota_fiscal' => $request->nota_fiscal,
+                            'lote' => $request->lote,
+                            'fonte' => $request->fonte,
+                            'data_trp' => $request->data_trp,
+                            'sei' => $request->sei,
                         ]);
                     }
 
