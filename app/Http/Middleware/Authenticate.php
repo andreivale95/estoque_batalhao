@@ -18,14 +18,6 @@ class Authenticate extends Middleware
             return null;
         }
 
-        if (!Auth::check()) {
-            $user = User::first();
-            if ($user) {
-                Auth::login($user);
-                return null;
-            }
-        }
-
         return route('login');
     }
 }
