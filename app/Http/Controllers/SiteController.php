@@ -61,6 +61,9 @@ class SiteController extends Controller
 
     public function Site(Request $request)
     {
+        if (Auth::check()) {
+            return redirect()->route('dashboard');
+        }
         return view('auth/login');
     }
 
