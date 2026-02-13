@@ -15,24 +15,30 @@
 
     <section class="content container-fluid">
         <style>
-            .secao-table {
-                width: 100%;
-                border-collapse: collapse;
-                margin: 20px 0;
-                font-family: Arial, sans-serif;
+            .dragging {
+                opacity: 0.5;
+                background-color: #ffffcc !important;
             }
-            .secao-table th,
-            .secao-table td {
-                border: 1px solid #000;
-                padding: 8px;
+            .drag-handle {
+                cursor: move;
+                color: #999;
+                width: 30px;
                 text-align: center;
             }
-            .secao-table th {
-                background-color: #f2f2f2;
-                font-weight: bold;
+            .drag-handle:hover {
+                color: #333;
             }
-            .secao-table tr:nth-child(even) {
-                background-color: #f9f9f9;
+            .selected-row {
+                background-color: #d9edf7 !important;
+            }
+            .drag-ghost {
+                background-color: #5bc0de;
+                color: white;
+                padding: 5px 10px;
+                border-radius: 3px;
+                position: fixed;
+                pointer-events: none;
+                z-index: 9999;
             }
         </style>
         @if(session('success'))
@@ -43,24 +49,32 @@
         <div class="box box-primary">
             <div class="box-header with-border">
                 <h3 class="box-title"><i class="fa fa-cubes"></i> Lista de Itens</h3>
+                @if($consumoAgrupado->count() > 0 || $itensPatrimoniais->count() > 0)
+                    <div class="pull-right">
+                        <button id="salvarOrdem" class="btn btn-success btn-sm">
+                            <i class="fa fa-save"></i> Salvar Ordem
+                        </button>
+                    </div>
+                @endif
             </div>
             <div class="box-body table-responsive">
                 @if($consumoAgrupado->count() > 0 || $itensPatrimoniais->count() > 0)
-                    <table class="secao-table">
-                        <thead>
+                    <table class="table table-striped table-hover" id="tabelaItens">
+                        <thead class="bg-primary" style="color:white;">
                             <tr>
-                                <th>Nº</th>
+                                <th style="width:30px;"><input type="checkbox" id="selectAll"></th>
+                                <th style="width:30px;"></th>
                                 <th>Item</th>
                                 <th>Patrimônio</th>
                                 <th>Descrição</th>
                                 <th>Quantidade</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @php $contador = 1; @endphp
+                        <tbody id="sortableBody">
                             @foreach($consumoAgrupado as $dados)
-                                <tr>
-                                    <td>{{ $contador++ }}</td>
+                                <tr draggable="true" data-tipo="consumo" data-id="{{ $dados['produto']->id }}">
+                                    <td><input type="checkbox" class="row-checkbox"></td>
+                                    <td class="drag-handle"><i class="fa fa-bars"></i></td>
                                     <td>{{ $dados['produto']->nome ?? 'Sem Nome' }}</td>
                                     <td>-</td>
                                     <td>{{ $dados['produto']->descricao ?? '-' }}</td>
@@ -68,8 +82,9 @@
                                 </tr>
                             @endforeach
                             @foreach($itensPatrimoniais as $patrimonio)
-                                <tr>
-                                    <td>{{ $contador++ }}</td>
+                                <tr draggable="true" data-tipo="patrimonial" data-id="{{ $patrimonio->id }}">
+                                    <td><input type="checkbox" class="row-checkbox"></td>
+                                    <td class="drag-handle"><i class="fa fa-bars"></i></td>
                                     <td>{{ $patrimonio->produto->nome ?? 'Sem Nome' }}</td>
                                     <td>{{ $patrimonio->patrimonio ?? '-' }}</td>
                                     <td>{{ $patrimonio->produto->descricao ?? '-' }}</td>
@@ -102,5 +117,171 @@
         </div>
     </section>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tbody = document.getElementById('sortableBody');
+    if (!tbody) return;
+
+    let draggedElements = [];
+    let ghostElement = null;
+
+    // Select All functionality
+    document.getElementById('selectAll').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = this.checked;
+            updateRowSelection(cb.closest('tr'), this.checked);
+        });
+    });
+
+    // Individual checkbox selection
+    document.querySelectorAll('.row-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function(e) {
+            e.stopPropagation();
+            updateRowSelection(this.closest('tr'), this.checked);
+            updateSelectAllState();
+        });
+    });
+
+    function updateRowSelection(row, selected) {
+        if (selected) {
+            row.classList.add('selected-row');
+        } else {
+            row.classList.remove('selected-row');
+        }
+    }
+
+    function updateSelectAllState() {
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        document.getElementById('selectAll').checked = allChecked;
+    }
+
+    tbody.addEventListener('dragstart', function(e) {
+        if (e.target.tagName === 'TR') {
+            const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
+            const draggedRow = e.target;
+            
+            if (selectedCheckboxes.length > 0) {
+                // Drag multiple selected items
+                draggedElements = Array.from(selectedCheckboxes).map(cb => cb.closest('tr'));
+                
+                // If dragged row is not selected, only drag that one
+                if (!draggedRow.querySelector('.row-checkbox').checked) {
+                    draggedElements = [draggedRow];
+                }
+            } else {
+                // Drag single item
+                draggedElements = [draggedRow];
+            }
+
+            // Create ghost element
+            ghostElement = document.createElement('div');
+            ghostElement.className = 'drag-ghost';
+            ghostElement.textContent = draggedElements.length > 1 
+                ? `Movendo ${draggedElements.length} itens` 
+                : 'Movendo 1 item';
+            document.body.appendChild(ghostElement);
+
+            draggedElements.forEach(el => el.classList.add('dragging'));
+            
+            // Set ghost position
+            ghostElement.style.left = e.clientX + 10 + 'px';
+            ghostElement.style.top = e.clientY + 10 + 'px';
+        }
+    });
+
+    tbody.addEventListener('drag', function(e) {
+        if (ghostElement) {
+            ghostElement.style.left = e.clientX + 10 + 'px';
+            ghostElement.style.top = e.clientY + 10 + 'px';
+        }
+    });
+
+    tbody.addEventListener('dragend', function(e) {
+        if (e.target.tagName === 'TR') {
+            draggedElements.forEach(el => el.classList.remove('dragging'));
+            if (ghostElement) {
+                document.body.removeChild(ghostElement);
+                ghostElement = null;
+            }
+            draggedElements = [];
+        }
+    });
+
+    tbody.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        if (draggedElements.length === 0) return;
+
+        const afterElement = getDragAfterElement(tbody, e.clientY);
+        const firstDraggedElement = draggedElements[0];
+
+        if (afterElement == null) {
+            // Move all selected elements to the end
+            draggedElements.forEach(el => {
+                tbody.appendChild(el);
+            });
+        } else {
+            // Move all selected elements before afterElement
+            draggedElements.forEach(el => {
+                tbody.insertBefore(el, afterElement);
+            });
+        }
+    });
+
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('tr:not(.dragging)')];
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    document.getElementById('salvarOrdem').addEventListener('click', function() {
+        const linhas = tbody.querySelectorAll('tr');
+        const ordens = [];
+        linhas.forEach((linha, index) => {
+            ordens.push({
+                tipo: linha.getAttribute('data-tipo'),
+                id: linha.getAttribute('data-id'),
+                ordem: index + 1
+            });
+        });
+
+        fetch('{{ route('secoes.reordenar', ['unidade' => $secao->fk_unidade, 'secao' => $secao->id]) }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ ordens: ordens })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Ordem salva com sucesso!');
+                // Clear selections
+                document.querySelectorAll('.row-checkbox').forEach(cb => {
+                    cb.checked = false;
+                    updateRowSelection(cb.closest('tr'), false);
+                });
+                document.getElementById('selectAll').checked = false;
+            } else {
+                alert('Erro ao salvar ordem: ' + (data.message || 'Desconhecido'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao salvar ordem.');
+        });
+    });
+});
+</script>
 @endsection
 

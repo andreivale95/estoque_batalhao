@@ -133,6 +133,7 @@ class SecaoController extends Controller
         // Busca itens de consumo da secao
         $itensConsumo = Itens_estoque::where('fk_secao', $secaoId)
             ->with(['produto'])
+            ->orderBy('ordem_pdf', 'asc')
             ->get();
 
         // Agrupa consumo por produto para exibir quantidade total
@@ -147,6 +148,7 @@ class SecaoController extends Controller
         $itensPatrimoniais = ItenPatrimonial::where('fk_secao', $secaoId)
             ->whereNull('data_saida')
             ->with(['produto'])
+            ->orderBy('ordem_pdf', 'asc')
             ->get();
 
         $totalItensSecao = $consumoAgrupado->count() + $itensPatrimoniais->count();
@@ -163,6 +165,7 @@ class SecaoController extends Controller
 
             $itensConsumo = Itens_estoque::where('fk_secao', $secaoId)
                 ->with(['produto'])
+                ->orderBy('ordem_pdf', 'asc')
                 ->get();
 
             $consumoAgrupado = $itensConsumo->groupBy('fk_produto')->map(function($grupo) {
@@ -175,6 +178,7 @@ class SecaoController extends Controller
             $itensPatrimoniais = ItenPatrimonial::where('fk_secao', $secaoId)
                 ->whereNull('data_saida')
                 ->with(['produto'])
+                ->orderBy('ordem_pdf', 'asc')
                 ->get();
 
             $totalItensSecao = $consumoAgrupado->count() + $itensPatrimoniais->count();
@@ -355,5 +359,29 @@ class SecaoController extends Controller
             return $redirect->with('warning', implode('; ', $erros));
         }
         return $redirect->with('success', 'Itens vinculados à seção com sucesso!');
+    }
+
+    public function reordenarItens(Request $request, $unidadeId, $secaoId)
+    {
+        try {
+            $ordens = $request->input('ordens', []);
+
+            foreach ($ordens as $item) {
+                $tipo = $item['tipo'] ?? null;
+                $id = $item['id'] ?? null;
+                $ordem = $item['ordem'] ?? null;
+
+                if ($tipo === 'consumo' && $id) {
+                    Itens_estoque::where('id', $id)->update(['ordem_pdf' => $ordem]);
+                } elseif ($tipo === 'patrimonial' && $id) {
+                    ItenPatrimonial::where('id', $id)->update(['ordem_pdf' => $ordem]);
+                }
+            }
+
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            \Log::error('Erro ao reordenar itens', [$e]);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 }

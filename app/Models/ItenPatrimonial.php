@@ -17,6 +17,7 @@ class ItenPatrimonial extends Model
         'patrimonio',
         'serie',
         'fk_secao',
+        'ordem_pdf',
         'condicao',
         'data_entrada',
         'data_saida',

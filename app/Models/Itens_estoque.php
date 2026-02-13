@@ -17,6 +17,7 @@ class Itens_estoque extends Model
         'preco_unitario',
         'unidade',
         'fk_secao',
+        'ordem_pdf',
         'fk_item_pai',
         'data_entrada',
         'data_saida',
